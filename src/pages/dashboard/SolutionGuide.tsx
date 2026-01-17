@@ -57,7 +57,7 @@ type ContentSource = 'loveble' | 'carcarekiosk';
 const SolutionGuide = () => {
   const { diagnosticItemId } = useParams<{ diagnosticItemId: string }>();
   const { user } = useAuth();
-  const { notifySuccess, notifyError, notifyInfo } = useNotifications();
+  const { notifySuccess, notifyError, notifyInfo, checkAndNotifyCacheStatus } = useNotifications();
   
   const { isValid, validId } = useValidUUID({
     id: diagnosticItemId,
@@ -118,6 +118,8 @@ const SolutionGuide = () => {
           notifySuccess("Solução carregada!", "Recuperada do cache local (offline)");
         } else {
           notifySuccess("Solução encontrada!", "Guia detalhado gerado e salvo no cache.");
+          // Verifica se o cache está quase cheio após salvar nova solução
+          checkAndNotifyCacheStatus();
         }
       } else {
         console.error("AI solution error:", response.error);

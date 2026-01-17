@@ -338,3 +338,19 @@ export async function getCacheStats(): Promise<{
     };
   }
 }
+
+/**
+ * Constante para limite de aviso do cache
+ */
+export const CACHE_WARNING_THRESHOLD = 80;
+
+/**
+ * Verifica se o cache está quase cheio
+ */
+export async function isCacheAlmostFull(): Promise<{ isFull: boolean; count: number }> {
+  const stats = await getCacheStats();
+  return {
+    isFull: stats.totalEntries >= CACHE_WARNING_THRESHOLD,
+    count: stats.totalEntries,
+  };
+}
