@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/images/logo-new.png";
+import logo from "@/assets/images/logo-new-car.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -45,8 +45,8 @@ const Header = () => {
           
           {/* Logo sem link de redirecionamento */}
           <div className="flex flex-col items-center cursor-default">
-            <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
-            <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
+            <img src={logo} alt="Doutor Motors" className="h-[80px] w-auto object-contain" />
+            <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider mt-1">DOUTOR MOTORS</span>
           </div>
         </div>
 
