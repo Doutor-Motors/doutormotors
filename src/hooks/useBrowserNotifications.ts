@@ -1,28 +1,147 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-// Notification sound as a base64-encoded short beep
-const NOTIFICATION_SOUND_DATA = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleipIjNHFnD8VLn3d4cqIPhVDgdDJnEQoQHvf3r1+Kz5MmN3EiDQRNZbe7dymXT1FhN3LkD8eNH7j5r5zJSxJmd/GizcONJni7NqlWjlChd7MkUAgNn/k5b1yJStJmt/GijgPN5rh69mlWjhChd7MkUEhN3/k5b1yJSxJmt/GizgQOJrh69mlWjhChd7MkUEhN4Dk5b1yJSxJmt/HizgQOJrh69mlWjhDhd7MkUEhN4Dk5b1yJSxJmt/HizgQOJrh69mlWjhDhd7MkUEhN4Dk5b1yJixJmt/GijgQOJvh69mlWjhDhd7MkUEhN4Dk5b1yJitJmt/GijgQOJvh69mlWjhDhd7MkUEhN4Dl5b1yJitJmt/GijgQOJvh69mlWjhDhd7MkUEhN4Dk5b1yJSxKmt/GijgQOJvh69qlWjhDhd7MkUEhN4Dk5b1yJSxJmt/GijgQOJrh69qlWjhDhd7MkUEhN4Dk5b1yJSxJmt/GijgQOJrh69qlWjhDhd7MkUEhN4Dk5bxzJSxKmt/GijgQOJrh69qlWjhDhd7MkT8gNoHl5bxzJSxJmt/GijcPOJrh69qlWjhDhd7MkT8gNoHl5bxzJSxJmd/GijcPOJrh69qlWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPOJrh69qlWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPOJrh69qlWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPOJrh69qlWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPN5rh69qmWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPN5rh69qmWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd7MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd/MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd/MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd/MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd/MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd/MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd/MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd/MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd/MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhChd/MkT8gNoHl5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJSxJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkT8gN4Lk5bxzJStJmd/GijcPN5nh69qmWjhCheHMkUA=";
+type AlertPriority = "urgent" | "high" | "normal" | "low";
 
 interface UseBrowserNotificationsOptions {
   onPermissionGranted?: () => void;
   onPermissionDenied?: () => void;
 }
 
+// Sound generator using Web Audio API for different priority levels
+class NotificationSoundGenerator {
+  private audioContext: AudioContext | null = null;
+
+  private getContext(): AudioContext {
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+    }
+    return this.audioContext;
+  }
+
+  // Play a beep with specific frequency and duration
+  private playTone(
+    frequency: number,
+    duration: number,
+    volume: number = 0.3,
+    type: OscillatorType = "sine"
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      const ctx = this.getContext();
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+      // Envelope for smooth sound
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(volume * 0.7, ctx.currentTime + duration * 0.7);
+      gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + duration);
+
+      oscillator.onended = () => resolve();
+    });
+  }
+
+  // Delay helper
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // URGENT: Rapid triple beep with rising pitch (alarming)
+  async playUrgent(): Promise<void> {
+    console.log("Playing URGENT notification sound");
+    await this.playTone(880, 0.1, 0.4, "square"); // A5
+    await this.delay(80);
+    await this.playTone(988, 0.1, 0.4, "square"); // B5
+    await this.delay(80);
+    await this.playTone(1047, 0.15, 0.5, "square"); // C6
+    await this.delay(100);
+    await this.playTone(880, 0.1, 0.4, "square");
+    await this.delay(80);
+    await this.playTone(988, 0.1, 0.4, "square");
+    await this.delay(80);
+    await this.playTone(1047, 0.15, 0.5, "square");
+  }
+
+  // HIGH: Double beep with attention-grabbing tone
+  async playHigh(): Promise<void> {
+    console.log("Playing HIGH notification sound");
+    await this.playTone(659, 0.15, 0.35, "triangle"); // E5
+    await this.delay(120);
+    await this.playTone(784, 0.2, 0.4, "triangle"); // G5
+    await this.delay(200);
+    await this.playTone(659, 0.15, 0.35, "triangle");
+    await this.delay(120);
+    await this.playTone(784, 0.2, 0.4, "triangle");
+  }
+
+  // NORMAL: Pleasant single chime
+  async playNormal(): Promise<void> {
+    console.log("Playing NORMAL notification sound");
+    await this.playTone(523, 0.15, 0.3, "sine"); // C5
+    await this.delay(50);
+    await this.playTone(659, 0.2, 0.35, "sine"); // E5
+    await this.delay(50);
+    await this.playTone(784, 0.25, 0.3, "sine"); // G5
+  }
+
+  // LOW: Soft, subtle notification
+  async playLow(): Promise<void> {
+    console.log("Playing LOW notification sound");
+    await this.playTone(392, 0.3, 0.2, "sine"); // G4
+  }
+
+  // Play sound based on priority
+  async playForPriority(priority: AlertPriority): Promise<void> {
+    // Resume audio context if suspended (browser autoplay policy)
+    const ctx = this.getContext();
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
+
+    switch (priority) {
+      case "urgent":
+        return this.playUrgent();
+      case "high":
+        return this.playHigh();
+      case "normal":
+        return this.playNormal();
+      case "low":
+        return this.playLow();
+      default:
+        return this.playNormal();
+    }
+  }
+
+  // Cleanup
+  dispose(): void {
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+  }
+}
+
 export const useBrowserNotifications = (options?: UseBrowserNotificationsOptions) => {
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "default"
   );
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const soundGeneratorRef = useRef<NotificationSoundGenerator | null>(null);
 
-  // Initialize audio element
+  // Initialize sound generator
   useEffect(() => {
-    const audio = new Audio(NOTIFICATION_SOUND_DATA);
-    audio.volume = 0.5;
-    setAudioElement(audio);
+    soundGeneratorRef.current = new NotificationSoundGenerator();
     
     return () => {
-      audio.pause();
-      audio.src = "";
+      soundGeneratorRef.current?.dispose();
+      soundGeneratorRef.current = null;
     };
   }, []);
 
@@ -55,24 +174,33 @@ export const useBrowserNotifications = (options?: UseBrowserNotificationsOptions
     }
   }, [isSupported, options]);
 
-  // Play notification sound
-  const playSound = useCallback(() => {
-    if (audioElement) {
-      audioElement.currentTime = 0;
-      audioElement.play().catch(error => {
+  // Play notification sound based on priority
+  const playSound = useCallback((priority: AlertPriority = "normal") => {
+    if (soundGeneratorRef.current) {
+      soundGeneratorRef.current.playForPriority(priority).catch(error => {
         console.warn("Could not play notification sound:", error);
       });
     }
-  }, [audioElement]);
+  }, []);
 
   // Show browser notification
   const showNotification = useCallback(
-    (title: string, options?: NotificationOptions & { playSound?: boolean }) => {
-      const { playSound: shouldPlaySound = true, ...notificationOptions } = options || {};
+    (
+      title: string, 
+      options?: NotificationOptions & { 
+        playSound?: boolean;
+        priority?: AlertPriority;
+      }
+    ) => {
+      const { 
+        playSound: shouldPlaySound = true, 
+        priority = "normal",
+        ...notificationOptions 
+      } = options || {};
 
       // Play sound if enabled
       if (shouldPlaySound) {
-        playSound();
+        playSound(priority);
       }
 
       // Show browser notification if permission granted
@@ -82,12 +210,13 @@ export const useBrowserNotifications = (options?: UseBrowserNotificationsOptions
             icon: "/favicon.ico",
             badge: "/favicon.ico",
             tag: "system-alert",
-            requireInteraction: false,
+            requireInteraction: priority === "urgent" || priority === "high",
             ...notificationOptions,
           });
 
-          // Auto-close after 5 seconds
-          setTimeout(() => notification.close(), 5000);
+          // Auto-close based on priority (urgent stays longer)
+          const closeDelay = priority === "urgent" ? 10000 : priority === "high" ? 7000 : 5000;
+          setTimeout(() => notification.close(), closeDelay);
 
           // Handle click
           notification.onclick = () => {
@@ -116,13 +245,23 @@ export const useBrowserNotifications = (options?: UseBrowserNotificationsOptions
         low: "ℹ️",
       }[alert.priority] || "📢";
 
+      const priority = (["urgent", "high", "normal", "low"].includes(alert.priority) 
+        ? alert.priority 
+        : "normal") as AlertPriority;
+
       return showNotification(`${priorityEmoji} ${alert.title}`, {
         body: alert.message,
         playSound: true,
+        priority,
       });
     },
     [showNotification]
   );
+
+  // Test sound for a specific priority
+  const testSound = useCallback((priority: AlertPriority) => {
+    playSound(priority);
+  }, [playSound]);
 
   return {
     isSupported,
@@ -131,6 +270,7 @@ export const useBrowserNotifications = (options?: UseBrowserNotificationsOptions
     showNotification,
     showAlertNotification,
     playSound,
+    testSound,
   };
 };
 
