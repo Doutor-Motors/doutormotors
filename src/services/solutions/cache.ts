@@ -354,3 +354,90 @@ export async function isCacheAlmostFull(): Promise<{ isFull: boolean; count: num
     count: stats.totalEntries,
   };
 }
+
+/**
+ * Exporta todo o cache como JSON
+ */
+export async function exportCache(): Promise<string> {
+  try {
+    const db = await openDatabase();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+
+      request.onerror = () => {
+        console.error('Erro ao exportar cache:', request.error);
+        reject(request.error);
+      };
+
+      request.onsuccess = () => {
+        const data = {
+          version: DB_VERSION,
+          exportedAt: Date.now(),
+          entries: request.result,
+        };
+        resolve(JSON.stringify(data, null, 2));
+      };
+
+      transaction.oncomplete = () => db.close();
+    });
+  } catch (error) {
+    console.error('Erro ao exportar cache:', error);
+    throw error;
+  }
+}
+
+/**
+ * Importa cache de um arquivo JSON
+ */
+export async function importCache(jsonData: string): Promise<{ imported: number; skipped: number }> {
+  try {
+    const data = JSON.parse(jsonData);
+    
+    if (!data.entries || !Array.isArray(data.entries)) {
+      throw new Error('Formato de arquivo inválido');
+    }
+
+    const db = await openDatabase();
+    let imported = 0;
+    let skipped = 0;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+
+      for (const entry of data.entries) {
+        // Valida estrutura básica
+        if (!entry.id || !entry.solution || !entry.cachedAt) {
+          skipped++;
+          continue;
+        }
+
+        // Verifica se não está expirado
+        if (Date.now() > entry.expiresAt) {
+          skipped++;
+          continue;
+        }
+
+        const request = store.put(entry);
+        request.onsuccess = () => imported++;
+        request.onerror = () => skipped++;
+      }
+
+      transaction.oncomplete = () => {
+        db.close();
+        resolve({ imported, skipped });
+      };
+
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error);
+      };
+    });
+  } catch (error) {
+    console.error('Erro ao importar cache:', error);
+    throw error;
+  }
+}
