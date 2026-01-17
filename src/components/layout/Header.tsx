@@ -22,7 +22,7 @@ const Header = () => {
     <header className={`absolute top-0 left-0 w-full z-50 px-4 md:px-10 py-6 ${isLandingPage ? "" : "bg-secondary"}`}>
       <div className="container mx-auto flex justify-between items-center">
         <Link to="/" className="flex items-center">
-          <img src={logo} alt="Doutor Motors" className="h-[70px] w-[130px] object-contain" />
+          <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
         </Link>
 
         {/* Desktop Navigation */}
