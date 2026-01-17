@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import CacheStatsPanel from "@/components/dashboard/CacheStatsPanel";
+import DataDeletionSection from "@/components/profile/DataDeletionSection";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Tables } from "@/integrations/supabase/types";
@@ -20,6 +21,7 @@ const UserProfile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { notifyProfileUpdated, notifyPasswordChanged, notifyError } = useNotifications();
+  const navigate = useNavigate();
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [name, setName] = useState("");
@@ -159,18 +161,9 @@ const UserProfile = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita."
-    );
-
-    if (!confirmed) return;
-
-    toast({
-      title: "Função não disponível",
-      description: "A exclusão de conta requer confirmação por e-mail. Entre em contato com o suporte.",
-      variant: "destructive",
-    });
+  const handleAccountDeleted = () => {
+    // Redirect to home after account deletion
+    navigate('/');
   };
 
   if (isLoading) {
@@ -202,10 +195,14 @@ const UserProfile = () => {
 
         {/* Tabs for Profile and Settings */}
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile" className="font-chakra uppercase text-xs sm:text-sm gap-2">
               <User className="w-4 h-4" />
               Perfil
+            </TabsTrigger>
+            <TabsTrigger value="privacy" className="font-chakra uppercase text-xs sm:text-sm gap-2">
+              <Database className="w-4 h-4" />
+              Privacidade
             </TabsTrigger>
             <TabsTrigger value="settings" className="font-chakra uppercase text-xs sm:text-sm gap-2">
               <Settings className="w-4 h-4" />
@@ -328,26 +325,16 @@ const UserProfile = () => {
               </CardContent>
             </Card>
 
-            {/* Danger Zone */}
-            <Card className="border-red-200">
-              <CardHeader>
-                <CardTitle className="font-chakra uppercase text-red-600">
-                  Zona de Perigo
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Ações irreversíveis que afetam sua conta.
-                </p>
-                <Button 
-                  variant="destructive" 
-                  className="font-chakra uppercase"
-                  onClick={handleDeleteAccount}
-                >
-                  Excluir Minha Conta
-                </Button>
-              </CardContent>
-            </Card>
+          </TabsContent>
+
+          <TabsContent value="privacy" className="mt-6">
+            {user && email && (
+              <DataDeletionSection 
+                userId={user.id} 
+                userEmail={email}
+                onAccountDeleted={handleAccountDeleted}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6 space-y-6">
