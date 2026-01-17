@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,7 +89,31 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Sending contact email from:", name, email);
+    console.log("Processing contact form from:", name, email);
+
+    // Initialize Supabase client with service role
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Save message to database
+    const { data: savedMessage, error: dbError } = await supabase
+      .from("contact_messages")
+      .insert({
+        name,
+        email,
+        phone: phone || null,
+        subject,
+        message,
+        status: "pending",
+      })
+      .select()
+      .single();
+
+    if (dbError) {
+      console.error("Error saving to database:", dbError);
+      // Continue with email sending even if DB save fails
+    } else {
+      console.log("Message saved to database:", savedMessage.id);
+    }
 
     // Send notification email to admin
     const adminEmailResponse = await sendEmail({
@@ -111,6 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
           <hr style="border: 1px solid #eee; margin-top: 20px;">
           <p style="color: #666; font-size: 12px;">
             Esta mensagem foi enviada através do formulário de contato do site Doutor Motors.
+            ${savedMessage ? `<br>ID da mensagem: ${savedMessage.id}` : ''}
           </p>
         </div>
       `,
@@ -168,6 +196,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: true, 
         message: "Emails enviados com sucesso",
+        messageId: savedMessage?.id,
         adminEmail: adminEmailResponse,
         userEmail: userEmailResponse
       }),
