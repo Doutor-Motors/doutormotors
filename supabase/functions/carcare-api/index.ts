@@ -12,6 +12,159 @@ interface CarCareRequest {
   query?: string;
 }
 
+// Traduzir conteúdo para português usando Lovable AI
+async function translateToPortuguese(content: {
+  title?: string;
+  description?: string;
+  videoDescription?: string;
+  steps?: string[];
+}): Promise<{
+  title?: string;
+  description?: string;
+  videoDescription?: string;
+  steps?: string[];
+}> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  
+  if (!LOVABLE_API_KEY) {
+    console.log("LOVABLE_API_KEY not configured, skipping translation");
+    return content;
+  }
+
+  // Prepare content for translation
+  const textsToTranslate: string[] = [];
+  const keys: string[] = [];
+
+  if (content.title) {
+    textsToTranslate.push(content.title);
+    keys.push("title");
+  }
+  if (content.description) {
+    textsToTranslate.push(content.description);
+    keys.push("description");
+  }
+  if (content.videoDescription) {
+    textsToTranslate.push(content.videoDescription);
+    keys.push("videoDescription");
+  }
+  if (content.steps && content.steps.length > 0) {
+    content.steps.forEach((step, i) => {
+      textsToTranslate.push(step);
+      keys.push(`step_${i}`);
+    });
+  }
+
+  if (textsToTranslate.length === 0) {
+    return content;
+  }
+
+  try {
+    console.log(`Translating ${textsToTranslate.length} texts to Portuguese...`);
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `Você é um tradutor especializado em conteúdo automotivo. Traduza o texto do inglês para o português brasileiro de forma clara e natural.
+
+REGRAS:
+- Mantenha termos técnicos automotivos quando apropriados (ex: OBD, ECU, R134a)
+- Use linguagem acessível para mecânicos e entusiastas
+- Traduza unidades de medida quando relevante
+- Não adicione ou remova informações
+- Retorne APENAS o JSON com as traduções, sem explicações
+
+FORMATO DE ENTRADA: JSON com chaves e textos em inglês
+FORMATO DE SAÍDA: JSON com as mesmas chaves e textos traduzidos para português`
+          },
+          {
+            role: "user",
+            content: JSON.stringify(
+              textsToTranslate.reduce((acc, text, i) => {
+                acc[keys[i]] = text;
+                return acc;
+              }, {} as Record<string, string>)
+            )
+          }
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Translation API error:", response.status);
+      return content;
+    }
+
+    const data = await response.json();
+    const translatedContent = data.choices?.[0]?.message?.content;
+
+    if (!translatedContent) {
+      console.error("No translation content received");
+      return content;
+    }
+
+    // Parse the translated JSON
+    let translations: Record<string, string>;
+    try {
+      // Clean up the response (remove markdown code blocks if present)
+      let cleanedContent = translatedContent.trim();
+      if (cleanedContent.startsWith("```json")) {
+        cleanedContent = cleanedContent.slice(7);
+      } else if (cleanedContent.startsWith("```")) {
+        cleanedContent = cleanedContent.slice(3);
+      }
+      if (cleanedContent.endsWith("```")) {
+        cleanedContent = cleanedContent.slice(0, -3);
+      }
+      translations = JSON.parse(cleanedContent.trim());
+    } catch (e) {
+      console.error("Failed to parse translation JSON:", e);
+      return content;
+    }
+
+    // Build translated content
+    const result: typeof content = {};
+
+    if (translations.title) {
+      result.title = translations.title;
+    } else if (content.title) {
+      result.title = content.title;
+    }
+
+    if (translations.description) {
+      result.description = translations.description;
+    } else if (content.description) {
+      result.description = content.description;
+    }
+
+    if (translations.videoDescription) {
+      result.videoDescription = translations.videoDescription;
+    } else if (content.videoDescription) {
+      result.videoDescription = content.videoDescription;
+    }
+
+    if (content.steps && content.steps.length > 0) {
+      result.steps = content.steps.map((_, i) => {
+        return translations[`step_${i}`] || content.steps![i];
+      });
+    }
+
+    console.log("Translation completed successfully");
+    return result;
+  } catch (error) {
+    console.error("Translation error:", error);
+    return content;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -522,13 +675,21 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string): Promise<any>
 
     console.log(`Extracted video description: ${videoDescription.slice(0, 100)}...`);
 
-    return {
+    // Traduzir conteúdo para português
+    const translatedContent = await translateToPortuguese({
       title,
       description: metadata.description || "",
       videoDescription: videoDescription || undefined,
+      steps: steps.length > 0 ? steps : undefined,
+    });
+
+    return {
+      title: translatedContent.title || title,
+      description: translatedContent.description || metadata.description || "",
+      videoDescription: translatedContent.videoDescription || videoDescription || undefined,
       videoUrl: videoEmbedUrl,
       sourceUrl: url,
-      steps,
+      steps: translatedContent.steps || steps,
       markdown: markdown.slice(0, 5000),
     };
   } catch (error) {
