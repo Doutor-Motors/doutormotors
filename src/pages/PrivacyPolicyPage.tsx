@@ -14,16 +14,20 @@ const PrivacyPolicyPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="pt-24 pb-16">
+      <main className="pt-28 md:pt-32 pb-16">
         <div className="container mx-auto px-4 max-w-4xl">
           {/* Header */}
           <div className="mb-8">
-            <Link to="/">
-              <Button variant="ghost" className="mb-4 text-foreground hover:text-primary">
+            <Button
+              asChild
+              variant="outline"
+              className="mb-4 bg-background/80 backdrop-blur text-foreground border-border shadow-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <Link to="/" aria-label="Voltar ao início">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar ao início
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-primary/10 p-3 rounded-full">
                 <Shield className="w-8 h-8 text-primary" />
