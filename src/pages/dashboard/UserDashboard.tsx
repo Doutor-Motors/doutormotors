@@ -10,7 +10,8 @@ import {
   ChevronRight,
   Loader2,
   Bluetooth,
-  Wifi
+  Wifi,
+  Smartphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -218,16 +219,26 @@ const UserDashboard = () => {
                 <Button
                   onClick={obd.connectBluetooth}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-chakra uppercase"
+                  size="sm"
                 >
-                  <Bluetooth className="w-4 h-4 mr-2" />
-                  Bluetooth
+                  <Bluetooth className="w-4 h-4 mr-1" />
+                  BT
                 </Button>
                 <Button
                   onClick={() => obd.connectWifi()}
                   className="bg-green-600 hover:bg-green-700 text-white font-chakra uppercase"
+                  size="sm"
                 >
-                  <Wifi className="w-4 h-4 mr-2" />
+                  <Wifi className="w-4 h-4 mr-1" />
                   WiFi
+                </Button>
+                <Button
+                  onClick={obd.connectCapacitorBluetooth}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-chakra uppercase"
+                  size="sm"
+                >
+                  <Smartphone className="w-4 h-4 mr-1" />
+                  Nativo
                 </Button>
               </>
             )}
