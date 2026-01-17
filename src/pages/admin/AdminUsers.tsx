@@ -29,6 +29,7 @@ import { Search, UserCog, Shield, User, Trash2, Eye } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -51,6 +52,7 @@ const AdminUsers = () => {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newRole, setNewRole] = useState<AppRole>("user");
+  const { notifySuccess, notifyError } = useAdminNotifications();
 
   useEffect(() => {
     fetchUsers();
@@ -120,11 +122,13 @@ const AdminUsers = () => {
       }
 
       toast.success("Papel atualizado com sucesso!");
+      notifySuccess("Papel Atualizado", `${selectedUser.name} agora é ${newRole === 'admin' ? 'Administrador' : newRole === 'user' ? 'Usuário' : 'Moderador'}`);
       setShowRoleDialog(false);
       fetchUsers();
     } catch (error) {
       console.error("Error updating role:", error);
       toast.error("Erro ao atualizar papel");
+      notifyError("Erro", "Não foi possível atualizar o papel do usuário");
     }
   };
 
@@ -141,11 +145,13 @@ const AdminUsers = () => {
       if (error) throw error;
 
       toast.success("Usuário removido com sucesso!");
+      notifySuccess("Usuário Removido", `${selectedUser.name} foi removido do sistema`);
       setShowDeleteDialog(false);
       fetchUsers();
     } catch (error) {
       console.error("Error deleting user:", error);
       toast.error("Erro ao remover usuário. O usuário pode ter dados relacionados.");
+      notifyError("Erro", "Não foi possível remover o usuário. Verifique dados relacionados.");
     }
   };
 

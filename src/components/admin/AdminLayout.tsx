@@ -14,9 +14,11 @@ import {
   BarChart3,
   FileText,
   MessageSquare,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminNotification } from "@/contexts/AdminNotificationContext";
 import logo from "@/assets/images/logo.png";
 
 interface AdminLayoutProps {
@@ -39,6 +41,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { unreadCount, clearAllNotifications } = useAdminNotification();
 
   const handleLogout = async () => {
     await signOut();
@@ -50,12 +53,26 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-gradient-to-b from-dm-space via-dm-blue-2 to-dm-space text-primary-foreground">
         <div className="p-6 border-b border-dm-cadet/20">
-          <Link to="/admin" className="flex items-center gap-2">
-            <img src={logo} alt="Doutor Motors" className="w-24" />
-            <span className="font-chakra text-xs uppercase text-primary bg-primary/20 px-2 py-1 rounded">
-              Admin
-            </span>
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link to="/admin" className="flex items-center gap-2">
+              <img src={logo} alt="Doutor Motors" className="w-24" />
+              <span className="font-chakra text-xs uppercase text-primary bg-primary/20 px-2 py-1 rounded">
+                Admin
+              </span>
+            </Link>
+            {unreadCount > 0 && (
+              <button
+                onClick={clearAllNotifications}
+                className="relative p-2 rounded-full hover:bg-dm-blue-2/50 transition-colors"
+                title="Limpar notificações"
+              >
+                <Bell className="w-5 h-5 text-dm-cadet" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              </button>
+            )}
+          </div>
         </div>
 
         <nav className="flex-1 px-4 py-4">
@@ -108,12 +125,25 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             Admin
           </span>
         </Link>
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="text-primary-foreground p-2"
-        >
-          {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button
+              onClick={clearAllNotifications}
+              className="relative p-2 rounded-full hover:bg-dm-blue-2/50 transition-colors"
+            >
+              <Bell className="w-5 h-5 text-dm-cadet" />
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            </button>
+          )}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="text-primary-foreground p-2"
+          >
+            {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Sidebar */}
