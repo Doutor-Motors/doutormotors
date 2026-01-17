@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { X, AlertTriangle, Info, CheckCircle, XCircle, Bell } from "lucide-react";
+import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
+import { X, AlertTriangle, Info, CheckCircle, XCircle, Bell, BellRing, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 interface SystemAlert {
   id: string;
@@ -22,18 +23,41 @@ interface SystemAlert {
 
 const SystemAlertsBanner = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const processedAlertIds = useRef<Set<string>>(new Set());
+  
+  const { 
+    isSupported, 
+    permission, 
+    requestPermission, 
+    showAlertNotification,
+    playSound 
+  } = useBrowserNotifications();
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if (isSupported && permission === "default") {
+      // Show a toast asking user to enable notifications
+      toast({
+        title: "Ativar Notificações",
+        description: "Clique no sino para receber alertas do sistema mesmo com o navegador em segundo plano.",
+        duration: 8000,
+      });
+    }
+  }, [isSupported, permission]);
 
   useEffect(() => {
     if (!user) return;
 
     fetchAlerts();
 
-    // Subscribe to new alerts
+    // Subscribe to new alerts in real-time
     const subscription = supabase
-      .channel("user-system-alerts")
+      .channel("user-system-alerts-realtime")
       .on(
         "postgres_changes",
         {
@@ -43,9 +67,29 @@ const SystemAlertsBanner = () => {
         },
         (payload) => {
           const alert = payload.new as SystemAlert;
-          // Check if this alert is for the user
-          if (!alert.read_by?.includes(user.id)) {
+          console.log("New system alert received:", alert);
+          
+          // Check if this alert is for the user and not already processed
+          if (!alert.read_by?.includes(user.id) && !processedAlertIds.current.has(alert.id)) {
+            processedAlertIds.current.add(alert.id);
             setAlerts((prev) => [alert, ...prev]);
+            
+            // Play sound if enabled
+            if (soundEnabled) {
+              playSound();
+            }
+            
+            // Show browser notification
+            showAlertNotification(alert);
+            
+            // Show in-app toast
+            toast({
+              title: `📢 ${alert.title}`,
+              description: alert.message.length > 100 
+                ? alert.message.substring(0, 100) + "..." 
+                : alert.message,
+              duration: 6000,
+            });
           }
         }
       )
@@ -54,7 +98,7 @@ const SystemAlertsBanner = () => {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [user]);
+  }, [user, soundEnabled, playSound, showAlertNotification, toast]);
 
   const fetchAlerts = async () => {
     if (!user) return;
@@ -150,11 +194,77 @@ const SystemAlertsBanner = () => {
   };
 
   if (loading || alerts.length === 0) {
+    // Still show notification controls even if no alerts
+    if (!loading && isSupported) {
+      return (
+        <div className="flex items-center justify-end gap-2 mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className="gap-2 text-muted-foreground"
+            title={soundEnabled ? "Desativar som" : "Ativar som"}
+          >
+            {soundEnabled ? (
+              <Volume2 className="w-4 h-4" />
+            ) : (
+              <VolumeX className="w-4 h-4" />
+            )}
+          </Button>
+          {permission !== "granted" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={requestPermission}
+              className="gap-2"
+            >
+              <BellRing className="w-4 h-4" />
+              Ativar notificações
+            </Button>
+          )}
+        </div>
+      );
+    }
     return null;
   }
 
   return (
     <div className="space-y-3 mb-6">
+      {/* Notification controls */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <Bell className="w-4 h-4" />
+          {alerts.length} alerta{alerts.length > 1 ? 's' : ''} não lido{alerts.length > 1 ? 's' : ''}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className="gap-1 text-xs"
+            title={soundEnabled ? "Desativar som" : "Ativar som"}
+          >
+            {soundEnabled ? (
+              <Volume2 className="w-3 h-3" />
+            ) : (
+              <VolumeX className="w-3 h-3" />
+            )}
+          </Button>
+          {permission !== "granted" && isSupported && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={requestPermission}
+              className="gap-1 text-xs"
+            >
+              <BellRing className="w-3 h-3" />
+              Push
+            </Button>
+          )}
+        </div>
+      </div>
+      
+      {/* Alert cards */}
       {alerts.slice(0, 3).map((alert) => {
         const styles = getTypeStyles(alert.type);
         const isExpanded = expandedId === alert.id;
