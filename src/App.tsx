@@ -16,6 +16,8 @@ import DiagnosticHistory from "./pages/dashboard/DiagnosticHistory";
 import SolutionGuide from "./pages/dashboard/SolutionGuide";
 import UserProfile from "./pages/dashboard/UserProfile";
 import NotFound from "./pages/NotFound";
+import TechnicalReport from "./pages/TechnicalReport";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -67,6 +69,9 @@ const App = () => (
                 <UserProfile />
               </ProtectedRoute>
             } />
+            
+            {/* Public Report Page */}
+            <Route path="/relatorio-tecnico" element={<TechnicalReport />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
