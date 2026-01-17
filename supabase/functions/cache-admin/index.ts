@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface CacheAdminRequest {
-  action: "stats" | "clear-all" | "clear-expired" | "delete-entry";
+  action: "stats" | "clear-all" | "clear-expired" | "delete-entry" | "export" | "schedule-info" | "run-scheduled-cleanup";
   entryId?: string;
 }
 
@@ -208,6 +208,105 @@ Deno.serve(async (req) => {
         console.log(`Deleted cache entry: ${entryId}`);
         return new Response(
           JSON.stringify({ success: true, message: "Entry deleted" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "export": {
+        // Export all cache entries for backup
+        const { data: allEntries, error } = await supabase
+          .from("video_transcription_cache")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error exporting cache:", error);
+          return new Response(
+            JSON.stringify({ success: false, error: error.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        console.log(`Exported ${allEntries?.length || 0} cache entries`);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              exportDate: new Date().toISOString(),
+              totalEntries: allEntries?.length || 0,
+              entries: allEntries || [],
+            }
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "schedule-info": {
+        // Get scheduled cleanup info from system_settings
+        const { data: scheduleSetting } = await supabase
+          .from("system_settings")
+          .select("*")
+          .eq("key", "cache_auto_cleanup")
+          .maybeSingle();
+
+        const { data: lastCleanup } = await supabase
+          .from("system_settings")
+          .select("*")
+          .eq("key", "cache_last_cleanup")
+          .maybeSingle();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              enabled: scheduleSetting?.value === true || scheduleSetting?.value === "true",
+              schedule: "Semanalmente (Domingo às 03:00 UTC)",
+              lastCleanup: lastCleanup?.value || null,
+              lastCleanupDate: lastCleanup?.updated_at || null,
+            }
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "run-scheduled-cleanup": {
+        // Manual trigger for scheduled cleanup (also used by cron)
+        const { data: deleted, error } = await supabase
+          .from("video_transcription_cache")
+          .delete()
+          .lt("expires_at", new Date().toISOString())
+          .select("id");
+
+        if (error) {
+          console.error("Error in scheduled cleanup:", error);
+          return new Response(
+            JSON.stringify({ success: false, error: error.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Update last cleanup timestamp
+        const cleanupResult = {
+          deletedCount: deleted?.length || 0,
+          timestamp: new Date().toISOString(),
+        };
+
+        await supabase
+          .from("system_settings")
+          .upsert({
+            key: "cache_last_cleanup",
+            value: cleanupResult,
+            category: "cache",
+            description: "Last automatic cache cleanup result",
+          }, { onConflict: "key" });
+
+        console.log(`Scheduled cleanup: removed ${deleted?.length || 0} expired entries`);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: `Limpeza automática concluída: ${deleted?.length || 0} entradas removidas`,
+            data: cleanupResult,
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }

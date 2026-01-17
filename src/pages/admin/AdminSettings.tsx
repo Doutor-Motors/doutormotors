@@ -49,7 +49,10 @@ import {
   Sparkles,
   Clock,
   FileText,
-  Video
+  Video,
+  Calendar,
+  Play,
+  FileDown
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,6 +86,13 @@ interface CacheStats {
   }>;
 }
 
+interface ScheduleInfo {
+  enabled: boolean;
+  schedule: string;
+  lastCleanup: { deletedCount: number; timestamp: string } | null;
+  lastCleanupDate: string | null;
+}
+
 const AdminSettings = () => {
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [originalSettings, setOriginalSettings] = useState<Record<string, any>>({});
@@ -94,10 +104,14 @@ const AdminSettings = () => {
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
   const [loadingCache, setLoadingCache] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [scheduleInfo, setScheduleInfo] = useState<ScheduleInfo | null>(null);
+  const [runningCleanup, setRunningCleanup] = useState(false);
 
   useEffect(() => {
     fetchSettings();
     fetchCacheStats();
+    fetchScheduleInfo();
   }, []);
 
   useEffect(() => {
@@ -293,6 +307,74 @@ const AdminSettings = () => {
     } catch (error) {
       console.error("Error deleting cache entry:", error);
       toast.error("Erro ao remover entrada");
+  };
+
+  const handleExportCache = async () => {
+    setExporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cache-admin", {
+        body: { action: "export" },
+      });
+
+      if (error) throw error;
+      
+      if (data.success) {
+        const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: "application/json" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `cache-backup-${new Date().toISOString().split("T")[0]}.json`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        toast.success(`Cache exportado: ${data.data.totalEntries} entradas`);
+      } else {
+        toast.error(data.error || "Erro ao exportar cache");
+      }
+    } catch (error) {
+      console.error("Error exporting cache:", error);
+      toast.error("Erro ao exportar cache");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const fetchScheduleInfo = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("cache-admin", {
+        body: { action: "schedule-info" },
+      });
+
+      if (error) throw error;
+      
+      if (data.success) {
+        setScheduleInfo(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching schedule info:", error);
+    }
+  };
+
+  const handleRunScheduledCleanup = async () => {
+    setRunningCleanup(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cache-admin", {
+        body: { action: "run-scheduled-cleanup" },
+      });
+
+      if (error) throw error;
+      
+      if (data.success) {
+        toast.success(data.message);
+        fetchCacheStats();
+        fetchScheduleInfo();
+      } else {
+        toast.error(data.error || "Erro ao executar limpeza");
+      }
+    } catch (error) {
+      console.error("Error running cleanup:", error);
+      toast.error("Erro ao executar limpeza agendada");
+    } finally {
+      setRunningCleanup(false);
     }
   };
 
@@ -921,9 +1003,110 @@ const AdminSettings = () => {
                       </div>
                     </div>
                   </div>
+
+                  <Separator />
+
+                  {/* Export Cache */}
+                  <div className="space-y-2">
+                    <Label>Exportar Cache</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Exportar todas as transcrições em cache para backup JSON
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleExportCache} 
+                      className="w-full"
+                      disabled={exporting || (cacheStats?.totalEntries || 0) === 0}
+                    >
+                      {exporting ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <FileDown className="w-4 h-4 mr-2" />
+                      )}
+                      Exportar {cacheStats?.totalEntries || 0} Entradas
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Schedule Card */}
+            <Card className="border-dm-cadet/20">
+              <CardHeader>
+                <CardTitle className="font-chakra flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Limpeza Automática Agendada
+                </CardTitle>
+                <CardDescription>
+                  Agendamento semanal para remover cache expirado automaticamente
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Status:</span>
+                    <Badge className="bg-green-500/10 text-green-500 border-green-500/30">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Ativo
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Frequência:</span>
+                    <span className="text-sm font-medium">{scheduleInfo?.schedule || "Semanalmente (Domingo às 03:00 UTC)"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Última execução:</span>
+                    <span className="text-sm font-medium">
+                      {scheduleInfo?.lastCleanup ? (
+                        <>
+                          {formatDate(scheduleInfo.lastCleanup.timestamp)} 
+                          <span className="text-muted-foreground ml-1">
+                            ({scheduleInfo.lastCleanup.deletedCount} removidas)
+                          </span>
+                        </>
+                      ) : "Nunca executada"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRunScheduledCleanup}
+                    disabled={runningCleanup}
+                    className="flex-1"
+                  >
+                    {runningCleanup ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="w-4 h-4 mr-2" />
+                    )}
+                    Executar Agora
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={fetchScheduleInfo}
+                    className="flex-1"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Atualizar Info
+                  </Button>
+                </div>
+
+                <div className="bg-blue-500/10 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Sobre a limpeza automática</p>
+                      <p className="text-sm text-muted-foreground">
+                        A limpeza automática é executada semanalmente aos domingos às 03:00 UTC (00:00 BRT).
+                        Remove apenas entradas com cache expirado (mais de 30 dias), preservando transcrições ativas.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Recent Cache Entries */}
             {cacheStats?.recentEntries && cacheStats.recentEntries.length > 0 && (
