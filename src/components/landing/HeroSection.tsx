@@ -8,7 +8,7 @@ import textBarsLight from "@/assets/images/text-bars-light.png";
 const HeroSection = () => {
   return (
     <section 
-      className="relative min-h-screen pt-56 pb-20 overflow-hidden text-center lg:text-left"
+      className="relative min-h-screen pt-[450px] pb-20 overflow-hidden text-center lg:text-left"
       style={{ 
         backgroundImage: `url(${heroBg})`,
         backgroundRepeat: 'no-repeat',
@@ -16,6 +16,9 @@ const HeroSection = () => {
         backgroundPosition: 'center'
       }}
     >
+      {/* Espaçador entre logo e conteúdo */}
+      <div className="h-16" />
+      
       <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-10 items-center">
         {/* Content */}
         <div className="relative z-10 max-w-xl mx-auto lg:mx-0">
