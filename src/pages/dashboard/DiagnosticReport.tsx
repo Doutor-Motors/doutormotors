@@ -174,7 +174,7 @@ const DiagnosticReport = () => {
             O diagnóstico solicitado não existe ou você não tem permissão para visualizá-lo.
           </p>
           <Link to="/dashboard/history">
-            <Button className="font-chakra uppercase">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-chakra uppercase">
               Ver Histórico
             </Button>
           </Link>
@@ -341,7 +341,7 @@ const DiagnosticReport = () => {
 
                       <div className="flex items-center gap-3 flex-wrap">
                         <Link to={`/dashboard/solutions/${item.id}`}>
-                          <Button variant="default" className="font-chakra uppercase text-sm flex items-center gap-2">
+                          <Button variant="default" className="bg-primary text-primary-foreground hover:bg-primary/90 font-chakra uppercase text-sm flex items-center gap-2">
                             Ver Solução
                             <ChevronRight className="w-4 h-4" />
                           </Button>
@@ -349,7 +349,7 @@ const DiagnosticReport = () => {
                         {item.status !== 'resolved' && (
                           <Button 
                             variant="outline" 
-                            className="font-chakra uppercase text-sm"
+                            className="border-border text-foreground hover:bg-accent hover:text-accent-foreground font-chakra uppercase text-sm"
                             onClick={() => handleMarkResolved(item.id)}
                           >
                             <CheckCircle className="w-4 h-4 mr-2" />
