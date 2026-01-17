@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -10,6 +12,87 @@ interface CarCareRequest {
   year?: string;
   procedure?: string;
   query?: string;
+}
+
+interface CachedTranscription {
+  id: string;
+  video_url: string;
+  youtube_video_id: string | null;
+  original_transcription: string | null;
+  elaborated_steps: string[] | null;
+  translated_title: string | null;
+  translated_description: string | null;
+  translated_video_description: string | null;
+  transcription_used: boolean;
+  vehicle_context: string | null;
+  expires_at: string;
+}
+
+// Inicializar Supabase client
+function getSupabaseClient() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+// Verificar cache de transcrição
+async function getCachedTranscription(videoUrl: string): Promise<CachedTranscription | null> {
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from("video_transcription_cache")
+      .select("*")
+      .eq("video_url", videoUrl)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching cache:", error);
+      return null;
+    }
+
+    if (data) {
+      console.log("Cache hit for video:", videoUrl);
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Cache lookup error:", err);
+    return null;
+  }
+}
+
+// Salvar transcrição no cache
+async function saveToCache(cacheData: {
+  video_url: string;
+  youtube_video_id?: string;
+  original_transcription?: string;
+  elaborated_steps?: string[];
+  translated_title?: string;
+  translated_description?: string;
+  translated_video_description?: string;
+  transcription_used: boolean;
+  vehicle_context?: string;
+}): Promise<void> {
+  try {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase
+      .from("video_transcription_cache")
+      .upsert({
+        ...cacheData,
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+      }, {
+        onConflict: "video_url",
+      });
+
+    if (error) {
+      console.error("Error saving to cache:", error);
+    } else {
+      console.log("Saved to cache:", cacheData.video_url);
+    }
+  } catch (err) {
+    console.error("Cache save error:", err);
+  }
 }
 
 // Extrair áudio do YouTube e transcrever usando ElevenLabs
@@ -779,6 +862,22 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
     
     console.log(`Fetching video details from ${url}...`);
 
+    // ========== VERIFICAR CACHE PRIMEIRO ==========
+    const cached = await getCachedTranscription(url);
+    if (cached) {
+      console.log("Returning cached transcription data");
+      return {
+        title: cached.translated_title || "Tutorial",
+        description: cached.translated_description || "",
+        videoDescription: cached.translated_video_description || undefined,
+        videoUrl: cached.youtube_video_id ? `https://www.youtube.com/embed/${cached.youtube_video_id}` : null,
+        sourceUrl: url,
+        steps: cached.elaborated_steps || [],
+        transcriptionUsed: cached.transcription_used,
+        cached: true,
+      };
+    }
+
     const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: {
@@ -803,15 +902,18 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
     const metadata = data.data?.metadata || {};
     
     let videoEmbedUrl = null;
-    const iframeMatch = html.match(/src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/);
+    let youtubeVideoId: string | null = null;
+    const iframeMatch = html.match(/src="(https:\/\/www\.youtube\.com\/embed\/([^"?]+))"/);
     if (iframeMatch) {
       videoEmbedUrl = iframeMatch[1];
+      youtubeVideoId = iframeMatch[2];
     }
     
     if (!videoEmbedUrl) {
       const youtubeMatch = markdown.match(/youtube\.com\/(?:watch\?v=|embed\/)([a-zA-Z0-9_-]{11})/);
       if (youtubeMatch) {
-        videoEmbedUrl = `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+        youtubeVideoId = youtubeMatch[1];
+        videoEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}`;
       }
     }
 
@@ -875,6 +977,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
     // ========== PASSO A PASSO ELABORADO VIA TRANSCRIÇÃO ==========
     let elaboratedSteps: string[] = [];
     let transcriptionUsed = false;
+    let originalTranscription: string | null = null;
 
     // Tentar transcrever o vídeo do YouTube
     if (videoEmbedUrl) {
@@ -883,6 +986,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       
       if (transcription && transcription.length > 100) {
         console.log("Transcription successful, generating elaborated steps...");
+        originalTranscription = transcription;
         elaboratedSteps = await generateElaboratedSteps(transcription, title, vehicleContext);
         transcriptionUsed = elaboratedSteps.length > 0;
       }
@@ -906,7 +1010,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       videoDescription: videoDescription || undefined,
     });
 
-    return {
+    const result = {
       title: translatedMeta.title || title,
       description: translatedMeta.description || metadata.description || "",
       videoDescription: translatedMeta.videoDescription || videoDescription || undefined,
@@ -916,6 +1020,21 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       transcriptionUsed,
       markdown: markdown.slice(0, 5000),
     };
+
+    // ========== SALVAR NO CACHE ==========
+    await saveToCache({
+      video_url: url,
+      youtube_video_id: youtubeVideoId || undefined,
+      original_transcription: originalTranscription || undefined,
+      elaborated_steps: result.steps,
+      translated_title: result.title,
+      translated_description: result.description,
+      translated_video_description: result.videoDescription,
+      transcription_used: transcriptionUsed,
+      vehicle_context: vehicleContext,
+    });
+
+    return result;
   } catch (error) {
     console.error("Error fetching video details:", error);
     return null;

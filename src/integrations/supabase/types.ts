@@ -497,6 +497,54 @@ export type Database = {
         }
         Relationships: []
       }
+      video_transcription_cache: {
+        Row: {
+          created_at: string
+          elaborated_steps: Json | null
+          expires_at: string | null
+          id: string
+          original_transcription: string | null
+          transcription_used: boolean | null
+          translated_description: string | null
+          translated_title: string | null
+          translated_video_description: string | null
+          updated_at: string
+          vehicle_context: string | null
+          video_url: string
+          youtube_video_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          elaborated_steps?: Json | null
+          expires_at?: string | null
+          id?: string
+          original_transcription?: string | null
+          transcription_used?: boolean | null
+          translated_description?: string | null
+          translated_title?: string | null
+          translated_video_description?: string | null
+          updated_at?: string
+          vehicle_context?: string | null
+          video_url: string
+          youtube_video_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          elaborated_steps?: Json | null
+          expires_at?: string | null
+          id?: string
+          original_transcription?: string | null
+          transcription_used?: boolean | null
+          translated_description?: string | null
+          translated_title?: string | null
+          translated_video_description?: string | null
+          updated_at?: string
+          vehicle_context?: string | null
+          video_url?: string
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
