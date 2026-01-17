@@ -142,7 +142,11 @@ const StudyCarPage = () => {
               transition={{ duration: 0.3 }}
               className="container mx-auto px-4 py-8"
             >
-              <TutorialViewer content={tutorialContent} onClose={handleCloseViewer} />
+              <TutorialViewer 
+                content={tutorialContent} 
+                onClose={handleCloseViewer}
+                category={selectedCategory || selectedTutorial.category}
+              />
             </motion.div>
           ) : (
             <motion.div

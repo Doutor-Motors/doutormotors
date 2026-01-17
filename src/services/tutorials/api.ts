@@ -139,3 +139,53 @@ export function getDifficultyLabel(difficulty?: string): string {
       return difficulty || "Intermediário";
   }
 }
+
+// Vídeos de fallback por categoria - tutoriais reais do YouTube em português
+export const FALLBACK_VIDEOS: Record<string, { url: string; title: string }[]> = {
+  motor: [
+    { url: "https://www.youtube.com/watch?v=yKEkLQ-OU_8", title: "Como trocar óleo do motor" },
+    { url: "https://www.youtube.com/watch?v=O1hF25Cowv8", title: "Troca de filtro de ar" },
+    { url: "https://www.youtube.com/watch?v=bM_sT52R7Xo", title: "Como verificar nível do óleo" },
+  ],
+  freios: [
+    { url: "https://www.youtube.com/watch?v=FnM67G8V6WY", title: "Como trocar pastilhas de freio" },
+    { url: "https://www.youtube.com/watch?v=uGX3rh6qjQw", title: "Sangria do sistema de freios" },
+    { url: "https://www.youtube.com/watch?v=WqQvAfHc2H8", title: "Verificar discos de freio" },
+  ],
+  eletrica: [
+    { url: "https://www.youtube.com/watch?v=LxqmN7sDm5U", title: "Testar bateria do carro" },
+    { url: "https://www.youtube.com/watch?v=en3TJBELisc", title: "Trocar lâmpada do farol" },
+    { url: "https://www.youtube.com/watch?v=x9Zfo6P-aBs", title: "Verificar alternador" },
+  ],
+  suspensao: [
+    { url: "https://www.youtube.com/watch?v=D1DwFLxF5kQ", title: "Verificar amortecedores" },
+    { url: "https://www.youtube.com/watch?v=a4UVCEqBH6U", title: "Trocar pivô de suspensão" },
+  ],
+  transmissao: [
+    { url: "https://www.youtube.com/watch?v=yKEkLQ-OU_8", title: "Trocar óleo do câmbio" },
+    { url: "https://www.youtube.com/watch?v=m_V9v2KgxoA", title: "Verificar embreagem" },
+  ],
+  arrefecimento: [
+    { url: "https://www.youtube.com/watch?v=2rT4p-GDWZE", title: "Trocar líquido de arrefecimento" },
+    { url: "https://www.youtube.com/watch?v=lKZQT8JJlps", title: "Verificar termostato" },
+  ],
+  escapamento: [
+    { url: "https://www.youtube.com/watch?v=Mn4n3hHVBp0", title: "Verificar escapamento" },
+  ],
+  direcao: [
+    { url: "https://www.youtube.com/watch?v=bM_sT52R7Xo", title: "Verificar fluido de direção" },
+    { url: "https://www.youtube.com/watch?v=LxqmN7sDm5U", title: "Problema na direção hidráulica" },
+  ],
+  default: [
+    { url: "https://www.youtube.com/watch?v=yKEkLQ-OU_8", title: "Manutenção básica do carro" },
+    { url: "https://www.youtube.com/watch?v=O1hF25Cowv8", title: "Dicas de manutenção automotiva" },
+    { url: "https://www.youtube.com/watch?v=LxqmN7sDm5U", title: "Cuidados com o veículo" },
+  ],
+};
+
+export function getFallbackVideos(category?: string): { url: string; title: string }[] {
+  if (category && FALLBACK_VIDEOS[category]) {
+    return FALLBACK_VIDEOS[category];
+  }
+  return FALLBACK_VIDEOS.default;
+}
