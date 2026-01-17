@@ -1,40 +1,85 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import textBarsDark from "@/assets/images/text-bars-dark.png";
-import testimonial1 from "@/assets/images/testimonial-1.jpg";
-import testimonial2 from "@/assets/images/testimonial-2.jpg";
-import testimonial3 from "@/assets/images/testimonial-3.jpg";
 
-const testimonials = [
+// Pool of testimonial data to randomly select from
+const testimonialPool = [
   {
-    id: 1,
     name: "Carlos Silva",
     role: "Proprietário de Honda Civic",
-    image: testimonial1,
     rating: 5,
     text: "Salvou meu bolso! A luz do motor acendeu e o mecânico queria cobrar R$400 só pra ver o que era. Com o CarDoc, descobri que era só o sensor de oxigênio e resolvi sozinho seguindo o guia.",
   },
   {
-    id: 2,
     name: "Marina Santos",
     role: "Motorista de Fiat Argo",
-    image: testimonial2,
     rating: 5,
     text: "Finalmente entendo o que acontece com meu carro! Antes ficava perdida quando o mecânico falava códigos técnicos. Agora sei exatamente o que precisa de atenção urgente e o que pode esperar.",
   },
   {
-    id: 3,
     name: "Roberto Almeida",
     role: "Dono de oficina mecânica",
-    image: testimonial3,
     rating: 5,
     text: "Recomendo pros meus clientes! É uma ferramenta séria que ajuda as pessoas a entenderem seus carros. Meus clientes chegam mais informados e a comunicação fica muito mais fácil.",
   },
+  {
+    name: "Fernanda Costa",
+    role: "Motorista de Volkswagen Polo",
+    rating: 5,
+    text: "Economizei mais de R$800 em diagnósticos! O app me mostrou exatamente qual era o problema e o mecânico confirmou. Agora não vou mais às cegas para a oficina.",
+  },
+  {
+    name: "João Pedro Mendes",
+    role: "Entusiasta automotivo",
+    rating: 5,
+    text: "Como alguém que gosta de fazer manutenção própria, esse app é perfeito. Me ajuda a identificar problemas rapidamente e dá soluções passo a passo que posso seguir.",
+  },
+  {
+    name: "Luciana Ferreira",
+    role: "Motorista de Toyota Corolla",
+    rating: 5,
+    text: "Minha luz do motor acendia sempre e eu morria de medo. Agora sei que a maioria eram alertas simples. O app me dá tranquilidade e conhecimento sobre meu carro.",
+  },
+  {
+    name: "Ricardo Oliveira",
+    role: "Motorista de Chevrolet Onix",
+    rating: 5,
+    text: "Incrível como algo tão simples pode fazer tanta diferença. Conectei o OBD2, escaneei e em segundos tinha todas as informações que precisava. Super recomendo!",
+  },
+  {
+    name: "Patrícia Nascimento",
+    role: "Motorista de Hyundai HB20",
+    rating: 5,
+    text: "Estava com medo de ser enganada na oficina. Agora chego sabendo exatamente o que meu carro tem. A explicação em português simples faz toda a diferença!",
+  },
+  {
+    name: "André Souza",
+    role: "Motorista de Renault Sandero",
+    rating: 5,
+    text: "Melhor investimento que fiz pro meu carro depois do seguro. O app já me economizou muito dinheiro mostrando problemas que eu mesmo pude resolver.",
+  },
 ];
+
+// Function to shuffle and pick random testimonials
+const getRandomTestimonials = () => {
+  const shuffled = [...testimonialPool].sort(() => Math.random() - 0.5);
+  const selected = shuffled.slice(0, 3);
+  const timestamp = Date.now();
+  
+  return selected.map((testimonial, index) => ({
+    id: index + 1,
+    ...testimonial,
+    // Use thispersondoesnotexist.com with unique timestamp for each image
+    image: `https://thispersondoesnotexist.com/?t=${timestamp}-${index}-${Math.random()}`,
+  }));
+};
 
 const TestimonialsSection = () => {
   const [activeIndex, setActiveIndex] = useState(0);
+  
+  // Generate random testimonials on component mount
+  const testimonials = useMemo(() => getRandomTestimonials(), []);
 
   const nextTestimonial = () => {
     setActiveIndex((prev) => (prev + 1) % testimonials.length);
