@@ -32,7 +32,7 @@ const Header = () => {
       {/* Logo e nome fixos - fora do header */}
       <div className="fixed top-[-120px] left-8 md:left-16 flex flex-col items-start cursor-default z-50">
         <img src={logo} alt="Doutor Motors" className="h-[350px] w-[350px] object-contain -ml-[60px]" />
-        <span className="font-chakra text-primary-foreground text-2xl md:text-3xl font-bold tracking-wider -mt-[140px] -ml-[60px]">DOUTOR MOTORS</span>
+        <span className="font-chakra text-primary-foreground text-2xl md:text-3xl font-bold tracking-wider -mt-[140px] -ml-[56px]">DOUTOR MOTORS</span>
       </div>
 
       <header className={`absolute top-0 left-0 w-full z-40 px-4 md:px-10 ${isLandingPage ? "" : "bg-secondary"}`}>
