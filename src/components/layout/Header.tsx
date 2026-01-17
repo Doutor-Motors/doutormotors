@@ -50,8 +50,11 @@ const Header = () => {
           </div>
         </div>
 
+        {/* Linha divisória sutil - apenas desktop */}
+        <div className="hidden lg:block h-16 w-px bg-primary-foreground/20" />
+
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-8 flex-1">
           {navLinks.map((link) => (
             <Link
               key={link.name}
