@@ -33,6 +33,7 @@ import { fetchSolutionFromCarCareKiosk, FetchedSolution } from "@/services/solut
 import IntegratedContentViewer from "@/components/solutions/IntegratedContentViewer";
 import SourceSelector from "@/components/solutions/SourceSelector";
 import SolutionSteps from "@/components/solutions/SolutionSteps";
+import GlossaryPanel from "@/components/solutions/GlossaryPanel";
 
 interface SolutionData {
   title: string;
@@ -597,6 +598,15 @@ const SolutionGuide = () => {
                   </Card>
                 </a>
               )}
+            </div>
+            
+            {/* Glossário Automático */}
+            <div className="mt-6">
+              <GlossaryPanel
+                contextText={`${solution.title} ${solution.description} ${solution.steps.join(' ')} ${solution.tools.join(' ')} ${solution.parts.join(' ')} ${solution.warnings.join(' ')}`}
+                contextOnly={true}
+                defaultCollapsed={true}
+              />
             </div>
           </TabsContent>
         </Tabs>
