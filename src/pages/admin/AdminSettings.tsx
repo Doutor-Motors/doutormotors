@@ -307,6 +307,7 @@ const AdminSettings = () => {
     } catch (error) {
       console.error("Error deleting cache entry:", error);
       toast.error("Erro ao remover entrada");
+    }
   };
 
   const handleExportCache = async () => {
