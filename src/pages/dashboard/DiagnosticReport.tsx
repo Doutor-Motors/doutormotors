@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
 import { 
   AlertTriangle, 
   Activity, 
@@ -21,16 +21,22 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useValidUUID } from "@/hooks/useValidUUID";
 import { Diagnostic, DiagnosticItem, Vehicle } from "@/store/useAppStore";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const DiagnosticReport = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const invalidIdHandled = useRef(false);
+  
+  const { isValid, validId } = useValidUUID({
+    id,
+    redirectTo: "/dashboard/history",
+    errorTitle: "Erro ao carregar diagnóstico",
+    errorDescription: "Link de diagnóstico inválido. Selecione um diagnóstico no histórico.",
+  });
   
   const [isLoading, setIsLoading] = useState(true);
   const [diagnostic, setDiagnostic] = useState<Diagnostic | null>(null);
@@ -39,21 +45,8 @@ const DiagnosticReport = () => {
 
   useEffect(() => {
     const fetchDiagnostic = async () => {
-      if (!user) return;
-      
-      // Validate UUID format
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!id || !uuidRegex.test(id)) {
-        if (invalidIdHandled.current) return;
-        invalidIdHandled.current = true;
-
-        toast({
-          title: "Erro ao carregar diagnóstico",
-          description: "Link de diagnóstico inválido. Selecione um diagnóstico no histórico.",
-          variant: "destructive",
-        });
+      if (!user || !isValid || !validId) {
         setIsLoading(false);
-        navigate("/dashboard/history", { replace: true });
         return;
       }
 
@@ -100,7 +93,7 @@ const DiagnosticReport = () => {
     };
 
     fetchDiagnostic();
-  }, [id, user, navigate, toast]);
+  }, [validId, user, isValid, toast]);
 
   const handleMarkResolved = async (itemId: string) => {
     const { error } = await supabase
