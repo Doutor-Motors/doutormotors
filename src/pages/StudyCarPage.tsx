@@ -39,6 +39,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { getBrandImage, getModelImage } from "@/utils/carImages";
 
 // Types
 interface CarBrand {
@@ -568,7 +569,7 @@ const StudyCarPage = () => {
                           >
                             <div className="aspect-[4/3] relative bg-muted">
                               <img
-                                src={brand.image}
+                                src={getBrandImage(brand.name)}
                                 alt={brand.name}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                 onError={(e) => {
@@ -656,7 +657,7 @@ const StudyCarPage = () => {
                           >
                             <div className="aspect-[4/3] relative bg-muted">
                               <img
-                                src={model.image}
+                                src={getModelImage(selectedBrand?.name || '', model.name)}
                                 alt={model.name}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                 onError={(e) => {
