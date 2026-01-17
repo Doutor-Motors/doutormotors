@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertTriangle, Shield, FileText, ExternalLink } from "lucide-react";
+import { AlertTriangle, Shield, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,7 +37,6 @@ const TermsAcceptanceModal = ({ isOpen, onAccepted, userId }: TermsAcceptanceMod
     setIsLoading(true);
 
     try {
-      // Registrar todos os aceites
       const consents = [
         { consent_type: 'terms_of_use', consent_version: CURRENT_VERSION },
         { consent_type: 'privacy_policy', consent_version: CURRENT_VERSION },
@@ -80,122 +79,136 @@ const TermsAcceptanceModal = ({ isOpen, onAccepted, userId }: TermsAcceptanceMod
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden" onPointerDownOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle className="font-chakra text-xl uppercase flex items-center gap-2">
-            <Shield className="w-6 h-6 text-primary" />
-            Termos de Uso - Doutor Motors
+      <DialogContent 
+        className="w-[95vw] max-w-lg sm:max-w-xl md:max-w-2xl p-4 sm:p-6 max-h-[85vh] flex flex-col" 
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="flex-shrink-0 space-y-2">
+          <DialogTitle className="font-chakra text-base sm:text-lg md:text-xl uppercase flex items-center gap-2">
+            <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+            <span>Termos de Uso</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             Por favor, leia e aceite nossos termos antes de continuar.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-6">
+        <ScrollArea className="flex-1 min-h-0 pr-2 sm:pr-4 my-2 sm:my-4">
+          <div className="space-y-4 sm:space-y-5">
             {/* Aviso Principal */}
-            <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-3 sm:p-4">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-orange-800 dark:text-orange-300 mb-2">
+                  <h3 className="font-semibold text-orange-800 dark:text-orange-300 text-sm sm:text-base mb-1">
                     Aviso Importante
                   </h3>
-                  <p className="text-sm text-orange-700 dark:text-orange-400">
+                  <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-400">
                     O Doutor Motors é uma <strong>plataforma informativa e educativa</strong>. 
-                    Não somos uma oficina mecânica e não prestamos serviços de reparo automotivo.
+                    Não somos uma oficina mecânica e não prestamos serviços de reparo.
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Termos de Uso */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
                 Termos de Uso
               </h3>
-              <div className="text-sm text-muted-foreground space-y-2 pl-7">
-                <p>1. <strong>Natureza Informativa:</strong> Todo conteúdo disponibilizado é de caráter educativo e informativo. Não fornecemos instruções diretas de reparo.</p>
-                <p>2. <strong>Links Externos:</strong> Quando indicamos tutoriais ou guias, estes são de fontes externas (como CarCareKiosk) e abrem em nova aba. O conteúdo desses sites é de responsabilidade deles.</p>
-                <p>3. <strong>Classificação de Risco:</strong> Sempre indicamos o nível de risco e complexidade de cada problema diagnosticado.</p>
-                <p>4. <strong>Recomendação Profissional:</strong> Problemas críticos ou que envolvam sistemas de segurança (freios, direção, suspensão, airbags) devem SEMPRE ser avaliados e reparados por profissionais qualificados.</p>
+              <div className="text-xs sm:text-sm text-muted-foreground space-y-1.5 pl-6 sm:pl-7">
+                <p>• <strong>Natureza Informativa:</strong> Todo conteúdo é de caráter educativo.</p>
+                <p>• <strong>Links Externos:</strong> Tutoriais são de fontes externas.</p>
+                <p>• <strong>Classificação de Risco:</strong> Indicamos nível de risco de cada problema.</p>
+                <p>• <strong>Recomendação:</strong> Problemas críticos devem ser avaliados por profissionais.</p>
               </div>
             </div>
 
             {/* Isenção de Responsabilidade */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-orange-500" />
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
+                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 flex-shrink-0" />
                 Isenção de Responsabilidade
               </h3>
-              <div className="text-sm text-muted-foreground space-y-2 pl-7">
-                <p>1. <strong>Sem Garantia:</strong> Não garantimos a precisão, completude ou aplicabilidade das informações fornecidas para seu veículo específico.</p>
-                <p>2. <strong>Decisão do Usuário:</strong> Qualquer ação tomada com base nas informações é de inteira responsabilidade do usuário.</p>
-                <p>3. <strong>Sem Responsabilidade por Danos:</strong> Não nos responsabilizamos por quaisquer danos, lesões ou prejuízos decorrentes de reparos realizados por você ou por terceiros.</p>
-                <p>4. <strong>Consulte um Profissional:</strong> Sempre recomendamos consultar um mecânico qualificado antes de realizar qualquer reparo.</p>
+              <div className="text-xs sm:text-sm text-muted-foreground space-y-1.5 pl-6 sm:pl-7">
+                <p>• <strong>Sem Garantia:</strong> Não garantimos precisão para seu veículo específico.</p>
+                <p>• <strong>Decisão do Usuário:</strong> Ações são de sua responsabilidade.</p>
+                <p>• <strong>Sem Responsabilidade:</strong> Não nos responsabilizamos por danos.</p>
+                <p>• <strong>Consulte um Profissional:</strong> Sempre recomendamos isso.</p>
               </div>
             </div>
 
             {/* Privacidade - LGPD */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground flex items-center gap-2">
-                <Shield className="w-5 h-5 text-green-500" />
-                Privacidade e Dados (LGPD)
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
+                Privacidade (LGPD)
               </h3>
-              <div className="text-sm text-muted-foreground space-y-2 pl-7">
-                <p>1. <strong>Dados Coletados:</strong> Armazenamos dados do veículo (marca, modelo, ano) e histórico de diagnósticos associados à sua conta.</p>
-                <p>2. <strong>Uso dos Dados:</strong> Usamos seus dados apenas para fornecer o serviço de diagnóstico e melhorar sua experiência.</p>
-                <p>3. <strong>Não Compartilhamos:</strong> Não vendemos ou compartilhamos seus dados com terceiros para fins de marketing.</p>
-                <p>4. <strong>Direito à Exclusão:</strong> Você pode solicitar a exclusão completa dos seus dados a qualquer momento através do seu perfil.</p>
-                <p>5. <strong>Consentimento:</strong> Ao usar a plataforma, você consente com a coleta e uso dos dados conforme descrito.</p>
+              <div className="text-xs sm:text-sm text-muted-foreground space-y-1.5 pl-6 sm:pl-7">
+                <p>• <strong>Dados:</strong> Armazenamos dados do veículo e diagnósticos.</p>
+                <p>• <strong>Uso:</strong> Dados usados apenas para fornecer o serviço.</p>
+                <p>• <strong>Não Compartilhamos:</strong> Não vendemos seus dados.</p>
+                <p>• <strong>Exclusão:</strong> Você pode solicitar exclusão dos dados.</p>
               </div>
             </div>
           </div>
         </ScrollArea>
 
-        <div className="space-y-4 pt-4 border-t">
+        <div className="flex-shrink-0 space-y-3 sm:space-y-4 pt-3 sm:pt-4 border-t">
           {/* Checkboxes de aceite */}
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
+          <div className="space-y-2 sm:space-y-3">
+            <label 
+              htmlFor="terms" 
+              className="flex items-start gap-2 sm:gap-3 cursor-pointer hover:bg-muted/50 p-1.5 sm:p-2 rounded-md transition-colors"
+            >
               <Checkbox
                 id="terms"
                 checked={acceptedTerms}
                 onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                className="mt-0.5 flex-shrink-0"
               />
-              <label htmlFor="terms" className="text-sm text-foreground cursor-pointer">
+              <span className="text-xs sm:text-sm text-foreground leading-tight">
                 Li e aceito os <strong>Termos de Uso</strong> e entendo que esta é uma plataforma informativa.
-              </label>
-            </div>
+              </span>
+            </label>
 
-            <div className="flex items-start gap-3">
+            <label 
+              htmlFor="privacy" 
+              className="flex items-start gap-2 sm:gap-3 cursor-pointer hover:bg-muted/50 p-1.5 sm:p-2 rounded-md transition-colors"
+            >
               <Checkbox
                 id="privacy"
                 checked={acceptedPrivacy}
                 onCheckedChange={(checked) => setAcceptedPrivacy(checked as boolean)}
+                className="mt-0.5 flex-shrink-0"
               />
-              <label htmlFor="privacy" className="text-sm text-foreground cursor-pointer">
-                Li e aceito a <strong>Política de Privacidade</strong> e o uso dos meus dados conforme descrito.
-              </label>
-            </div>
+              <span className="text-xs sm:text-sm text-foreground leading-tight">
+                Li e aceito a <strong>Política de Privacidade</strong> e o uso dos meus dados.
+              </span>
+            </label>
 
-            <div className="flex items-start gap-3">
+            <label 
+              htmlFor="liability" 
+              className="flex items-start gap-2 sm:gap-3 cursor-pointer hover:bg-muted/50 p-1.5 sm:p-2 rounded-md transition-colors"
+            >
               <Checkbox
                 id="liability"
                 checked={acceptedLiability}
                 onCheckedChange={(checked) => setAcceptedLiability(checked as boolean)}
+                className="mt-0.5 flex-shrink-0"
               />
-              <label htmlFor="liability" className="text-sm text-foreground cursor-pointer">
-                Entendo e aceito a <strong>Isenção de Responsabilidade</strong>, reconhecendo que qualquer reparo é de minha inteira responsabilidade.
-              </label>
-            </div>
+              <span className="text-xs sm:text-sm text-foreground leading-tight">
+                Entendo e aceito a <strong>Isenção de Responsabilidade</strong>.
+              </span>
+            </label>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="pt-2">
             <Button
               onClick={handleAccept}
               disabled={!canProceed || isLoading}
-              className="w-full font-chakra uppercase"
+              className="w-full font-chakra uppercase text-sm sm:text-base py-2 sm:py-2.5"
             >
               {isLoading ? "Salvando..." : "Aceitar e Continuar"}
             </Button>
