@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
 import { 
   ArrowLeft,
   Loader2,
@@ -22,6 +22,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useValidUUID } from "@/hooks/useValidUUID";
 import { DiagnosticItem, Vehicle } from "@/store/useAppStore";
 import { getSolutionForDTC } from "@/services/solutions/recommender";
 
@@ -43,10 +44,15 @@ interface SolutionData {
 
 const SolutionGuide = () => {
   const { diagnosticItemId } = useParams<{ diagnosticItemId: string }>();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { notifySuccess, notifyError } = useNotifications();
-  const invalidIdHandled = useRef(false);
+  
+  const { isValid, validId } = useValidUUID({
+    id: diagnosticItemId,
+    redirectTo: "/dashboard/history",
+    errorTitle: "Link inválido",
+    errorDescription: "Selecione uma solução a partir do relatório de diagnóstico.",
+  });
   
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<DiagnosticItem | null>(null);
@@ -55,17 +61,8 @@ const SolutionGuide = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return;
-
-      // Validate UUID format
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!diagnosticItemId || !uuidRegex.test(diagnosticItemId)) {
-        if (invalidIdHandled.current) return;
-        invalidIdHandled.current = true;
-
-        notifyError('Link inválido', 'Selecione uma solução a partir do relatório de diagnóstico.');
+      if (!user || !isValid || !validId) {
         setIsLoading(false);
-        navigate("/dashboard/history", { replace: true });
         return;
       }
 
@@ -117,7 +114,7 @@ const SolutionGuide = () => {
     };
 
     fetchData();
-  }, [diagnosticItemId, user, navigate, notifyError]);
+  }, [validId, user, isValid, notifyError]);
 
   const handleMarkResolved = async () => {
     if (!item) return;
