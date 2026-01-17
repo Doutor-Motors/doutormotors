@@ -35,7 +35,7 @@ export interface Diagnostic {
   vehicle_id: string;
   user_id: string;
   status: 'pending' | 'completed' | 'resolved';
-  obd_raw_data: Record<string, unknown> | null;
+  obd_raw_data: unknown;
   notes: string | null;
   created_at: string;
   updated_at: string;

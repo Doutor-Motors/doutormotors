@@ -11,10 +11,11 @@ import SignUpPage from "./pages/SignUpPage";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import VehicleManager from "./pages/dashboard/VehicleManager";
 import DiagnosticCenter from "./pages/dashboard/DiagnosticCenter";
+import DiagnosticReport from "./pages/dashboard/DiagnosticReport";
 import DiagnosticHistory from "./pages/dashboard/DiagnosticHistory";
+import SolutionGuide from "./pages/dashboard/SolutionGuide";
 import UserProfile from "./pages/dashboard/UserProfile";
 import NotFound from "./pages/NotFound";
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -48,7 +49,12 @@ const App = () => (
             } />
             <Route path="/dashboard/diagnostics/:id" element={
               <ProtectedRoute>
-                <DiagnosticCenter />
+                <DiagnosticReport />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/solutions/:diagnosticItemId" element={
+              <ProtectedRoute>
+                <SolutionGuide />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/history" element={
