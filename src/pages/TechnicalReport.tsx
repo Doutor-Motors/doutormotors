@@ -29,9 +29,8 @@ const TechnicalReport = () => {
       <div className="no-print bg-dm-space text-primary-foreground border-b sticky top-0 z-50 p-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Button 
-            variant="outline" 
             onClick={() => navigate(-1)} 
-            className="flex items-center gap-2 border-white/50 text-white hover:bg-white hover:text-dm-space"
+            className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-dm-blue-3"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="font-chakra uppercase">Voltar</span>
