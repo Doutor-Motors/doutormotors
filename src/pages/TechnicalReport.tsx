@@ -31,7 +31,7 @@ const TechnicalReport = () => {
           <Button 
             variant="outline" 
             onClick={() => navigate(-1)} 
-            className="flex items-center gap-2 border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground hover:text-dm-space"
+            className="flex items-center gap-2 border-white/50 text-white hover:bg-white hover:text-dm-space"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="font-chakra uppercase">Voltar</span>
