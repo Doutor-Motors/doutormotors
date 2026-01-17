@@ -54,11 +54,14 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       <aside className="hidden lg:flex flex-col w-64 bg-gradient-to-b from-dm-space via-dm-blue-2 to-dm-space text-primary-foreground">
         <div className="p-6 border-b border-dm-cadet/20">
           <div className="flex items-center justify-between">
-            <Link to="/admin" className="flex items-center gap-2">
-              <img src={logo} alt="Doutor Motors" className="w-24" />
-              <span className="font-chakra text-xs uppercase text-primary bg-primary/20 px-2 py-1 rounded">
-                Admin
-              </span>
+            <Link to="/admin" className="flex flex-col items-center">
+              <img src={logo} alt="Doutor Motors" className="h-[90px] w-[130px] object-contain" />
+              <div className="flex items-center gap-2 -mt-[40px]">
+                <span className="font-chakra text-primary-foreground text-[10px] font-bold tracking-wider">DOUTOR MOTORS</span>
+                <span className="font-chakra text-[8px] uppercase text-primary bg-primary/20 px-1.5 py-0.5 rounded">
+                  Admin
+                </span>
+              </div>
             </Link>
             {unreadCount > 0 && (
               <button
@@ -119,11 +122,14 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-dm-space z-40 px-4 py-3 flex items-center justify-between">
-        <Link to="/admin" className="flex items-center gap-2">
-          <img src={logo} alt="Doutor Motors" className="w-20" />
-          <span className="font-chakra text-xs uppercase text-primary bg-primary/20 px-2 py-1 rounded">
-            Admin
-          </span>
+        <Link to="/admin" className="flex flex-col items-center">
+          <img src={logo} alt="Doutor Motors" className="h-[60px] w-[90px] object-contain" />
+          <div className="flex items-center gap-1 -mt-[25px]">
+            <span className="font-chakra text-primary-foreground text-[8px] font-bold tracking-wider">DOUTOR MOTORS</span>
+            <span className="font-chakra text-[6px] uppercase text-primary bg-primary/20 px-1 py-0.5 rounded">
+              Admin
+            </span>
+          </div>
         </Link>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (

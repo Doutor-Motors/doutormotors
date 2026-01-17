@@ -76,8 +76,9 @@ const LoginPage = () => {
     >
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link to="/" className="flex justify-center mb-8">
-          <img src={logo} alt="Doutor Motors" className="w-32" />
+        <Link to="/" className="flex flex-col items-center mb-8">
+          <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
+          <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
         </Link>
 
         {/* Card */}

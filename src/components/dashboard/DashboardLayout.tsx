@@ -42,9 +42,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     <div className="min-h-screen bg-background flex">
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-dm-space text-primary-foreground">
-        <div className="p-6">
-          <Link to="/">
-            <img src={logo} alt="Doutor Motors" className="w-28" />
+        <div className="p-6 border-b border-dm-cadet/20">
+          <Link to="/" className="flex flex-col items-center">
+            <img src={logo} alt="Doutor Motors" className="h-[100px] w-[150px] object-contain" />
+            <span className="font-chakra text-primary-foreground text-xs font-bold tracking-wider -mt-[45px]">DOUTOR MOTORS</span>
           </Link>
         </div>
 
@@ -85,8 +86,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-dm-space z-40 px-4 py-3 flex items-center justify-between">
-        <Link to="/">
-          <img src={logo} alt="Doutor Motors" className="w-24" />
+        <Link to="/" className="flex flex-col items-center">
+          <img src={logo} alt="Doutor Motors" className="h-[70px] w-[100px] object-contain" />
+          <span className="font-chakra text-primary-foreground text-[10px] font-bold tracking-wider -mt-[30px]">DOUTOR MOTORS</span>
         </Link>
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
