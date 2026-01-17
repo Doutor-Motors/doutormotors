@@ -1,20 +1,22 @@
 import { useState } from "react";
-import { ArrowLeft, Clock, Wrench, AlertTriangle, CheckCircle, ExternalLink, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ArrowLeft, Clock, Wrench, AlertTriangle, CheckCircle, ExternalLink, ChevronLeft, ChevronRight, Play, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { TutorialContent, getDifficultyColor } from "@/services/tutorials/api";
+import { TutorialContent, getDifficultyColor, getFallbackVideos } from "@/services/tutorials/api";
 
 interface TutorialViewerProps {
   content: TutorialContent;
   onClose: () => void;
+  category?: string;
 }
 
-const TutorialViewer = ({ content, onClose }: TutorialViewerProps) => {
+const TutorialViewer = ({ content, onClose, category }: TutorialViewerProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
 
   const totalSteps = content.steps.length;
   const progress = (completedSteps.size / totalSteps) * 100;
@@ -43,7 +45,11 @@ const TutorialViewer = ({ content, onClose }: TutorialViewerProps) => {
     return match ? `https://www.youtube.com/embed/${match[1]}` : null;
   };
 
-  const youtubeEmbedUrl = getYouTubeEmbedUrl(content.videoUrl);
+  // Usa vídeo do conteúdo ou fallback por categoria
+  const fallbackVideos = getFallbackVideos(category);
+  const primaryVideoUrl = content.videoUrl || fallbackVideos[0]?.url;
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(primaryVideoUrl);
+  const currentFallbackVideo = fallbackVideos[selectedVideoIndex];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -75,43 +81,63 @@ const TutorialViewer = ({ content, onClose }: TutorialViewerProps) => {
         </CardContent>
       </Card>
 
-      {/* Video Section */}
-      {(youtubeEmbedUrl || content.videoUrl) && (
-        <Card className="overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="font-chakra text-lg flex items-center gap-2">
-              <Play className="w-5 h-5 text-primary" />
-              Vídeo Tutorial
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
+      {/* Video Section - Always shows */}
+      <Card className="overflow-hidden border-2 border-primary/20">
+        <CardHeader className="pb-2 bg-gradient-to-r from-primary/10 to-transparent">
+          <CardTitle className="font-chakra text-lg flex items-center gap-2">
+            <Video className="w-5 h-5 text-primary" />
+            Vídeos Tutorial
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {/* Video Player */}
+          <div className="aspect-video w-full bg-black">
             {youtubeEmbedUrl ? (
-              <div className="aspect-video w-full">
-                <iframe
-                  src={youtubeEmbedUrl}
-                  title={content.title}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+              <iframe
+                src={getYouTubeEmbedUrl(content.videoUrl || fallbackVideos[selectedVideoIndex]?.url) || ''}
+                title={content.title}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white">
+                <Play className="w-16 h-16 opacity-50" />
               </div>
-            ) : content.videoUrl ? (
-              <div className="p-4">
-                <a
-                  href={content.videoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-primary hover:underline"
-                >
-                  <Play className="w-5 h-5" />
-                  Assistir vídeo externo
-                  <ExternalLink className="w-4 h-4" />
-                </a>
+            )}
+          </div>
+          
+          {/* Video Selection Cards */}
+          {fallbackVideos.length > 0 && (
+            <div className="p-4 bg-muted/30">
+              <p className="text-sm font-medium text-muted-foreground mb-3">Vídeos Relacionados:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {fallbackVideos.map((video, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedVideoIndex(index)}
+                    className={`p-3 rounded-lg border-2 transition-all text-left hover:border-primary/50 ${
+                      selectedVideoIndex === index 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border bg-card'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className={`p-2 rounded-full ${selectedVideoIndex === index ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                        <Play className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{video.title}</p>
+                        <p className="text-xs text-muted-foreground">YouTube</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Info Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
