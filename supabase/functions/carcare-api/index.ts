@@ -877,6 +877,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           steps: cached.elaborated_steps || [],
           transcriptionUsed: cached.transcription_used,
           fromCache: true,
+          cacheExpiresAt: cached.expires_at,
         };
       }
     } else {
