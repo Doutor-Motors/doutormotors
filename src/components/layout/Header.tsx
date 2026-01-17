@@ -34,13 +34,13 @@ const Header = () => {
   return (
     <>
       {/* Logo e nome fixos - fora do header */}
-      <div className={`absolute left-8 md:left-16 flex flex-col items-start cursor-default z-50 ${isCompactLogo ? "top-[-60px]" : "top-[-120px]"}`}>
+      <div className={`absolute left-8 md:left-16 flex flex-col items-start cursor-default z-50 ${isCompactLogo ? "top-[-80px]" : "top-[-120px]"}`}>
         <img 
           src={logo} 
           alt="Doutor Motors" 
-          className={`object-contain ${isCompactLogo ? "h-[200px] w-[200px] -ml-[35px]" : "h-[350px] w-[350px] -ml-[60px]"}`} 
+          className={`object-contain ${isCompactLogo ? "h-[250px] w-[250px] -ml-[45px]" : "h-[350px] w-[350px] -ml-[60px]"}`} 
         />
-        <span className={`font-chakra text-primary-foreground font-bold tracking-wider ${isCompactLogo ? "text-lg md:text-xl -mt-[80px] -ml-[28px]" : "text-2xl md:text-3xl -mt-[140px] -ml-[48px]"}`}>
+        <span className={`font-chakra text-primary-foreground font-bold tracking-wider ${isCompactLogo ? "text-xl md:text-2xl -mt-[100px] -ml-[38px]" : "text-2xl md:text-3xl -mt-[140px] -ml-[48px]"}`}>
           DOUTOR MOTORS
         </span>
       </div>
