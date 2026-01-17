@@ -138,8 +138,9 @@ const ResetPasswordPage = () => {
         }}
       >
         <div className="w-full max-w-md animate-fade-in">
-          <Link to="/" className="flex justify-center mb-8 hover-scale">
-            <img src={logo} alt="Doutor Motors" className="w-32" />
+          <Link to="/" className="flex flex-col items-center mb-8 hover-scale">
+            <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
+            <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
           </Link>
 
           <div className="bg-card rounded-lg shadow-2xl p-8 text-center animate-scale-in">
@@ -185,8 +186,9 @@ const ResetPasswordPage = () => {
     >
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
-        <Link to="/" className="flex justify-center mb-8 hover-scale">
-          <img src={logo} alt="Doutor Motors" className="w-32" />
+        <Link to="/" className="flex flex-col items-center mb-8 hover-scale">
+          <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
+          <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
         </Link>
 
         {/* Card */}
