@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/useNotifications";
-import logo from "@/assets/images/logo.png";
+import logo from "@/assets/images/logo-new.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
 const ForgotPasswordPage = () => {

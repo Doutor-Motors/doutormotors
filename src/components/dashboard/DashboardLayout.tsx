@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import logo from "@/assets/images/logo.png";
+import logo from "@/assets/images/logo-new.png";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;

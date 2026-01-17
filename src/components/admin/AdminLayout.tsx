@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminNotification } from "@/contexts/AdminNotificationContext";
-import logo from "@/assets/images/logo.png";
+import logo from "@/assets/images/logo-new.png";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
