@@ -4,8 +4,8 @@ import { ArrowRight, Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNotifications } from "@/hooks/useNotifications";
 import logo from "@/assets/images/logo.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -13,28 +13,20 @@ const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const { toast } = useToast();
+  const { notifySuccess, notifyError, notifyWarning } = useNotifications();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email) {
-      toast({
-        title: "Erro",
-        description: "Preencha o campo de email.",
-        variant: "destructive",
-      });
+      notifyWarning('Campo obrigatório', 'Preencha o campo de email.');
       return;
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      toast({
-        title: "Erro",
-        description: "Digite um email válido.",
-        variant: "destructive",
-      });
+      notifyError('Email inválido', 'Digite um email válido.');
       return;
     }
 
@@ -50,17 +42,10 @@ const ForgotPasswordPage = () => {
       }
 
       setEmailSent(true);
-      toast({
-        title: "Email enviado!",
-        description: "Verifique sua caixa de entrada para redefinir sua senha.",
-      });
+      notifySuccess('Email enviado!', 'Verifique sua caixa de entrada para redefinir sua senha.');
     } catch (error: any) {
       console.error("Error sending reset email:", error);
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível enviar o email. Tente novamente.",
-        variant: "destructive",
-      });
+      notifyError('Erro ao enviar', error.message || 'Não foi possível enviar o email. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
