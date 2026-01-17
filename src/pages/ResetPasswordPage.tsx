@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Eye, EyeOff, Lock, CheckCircle, ShieldCheck, AlertCircle } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, CheckCircle, ShieldCheck, AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,14 @@ const ResetPasswordPage = () => {
   const [hasValidSession, setHasValidSession] = useState<boolean | null>(null);
   const navigate = useNavigate();
   const { notifySuccess, notifyError, notifyWarning } = useNotifications();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
+  };
 
   useEffect(() => {
     // Check if user has a valid recovery session
@@ -137,11 +145,22 @@ const ResetPasswordPage = () => {
           backgroundPosition: 'center'
         }}
       >
+        {/* Botão Voltar Fixo */}
+        <Button
+          variant="ghost"
+          onClick={handleBack}
+          className="fixed top-4 left-4 z-50 text-primary-foreground hover:bg-primary-foreground/10 gap-2 font-chakra uppercase text-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="hidden sm:inline">Voltar</span>
+        </Button>
+
         <div className="w-full max-w-md animate-fade-in">
-          <Link to="/" className="flex flex-col items-center mb-8 hover-scale">
+          {/* Logo sem link de redirecionamento */}
+          <div className="flex flex-col items-center mb-8 cursor-default">
             <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
             <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
-          </Link>
+          </div>
 
           <div className="bg-card rounded-lg shadow-2xl p-8 text-center animate-scale-in">
             <div className="w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -184,12 +203,22 @@ const ResetPasswordPage = () => {
         backgroundPosition: 'center'
       }}
     >
+      {/* Botão Voltar Fixo */}
+      <Button
+        variant="ghost"
+        onClick={handleBack}
+        className="fixed top-4 left-4 z-50 text-primary-foreground hover:bg-primary-foreground/10 gap-2 font-chakra uppercase text-sm"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="hidden sm:inline">Voltar</span>
+      </Button>
+
       <div className="w-full max-w-md animate-fade-in">
-        {/* Logo */}
-        <Link to="/" className="flex flex-col items-center mb-8 hover-scale">
+        {/* Logo sem link de redirecionamento */}
+        <div className="flex flex-col items-center mb-8 cursor-default">
           <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
           <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
-        </Link>
+        </div>
 
         {/* Card */}
         <div className="bg-card rounded-lg shadow-2xl p-8 animate-scale-in">
@@ -355,13 +384,6 @@ const ResetPasswordPage = () => {
               </form>
             </>
           )}
-        </div>
-
-        {/* Back to Home */}
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-dm-cadet hover:text-primary-foreground text-sm transition-colors">
-            ← Voltar para o início
-          </Link>
         </div>
       </div>
     </div>

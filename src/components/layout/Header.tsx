@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, ArrowRight } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/images/logo-new.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -18,13 +19,36 @@ const Header = () => {
 
   const isLandingPage = location.pathname === "/";
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
+  };
+
   return (
     <header className={`absolute top-0 left-0 w-full z-50 px-4 md:px-10 py-6 ${isLandingPage ? "" : "bg-secondary"}`}>
       <div className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="flex flex-col items-center">
-          <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
-          <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
-        </Link>
+        <div className="flex items-center gap-4">
+          {/* Botão Voltar - aparece em todas as páginas exceto landing */}
+          {!isLandingPage && (
+            <Button
+              variant="ghost"
+              onClick={handleBack}
+              className="text-primary-foreground hover:bg-primary-foreground/10 gap-2 font-chakra uppercase text-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Voltar</span>
+            </Button>
+          )}
+          
+          {/* Logo sem link de redirecionamento */}
+          <div className="flex flex-col items-center cursor-default">
+            <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
+            <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
+          </div>
+        </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-8">

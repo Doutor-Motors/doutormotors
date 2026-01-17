@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,15 @@ const ForgotPasswordPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const { notifySuccess, notifyError, notifyWarning } = useNotifications();
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,12 +70,22 @@ const ForgotPasswordPage = () => {
         backgroundPosition: 'center'
       }}
     >
+      {/* Botão Voltar Fixo */}
+      <Button
+        variant="ghost"
+        onClick={handleBack}
+        className="fixed top-4 left-4 z-50 text-primary-foreground hover:bg-primary-foreground/10 gap-2 font-chakra uppercase text-sm"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="hidden sm:inline">Voltar</span>
+      </Button>
+
       <div className="w-full max-w-md animate-fade-in">
-        {/* Logo */}
-        <Link to="/" className="flex flex-col items-center mb-8 hover-scale">
+        {/* Logo sem link de redirecionamento */}
+        <div className="flex flex-col items-center mb-8 cursor-default">
           <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
           <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
-        </Link>
+        </div>
 
         {/* Card */}
         <div className="bg-card rounded-lg shadow-2xl p-8 animate-scale-in">
@@ -181,13 +200,6 @@ const ForgotPasswordPage = () => {
               </div>
             </>
           )}
-        </div>
-
-        {/* Back to Home */}
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-dm-cadet hover:text-primary-foreground text-sm transition-colors">
-            ← Voltar para o início
-          </Link>
         </div>
       </div>
     </div>
