@@ -15,7 +15,7 @@ const Footer = () => {
         <div className="container mx-auto px-4 grid md:grid-cols-3 gap-10 relative z-10">
           {/* Brand */}
           <div>
-            <Link to="/" className="flex flex-col items-center mb-4">
+            <Link to="/" className="flex flex-col items-start mb-4">
               <img src={logo} alt="Doutor Motors" className="h-[100px] w-auto object-contain" />
               <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[29px]">DOUTOR MOTORS</span>
             </Link>
