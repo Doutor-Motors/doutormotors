@@ -23,6 +23,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useLegalConsent } from "@/hooks/useLegalConsent";
 import { useOBDConnection } from "@/components/obd/useOBDConnection";
 import TermsAcceptanceModal from "@/components/legal/TermsAcceptanceModal";
+import SystemAlertsBanner from "@/components/notifications/SystemAlertsBanner";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Vehicle = Tables<"vehicles">;
@@ -190,6 +191,9 @@ const UserDashboard = () => {
       )}
 
       <div className="space-y-6">
+        {/* System Alerts Banner */}
+        <SystemAlertsBanner />
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

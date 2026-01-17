@@ -35,6 +35,7 @@ import AdminMessages from "./pages/admin/AdminMessages";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminLogs from "./pages/admin/AdminLogs";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminAlerts from "./pages/admin/AdminAlerts";
 import NotFound from "./pages/NotFound";
 import TechnicalReport from "./pages/TechnicalReport";
 import StudyCarPage from "./pages/StudyCarPage";
@@ -96,6 +97,7 @@ const App = () => (
                 <Route path="/admin/reports" element={<ProtectedRoute><AdminProtectedRoute><AdminReports /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/logs" element={<ProtectedRoute><AdminProtectedRoute><AdminLogs /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/settings" element={<ProtectedRoute><AdminProtectedRoute><AdminSettings /></AdminProtectedRoute></ProtectedRoute>} />
+                <Route path="/admin/alerts" element={<ProtectedRoute><AdminProtectedRoute><AdminAlerts /></AdminProtectedRoute></ProtectedRoute>} />
                 
                 {/* Public Pages */}
                 <Route path="/relatorio-tecnico" element={<TechnicalReport />} />

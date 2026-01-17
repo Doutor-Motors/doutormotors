@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.fetch-tutorial]
 verify_jwt = false
+
+[functions.send-system-alert]
+verify_jwt = false
