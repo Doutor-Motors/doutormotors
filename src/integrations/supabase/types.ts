@@ -14,16 +14,213 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      diagnostic_items: {
+        Row: {
+          can_diy: boolean
+          created_at: string
+          description_human: string
+          diagnostic_id: string
+          diy_difficulty: number | null
+          dtc_code: string
+          id: string
+          priority: Database["public"]["Enums"]["diagnostic_priority"]
+          probable_causes: string[] | null
+          severity: number
+          solution_url: string | null
+          status: Database["public"]["Enums"]["diagnostic_status"]
+          updated_at: string
+        }
+        Insert: {
+          can_diy?: boolean
+          created_at?: string
+          description_human: string
+          diagnostic_id: string
+          diy_difficulty?: number | null
+          dtc_code: string
+          id?: string
+          priority?: Database["public"]["Enums"]["diagnostic_priority"]
+          probable_causes?: string[] | null
+          severity?: number
+          solution_url?: string | null
+          status?: Database["public"]["Enums"]["diagnostic_status"]
+          updated_at?: string
+        }
+        Update: {
+          can_diy?: boolean
+          created_at?: string
+          description_human?: string
+          diagnostic_id?: string
+          diy_difficulty?: number | null
+          dtc_code?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["diagnostic_priority"]
+          probable_causes?: string[] | null
+          severity?: number
+          solution_url?: string | null
+          status?: Database["public"]["Enums"]["diagnostic_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_items_diagnostic_id_fkey"
+            columns: ["diagnostic_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diagnostics: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          obd_raw_data: Json | null
+          status: Database["public"]["Enums"]["diagnostic_status"]
+          updated_at: string
+          user_id: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          obd_raw_data?: Json | null
+          status?: Database["public"]["Enums"]["diagnostic_status"]
+          updated_at?: string
+          user_id: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          obd_raw_data?: Json | null
+          status?: Database["public"]["Enums"]["diagnostic_status"]
+          updated_at?: string
+          user_id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostics_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          brand: string
+          created_at: string
+          engine: string | null
+          fuel_type: string | null
+          id: string
+          license_plate: string | null
+          model: string
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          engine?: string | null
+          fuel_type?: string | null
+          id?: string
+          license_plate?: string | null
+          model: string
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          engine?: string | null
+          fuel_type?: string | null
+          id?: string
+          license_plate?: string | null
+          model?: string
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      diagnostic_priority: "critical" | "attention" | "preventive"
+      diagnostic_status: "pending" | "completed" | "resolved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +347,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      diagnostic_priority: ["critical", "attention", "preventive"],
+      diagnostic_status: ["pending", "completed", "resolved"],
+    },
   },
 } as const
