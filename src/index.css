@@ -61,6 +61,14 @@
     --sidebar-border: 222 50% 11%;
     --sidebar-ring: 1 91% 37%;
 
+    /* Notification Colors */
+    --warning: 48 96% 50%;
+    --warning-foreground: 48 96% 5%;
+    --success: 142 76% 36%;
+    --success-foreground: 142 76% 95%;
+    --info: 215 91% 54%;
+    --info-foreground: 215 91% 95%;
+
     /* Tipografia */
     --ff-chakra-petch: 'Chakra Petch', sans-serif;
     --ff-mulish: 'Mulish', sans-serif;

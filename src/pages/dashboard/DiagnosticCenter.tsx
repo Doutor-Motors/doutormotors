@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +55,7 @@ const DiagnosticCenter = () => {
   const [diagnosticItems, setDiagnosticItems] = useState<DiagnosticItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { notifyDiagnosticStarted, notifyDiagnosticComplete, notifyCriticalAlert, notifyAttentionAlert, notifyError, notifySuccess } = useNotifications();
 
   // Fetch vehicles if not loaded
   useEffect(() => {
@@ -104,6 +106,7 @@ const DiagnosticCenter = () => {
         title: "Conectado!",
         description: "Adaptador OBD2 conectado com sucesso.",
       });
+      notifySuccess("OBD2 Conectado", "Adaptador detectado e pronto para diagnóstico");
     }, 2000);
   };
 
@@ -137,6 +140,7 @@ const DiagnosticCenter = () => {
     setDiagnosticStatus("running");
     setProgress(0);
     setDiagnosticItems([]);
+    notifyDiagnosticStarted();
 
     // Simulate progress
     const interval = setInterval(() => {
@@ -196,6 +200,16 @@ const DiagnosticCenter = () => {
           title: "Diagnóstico concluído!",
           description: `${result.items.length} item(s) encontrado(s).`,
         });
+        notifyDiagnosticComplete();
+        
+        // Notificar alertas críticos e de atenção
+        result.items.forEach((item: any) => {
+          if (item.priority === 'critical') {
+            notifyCriticalAlert(item.dtc_code, item.description_human);
+          } else if (item.priority === 'attention') {
+            notifyAttentionAlert(item.dtc_code, item.description_human);
+          }
+        });
       } else {
         throw new Error(result.error || 'Erro desconhecido');
       }
@@ -203,11 +217,13 @@ const DiagnosticCenter = () => {
       clearInterval(interval);
       setProgress(0);
       setDiagnosticStatus("idle");
+      const errorMessage = error instanceof Error ? error.message : "Erro ao executar diagnóstico";
       toast({
         title: "Erro no diagnóstico",
-        description: error instanceof Error ? error.message : "Erro ao executar diagnóstico",
+        description: errorMessage,
         variant: "destructive",
       });
+      notifyError("Erro no diagnóstico", errorMessage);
     }
   };
 
