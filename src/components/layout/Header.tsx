@@ -20,7 +20,7 @@ const Header = () => {
   const isLandingPage = location.pathname === "/";
   
   // Páginas onde a logo e nome devem ser menores
-  const compactLogoPages = ["/sobre", "/servicos", "/como-funciona", "/contato", "/termos", "/privacidade"];
+  const compactLogoPages = ["/sobre", "/servicos", "/como-funciona", "/contato", "/termos", "/privacidade", "/faq"];
   const isCompactLogo = compactLogoPages.includes(location.pathname);
 
   const handleBack = () => {
