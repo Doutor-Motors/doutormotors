@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
@@ -21,18 +23,48 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/dashboard" element={<UserDashboard />} />
-          <Route path="/dashboard/vehicles" element={<VehicleManager />} />
-          <Route path="/dashboard/diagnostics" element={<DiagnosticCenter />} />
-          <Route path="/dashboard/diagnostics/:id" element={<DiagnosticCenter />} />
-          <Route path="/dashboard/history" element={<DiagnosticHistory />} />
-          <Route path="/profile" element={<UserProfile />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
+            
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <UserDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/vehicles" element={
+              <ProtectedRoute>
+                <VehicleManager />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/diagnostics" element={
+              <ProtectedRoute>
+                <DiagnosticCenter />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/diagnostics/:id" element={
+              <ProtectedRoute>
+                <DiagnosticCenter />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/history" element={
+              <ProtectedRoute>
+                <DiagnosticHistory />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <UserProfile />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

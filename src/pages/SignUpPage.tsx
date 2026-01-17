@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/images/logo.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -17,9 +18,26 @@ const SignUpPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signUp, user, loading } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!name || !email || !password || !confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast({
@@ -39,18 +57,56 @@ const SignUpPage = () => {
       return;
     }
 
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "Erro",
+        description: "Digite um email válido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulação de cadastro - será substituído por Supabase
-    setTimeout(() => {
-      setIsLoading(false);
+    const { error } = await signUp(email, password, name);
+
+    setIsLoading(false);
+
+    if (error) {
+      let errorMessage = "Erro ao criar conta. Tente novamente.";
+      
+      if (error.message.includes("User already registered")) {
+        errorMessage = "Este email já está cadastrado.";
+      } else if (error.message.includes("Password should be at least")) {
+        errorMessage = "A senha deve ter pelo menos 6 caracteres.";
+      } else if (error.message.includes("Invalid email")) {
+        errorMessage = "Digite um email válido.";
+      }
+
       toast({
-        title: "Conta criada com sucesso!",
-        description: "Redirecionando para o dashboard...",
+        title: "Erro ao criar conta",
+        description: errorMessage,
+        variant: "destructive",
       });
-      navigate("/dashboard");
-    }, 1500);
+      return;
+    }
+
+    toast({
+      title: "Conta criada com sucesso!",
+      description: "Verifique seu email para confirmar o cadastro, ou faça login se a confirmação estiver desativada.",
+    });
+    navigate("/login");
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -92,6 +148,7 @@ const SignUpPage = () => {
                   onChange={(e) => setName(e.target.value)}
                   className="pl-10 bg-background border-border focus:border-primary"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -108,6 +165,7 @@ const SignUpPage = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 bg-background border-border focus:border-primary"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -124,6 +182,7 @@ const SignUpPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10 bg-background border-border focus:border-primary"
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -147,6 +206,7 @@ const SignUpPage = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="pl-10 bg-background border-border focus:border-primary"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
