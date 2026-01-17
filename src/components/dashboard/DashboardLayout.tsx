@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAdminNotification } from "@/contexts/AdminNotificationContext";
-import logo from "@/assets/images/logo-new.png";
+import logo from "@/assets/images/logo-new-car.png";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -68,10 +68,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-dm-space text-primary-foreground">
         <div className="p-6 border-b border-dm-cadet/20">
-          {/* Logo sem link de redirecionamento */}
-          <div className="flex flex-col items-center cursor-default">
-            <img src={logo} alt="Doutor Motors" className="h-[100px] w-[150px] object-contain" />
-            <span className="font-chakra text-primary-foreground text-xs font-bold tracking-wider -mt-[45px]">DOUTOR MOTORS</span>
+          {/* Logo igual ao Footer */}
+          <div className="flex flex-col items-start cursor-default">
+            <img src={logo} alt="Doutor Motors" className="h-[100px] w-auto object-contain -ml-1" />
+            <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[29px] ml-1">DOUTOR MOTORS</span>
           </div>
         </div>
 
@@ -128,10 +128,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          {/* Logo sem link de redirecionamento */}
-          <div className="flex flex-col items-center cursor-default">
-            <img src={logo} alt="Doutor Motors" className="h-[70px] w-[100px] object-contain" />
-            <span className="font-chakra text-primary-foreground text-[10px] font-bold tracking-wider -mt-[30px]">DOUTOR MOTORS</span>
+          {/* Logo igual ao Footer */}
+          <div className="flex flex-col items-start cursor-default">
+            <img src={logo} alt="Doutor Motors" className="h-[70px] w-auto object-contain -ml-1" />
+            <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[20px] ml-1">DOUTOR MOTORS</span>
           </div>
         </div>
         <button
