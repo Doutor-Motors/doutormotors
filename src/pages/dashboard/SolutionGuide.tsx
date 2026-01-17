@@ -12,7 +12,8 @@ import {
   Youtube,
   BookOpen,
   ShoppingCart,
-  Activity
+  Activity,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useValidUUID } from "@/hooks/useValidUUID";
 import { DiagnosticItem, Vehicle } from "@/store/useAppStore";
-import { getSolutionForDTC } from "@/services/solutions/recommender";
+import { getSolutionForDTC, getYouTubeSearchUrl } from "@/services/solutions/recommender";
+import { fetchSolutionFromCarCareKiosk, FetchedSolution } from "@/services/solutions/api";
 
 interface SolutionData {
   title: string;
@@ -40,12 +42,13 @@ interface SolutionData {
   shopUrl?: string;
   warnings: string[];
   professionalRecommended: boolean;
+  sourceUrl?: string;
 }
 
 const SolutionGuide = () => {
   const { diagnosticItemId } = useParams<{ diagnosticItemId: string }>();
   const { user } = useAuth();
-  const { notifySuccess, notifyError } = useNotifications();
+  const { notifySuccess, notifyError, notifyInfo } = useNotifications();
   
   const { isValid, validId } = useValidUUID({
     id: diagnosticItemId,
@@ -55,9 +58,46 @@ const SolutionGuide = () => {
   });
   
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingAI, setIsFetchingAI] = useState(false);
   const [item, setItem] = useState<DiagnosticItem | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [solution, setSolution] = useState<SolutionData | null>(null);
+  const [usedAI, setUsedAI] = useState(false);
+
+  const fetchAISolution = async (diagnosticItem: DiagnosticItem, vehicleData: Vehicle) => {
+    setIsFetchingAI(true);
+    notifyInfo("Buscando solução", "Consultando base de dados CarCareKiosk...");
+
+    try {
+      const response = await fetchSolutionFromCarCareKiosk({
+        dtcCode: diagnosticItem.dtc_code,
+        vehicleBrand: vehicleData.brand,
+        vehicleModel: vehicleData.model,
+        vehicleYear: vehicleData.year,
+        problemDescription: diagnosticItem.description_human,
+      });
+
+      if (response.success && response.solution) {
+        const aiSolution: SolutionData = {
+          ...response.solution,
+          videoUrl: getYouTubeSearchUrl(vehicleData.brand, vehicleData.model, diagnosticItem.dtc_code),
+          articleUrl: response.solution.sourceUrl,
+          shopUrl: `https://www.mercadolivre.com.br/jm/search?as_word=${encodeURIComponent(`${vehicleData.brand} ${vehicleData.model}`)}`,
+        };
+        setSolution(aiSolution);
+        setUsedAI(true);
+        notifySuccess("Solução encontrada!", "Guia detalhado gerado com sucesso.");
+      } else {
+        console.error("AI solution error:", response.error);
+        notifyError("Erro ao buscar", response.error || "Usando solução padrão");
+      }
+    } catch (error) {
+      console.error("Error fetching AI solution:", error);
+      notifyError("Erro de conexão", "Não foi possível buscar a solução online");
+    } finally {
+      setIsFetchingAI(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,8 +139,8 @@ const SolutionGuide = () => {
 
       setVehicle(vehicleData);
 
-      // Get solution from recommender
-      const solutionData = getSolutionForDTC(
+      // First, set fallback solution from local recommender
+      const fallbackSolution = getSolutionForDTC(
         itemData.dtc_code,
         vehicleData ? {
           brand: vehicleData.brand,
@@ -108,9 +148,13 @@ const SolutionGuide = () => {
           year: vehicleData.year,
         } : undefined
       );
-
-      setSolution(solutionData);
+      setSolution(fallbackSolution);
       setIsLoading(false);
+
+      // Then try to fetch AI-powered solution from CarCareKiosk
+      if (vehicleData) {
+        fetchAISolution(itemData, vehicleData);
+      }
     };
 
     fetchData();
@@ -219,6 +263,17 @@ const SolutionGuide = () => {
             <p className="text-muted-foreground">
               {item.dtc_code} - {vehicle ? `${vehicle.brand} ${vehicle.model}` : 'Veículo'}
             </p>
+            {isFetchingAI && (
+              <div className="flex items-center gap-2 text-sm text-primary">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Buscando solução detalhada...</span>
+              </div>
+            )}
+            {usedAI && !isFetchingAI && (
+              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                ✓ Solução via CarCareKiosk + IA
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -320,7 +375,7 @@ const SolutionGuide = () => {
             <CardTitle className="font-chakra uppercase">{solution.title}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <p className="text-muted-foreground">{solution.description}</p>
+            <p className="text-muted-foreground leading-relaxed">{solution.description}</p>
 
             <Separator />
 
@@ -432,6 +487,17 @@ const SolutionGuide = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {vehicle && !isFetchingAI && (
+            <Button 
+              size="lg" 
+              variant="secondary"
+              className="font-chakra uppercase"
+              onClick={() => fetchAISolution(item, vehicle)}
+            >
+              <RefreshCw className="w-5 h-5 mr-2" />
+              Atualizar Solução
+            </Button>
+          )}
           {item.status !== 'resolved' && (
             <Button 
               size="lg" 
