@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useAdminNotification } from "@/contexts/AdminNotificationContext";
 import logo from "@/assets/images/logo-new.png";
 
 interface DashboardLayoutProps {
@@ -40,10 +41,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { isAdmin } = useAdmin();
+  const { unreadCount } = useAdminNotification();
 
   // Build menu items dynamically based on admin status
   const menuItems = isAdmin 
-    ? [...baseMenuItems, { icon: Shield, label: "Admin", path: "/admin" }]
+    ? [...baseMenuItems, { icon: Shield, label: "Admin", path: "/admin", showBadge: true }]
     : baseMenuItems;
 
   const handleLogout = async () => {
@@ -77,6 +79,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
+              const showNotificationBadge = 'showBadge' in item && item.showBadge && unreadCount > 0;
               return (
                 <li key={item.path}>
                   <Link
@@ -89,6 +92,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   >
                     <item.icon className="w-5 h-5" />
                     <span>{item.label}</span>
+                    {showNotificationBadge && (
+                      <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
                 </li>
               );
@@ -145,6 +153,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <ul className="space-y-2">
                 {menuItems.map((item) => {
                   const isActive = location.pathname === item.path;
+                  const showNotificationBadge = 'showBadge' in item && item.showBadge && unreadCount > 0;
                   return (
                     <li key={item.path}>
                       <Link
@@ -158,7 +167,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                       >
                         <item.icon className="w-5 h-5" />
                         <span>{item.label}</span>
-                        <ChevronRight className="w-4 h-4 ml-auto" />
+                        {showNotificationBadge ? (
+                          <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        ) : (
+                          <ChevronRight className="w-4 h-4 ml-auto" />
+                        )}
                       </Link>
                     </li>
                   );
