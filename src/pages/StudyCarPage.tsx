@@ -60,6 +60,7 @@ interface VideoCategory {
 interface VideoDetails {
   title: string;
   description?: string;
+  videoDescription?: string; // Full "Video Description" from CarCareKiosk sidebar
   videoUrl?: string;
   sourceUrl?: string;
   steps?: string[];
@@ -972,7 +973,7 @@ const StudyCarPage = () => {
                           <h2 className="font-chakra font-bold text-xl mb-2">
                             {videoDetails?.title || `${selectedProcedure?.name || selectedCategory.name} - ${selectedBrand.name} ${selectedModel.name}`}
                           </h2>
-                          {videoDetails?.description && (
+                          {videoDetails?.description && !videoDetails?.videoDescription && (
                             <p className="text-muted-foreground">{videoDetails.description}</p>
                           )}
                           
@@ -989,6 +990,25 @@ const StudyCarPage = () => {
                             </Button>
                           )}
                         </CardContent>
+                        
+                        {/* Video Description Section */}
+                        {videoDetails?.videoDescription && (
+                          <div className="border-t">
+                            <CardContent className="p-6">
+                              <h3 className="font-chakra font-bold text-lg mb-4 flex items-center gap-2">
+                                <BookOpen className="w-5 h-5 text-primary" />
+                                Video Description
+                              </h3>
+                              <div className="prose prose-sm max-w-none text-muted-foreground">
+                                {videoDetails.videoDescription.split('\n\n').map((paragraph, idx) => (
+                                  <p key={idx} className="mb-4 last:mb-0 leading-relaxed">
+                                    {paragraph}
+                                  </p>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </div>
+                        )}
                       </Card>
 
                       {/* Steps */}

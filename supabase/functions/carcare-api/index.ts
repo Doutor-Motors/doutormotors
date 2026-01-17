@@ -479,9 +479,53 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string): Promise<any>
       }
     }
 
+    // Extract "Video Description" section from the sidebar
+    let videoDescription = "";
+    
+    // Try to find "Video Description" heading and its content
+    const videoDescRegex = /Video\s*Description[\s\S]*?<\/h[23]>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi;
+    const descMatches: string[] = [];
+    let descMatch;
+    while ((descMatch = videoDescRegex.exec(html)) !== null) {
+      const content = descMatch[1].replace(/<[^>]+>/g, '').trim();
+      if (content.length > 50) {
+        descMatches.push(content);
+      }
+    }
+    
+    if (descMatches.length > 0) {
+      videoDescription = descMatches.join('\n\n');
+    }
+    
+    // Alternative: Try to extract from markdown (often has better formatting)
+    if (!videoDescription && markdown) {
+      const markdownDescRegex = /Video\s*Description[\s\n]+([\s\S]+?)(?=\n##|\n\*\*[A-Z]|$)/i;
+      const mdMatch = markdown.match(markdownDescRegex);
+      if (mdMatch) {
+        videoDescription = mdMatch[1]
+          .replace(/\*\*/g, '')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+      }
+    }
+
+    // Fallback: Look for any substantial paragraph content after main content area
+    if (!videoDescription) {
+      const paragraphRegex = /<p[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/p>/gi;
+      while ((descMatch = paragraphRegex.exec(html)) !== null) {
+        const content = descMatch[1].replace(/<[^>]+>/g, '').trim();
+        if (content.length > 100) {
+          videoDescription += (videoDescription ? '\n\n' : '') + content;
+        }
+      }
+    }
+
+    console.log(`Extracted video description: ${videoDescription.slice(0, 100)}...`);
+
     return {
       title,
       description: metadata.description || "",
+      videoDescription: videoDescription || undefined,
       videoUrl: videoEmbedUrl,
       sourceUrl: url,
       steps,
