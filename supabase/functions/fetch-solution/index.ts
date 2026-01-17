@@ -134,23 +134,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    const systemPrompt = `Você é um especialista em diagnóstico e reparo automotivo. Sua função é criar guias de solução claros, detalhados e didáticos em português brasileiro.
+    const systemPrompt = `Você é um especialista em diagnóstico e reparo automotivo. Sua função é criar guias de solução claros, detalhados e didáticos EXCLUSIVAMENTE em português brasileiro (pt-BR).
+
+⚠️ REGRA CRÍTICA DE IDIOMA:
+- TODO o conteúdo gerado DEVE estar em PORTUGUÊS BRASILEIRO
+- NUNCA use palavras em inglês - SEMPRE traduza para português
+- Traduza termos técnicos para português (ex: "spark plug" = "vela de ignição", "throttle body" = "corpo de borboleta", "mass air flow" = "sensor de fluxo de ar")
+- Se a fonte estiver em inglês, traduza COMPLETAMENTE para português
+- Nomes de ferramentas devem estar em português (ex: "socket wrench" = "chave soquete", "multimeter" = "multímetro")
 
 CONTEXTO DO PROBLEMA:
 - Veículo: ${vehicleBrand} ${vehicleModel} ${vehicleYear}
 - Código DTC: ${dtcCode}
 - Descrição: ${problemDescription}
 
-${scrapedContent ? `INFORMAÇÕES DE REFERÊNCIA DO CARCAREKIOSK:
+${scrapedContent ? `INFORMAÇÕES DE REFERÊNCIA (podem estar em inglês - TRADUZA TUDO):
 ${scrapedContent.substring(0, 4000)}` : ""}
 
 INSTRUÇÕES:
-1. Crie um guia de solução completo e didático
-2. Use linguagem clara e acessível para leigos
+1. Crie um guia de solução completo e didático EM PORTUGUÊS BRASILEIRO
+2. Use linguagem clara e acessível para leigos brasileiros
 3. Inclua avisos de segurança quando necessário
-4. Estime custos em Reais (R$)
+4. Estime custos em Reais (R$) com base no mercado brasileiro
 5. Seja específico para o veículo mencionado
-6. Se o reparo for complexo, recomende um profissional`;
+6. Se o reparo for complexo, recomende um profissional
+7. TRADUZA absolutamente TUDO para português - sem exceções`;
 
     const userPrompt = `Crie um guia completo de solução para o código ${dtcCode} no ${vehicleBrand} ${vehicleModel} ${vehicleYear}.`;
 
