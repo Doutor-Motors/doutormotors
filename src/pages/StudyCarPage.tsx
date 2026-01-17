@@ -33,8 +33,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import BackButton from "@/components/ui/back-button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { supabase } from "@/integrations/supabase/client";
@@ -393,9 +393,14 @@ const StudyCarPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
+      {/* Back Button Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="container mx-auto px-4 py-3">
+          <BackButton variant="ghost" label="Voltar" />
+        </div>
+      </div>
       
-      <main className="flex-1 pt-24 md:pt-28">
+      <main className="flex-1 pt-16">
         <AnimatePresence mode="wait">
           {/* BRANDS VIEW */}
           {currentView === "brands" && (
