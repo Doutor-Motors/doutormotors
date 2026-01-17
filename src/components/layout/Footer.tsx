@@ -19,7 +19,7 @@ const Footer = () => {
               <img src={logo} alt="Doutor Motors" className="h-[100px] w-auto object-contain" />
               <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[29px]">DOUTOR MOTORS</span>
             </Link>
-            <p className="text-white/80 mb-5 text-sm leading-relaxed">
+            <p className="text-white/80 mb-5 text-sm leading-relaxed text-center">
               Doutor Motors é seu diagnóstico automotivo inteligente. 
               Entenda os problemas do seu veículo e saiba como resolver.
             </p>
