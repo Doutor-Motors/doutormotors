@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/images/logo.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -15,21 +16,64 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn, user, loading } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulação de login - será substituído por Supabase
-    setTimeout(() => {
-      setIsLoading(false);
+    const { error } = await signIn(email, password);
+
+    setIsLoading(false);
+
+    if (error) {
+      let errorMessage = "Erro ao fazer login. Tente novamente.";
+      
+      if (error.message.includes("Invalid login credentials")) {
+        errorMessage = "Email ou senha incorretos.";
+      } else if (error.message.includes("Email not confirmed")) {
+        errorMessage = "Confirme seu email antes de fazer login.";
+      }
+
       toast({
-        title: "Login bem-sucedido!",
-        description: "Redirecionando para o dashboard...",
+        title: "Erro ao entrar",
+        description: errorMessage,
+        variant: "destructive",
       });
-      navigate("/dashboard");
-    }, 1500);
+      return;
+    }
+
+    toast({
+      title: "Login bem-sucedido!",
+      description: "Redirecionando para o dashboard...",
+    });
+    navigate("/dashboard");
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -71,6 +115,7 @@ const LoginPage = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 bg-background border-border focus:border-primary"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -87,6 +132,7 @@ const LoginPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10 bg-background border-border focus:border-primary"
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
