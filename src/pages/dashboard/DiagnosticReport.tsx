@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
   AlertTriangle, 
   Activity, 
@@ -27,8 +27,10 @@ import { ptBR } from "date-fns/locale";
 
 const DiagnosticReport = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const invalidIdHandled = useRef(false);
   
   const [isLoading, setIsLoading] = useState(true);
   const [diagnostic, setDiagnostic] = useState<Diagnostic | null>(null);
@@ -42,12 +44,16 @@ const DiagnosticReport = () => {
       // Validate UUID format
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!id || !uuidRegex.test(id)) {
+        if (invalidIdHandled.current) return;
+        invalidIdHandled.current = true;
+
         toast({
           title: "Erro ao carregar diagnóstico",
-          description: "ID de diagnóstico inválido",
+          description: "Link de diagnóstico inválido. Selecione um diagnóstico no histórico.",
           variant: "destructive",
         });
         setIsLoading(false);
+        navigate("/dashboard/history", { replace: true });
         return;
       }
 
@@ -94,7 +100,7 @@ const DiagnosticReport = () => {
     };
 
     fetchDiagnostic();
-  }, [id, user]);
+  }, [id, user, navigate, toast]);
 
   const handleMarkResolved = async (itemId: string) => {
     const { error } = await supabase
