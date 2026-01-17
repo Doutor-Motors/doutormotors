@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { 
   Car, 
@@ -8,84 +8,141 @@ import {
   Clock,
   Plus,
   ChevronRight,
-  Bluetooth,
-  Wifi
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useAppStore } from "@/store/useAppStore";
+import OBDConnector from "@/components/obd/OBDConnector";
+import type { Tables } from "@/integrations/supabase/types";
 
-// Mock data - será substituído por dados reais do Supabase
-const mockVehicle = {
-  id: "1",
-  brand: "Volkswagen",
-  model: "Golf",
-  year: 2020,
-  engine: "1.4 TSI",
-  fuelType: "Flex",
-};
+type Vehicle = Tables<"vehicles">;
+type DiagnosticItem = Tables<"diagnostic_items">;
 
-const mockAlerts = [
-  {
-    id: "1",
-    code: "P0300",
-    title: "Falhas múltiplas de ignição",
-    priority: "critical",
-    description: "Problema detectado no sistema de ignição",
-  },
-  {
-    id: "2",
-    code: "P0420",
-    title: "Catalisador abaixo da eficiência",
-    priority: "attention",
-    description: "O catalisador pode precisar de substituição",
-  },
-];
-
-const mockLastDiagnostic = {
-  date: "2024-01-15",
-  totalIssues: 3,
-  critical: 1,
-  attention: 1,
-  preventive: 1,
-};
+interface DiagnosticWithItems {
+  id: string;
+  created_at: string;
+  vehicle_id: string;
+  items: DiagnosticItem[];
+}
 
 const UserDashboard = () => {
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { user } = useAuth();
+  const { activeVehicleId, setActiveVehicleId } = useAppStore();
+  
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
+  const [recentAlerts, setRecentAlerts] = useState<DiagnosticItem[]>([]);
+  const [stats, setStats] = useState({ critical: 0, attention: 0, preventive: 0, total: 0 });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleConnectOBD = () => {
-    setIsConnecting(true);
-    // Simulação de conexão
-    setTimeout(() => {
-      setIsConnecting(false);
-    }, 2000);
+  const obd = OBDConnector({});
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user, activeVehicleId]);
+
+  const fetchData = async () => {
+    if (!user) return;
+    setIsLoading(true);
+
+    try {
+      // Fetch vehicles
+      const { data: vehiclesData } = await supabase
+        .from('vehicles')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (vehiclesData) {
+        setVehicles(vehiclesData);
+        
+        // Set active vehicle
+        const active = activeVehicleId 
+          ? vehiclesData.find(v => v.id === activeVehicleId) 
+          : vehiclesData[0];
+        
+        if (active) {
+          setActiveVehicle(active);
+          if (!activeVehicleId) {
+            setActiveVehicleId(active.id);
+          }
+        }
+      }
+
+      // Fetch recent diagnostics with items
+      const { data: diagnosticsData } = await supabase
+        .from('diagnostics')
+        .select(`
+          id,
+          created_at,
+          vehicle_id,
+          diagnostic_items (*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (diagnosticsData && diagnosticsData.length > 0) {
+        // Collect all items from recent diagnostics
+        const allItems: DiagnosticItem[] = [];
+        let critical = 0, attention = 0, preventive = 0;
+
+        diagnosticsData.forEach((diag: any) => {
+          if (diag.diagnostic_items) {
+            diag.diagnostic_items.forEach((item: DiagnosticItem) => {
+              if (item.status !== 'resolved') {
+                allItems.push(item);
+                if (item.priority === 'critical') critical++;
+                else if (item.priority === 'attention') attention++;
+                else if (item.priority === 'preventive') preventive++;
+              }
+            });
+          }
+        });
+
+        setRecentAlerts(allItems.slice(0, 5));
+        setStats({ critical, attention, preventive, total: allItems.length });
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "critical":
-        return "bg-red-600";
-      case "attention":
-        return "bg-orange-500";
-      case "preventive":
-        return "bg-yellow-500";
-      default:
-        return "bg-green-500";
+      case "critical": return "bg-red-600";
+      case "attention": return "bg-orange-500";
+      case "preventive": return "bg-yellow-500";
+      default: return "bg-green-500";
     }
   };
 
   const getPriorityLabel = (priority: string) => {
     switch (priority) {
-      case "critical":
-        return "Crítico";
-      case "attention":
-        return "Atenção";
-      case "preventive":
-        return "Preventivo";
-      default:
-        return "OK";
+      case "critical": return "Crítico";
+      case "attention": return "Atenção";
+      case "preventive": return "Preventivo";
+      default: return "OK";
     }
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -100,51 +157,57 @@ const UserDashboard = () => {
               Bem-vindo de volta! Aqui está o resumo do seu veículo.
             </p>
           </div>
-          <Button
-            onClick={handleConnectOBD}
-            disabled={isConnecting}
-            className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2"
-          >
-            {isConnecting ? (
-              <>
-                <Bluetooth className="w-5 h-5 animate-pulse" />
-                <span>Conectando...</span>
-              </>
-            ) : (
-              <>
-                <Wifi className="w-5 h-5" />
-                <span>Conectar OBD2</span>
-              </>
-            )}
-          </Button>
+          <obd.ConnectButton />
         </div>
 
         {/* Vehicle Card */}
-        <Card className="bg-gradient-to-br from-dm-space to-dm-blue-2 text-primary-foreground border-0">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="bg-primary/20 p-4 rounded-full">
-                  <Car className="w-8 h-8 text-primary" />
+        {activeVehicle ? (
+          <Card className="bg-gradient-to-br from-dm-space to-dm-blue-2 text-primary-foreground border-0">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="bg-primary/20 p-4 rounded-full">
+                    <Car className="w-8 h-8 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-chakra text-xl font-bold uppercase">
+                      {activeVehicle.brand} {activeVehicle.model}
+                    </h2>
+                    <p className="text-dm-cadet">
+                      {activeVehicle.year} 
+                      {activeVehicle.engine && ` • ${activeVehicle.engine}`}
+                      {activeVehicle.fuel_type && ` • ${activeVehicle.fuel_type}`}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-chakra text-xl font-bold uppercase">
-                    {mockVehicle.brand} {mockVehicle.model}
-                  </h2>
-                  <p className="text-dm-cadet">
-                    {mockVehicle.year} • {mockVehicle.engine} • {mockVehicle.fuelType}
-                  </p>
-                </div>
+                <Link to="/dashboard/vehicles">
+                  <Button variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-secondary font-chakra uppercase">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Gerenciar Veículos
+                  </Button>
+                </Link>
               </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-gradient-to-br from-dm-space to-dm-blue-2 text-primary-foreground border-0">
+            <CardContent className="p-6 text-center">
+              <Car className="w-12 h-12 mx-auto mb-4 text-primary" />
+              <h2 className="font-chakra text-xl font-bold uppercase mb-2">
+                Nenhum veículo cadastrado
+              </h2>
+              <p className="text-dm-cadet mb-4">
+                Cadastre seu primeiro veículo para começar
+              </p>
               <Link to="/dashboard/vehicles">
-                <Button variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-secondary font-chakra uppercase">
+                <Button className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase">
                   <Plus className="w-4 h-4 mr-2" />
-                  Gerenciar Veículos
+                  Adicionar Veículo
                 </Button>
               </Link>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -155,7 +218,7 @@ const UserDashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-chakra font-bold text-foreground">
-                  {mockLastDiagnostic.critical}
+                  {stats.critical}
                 </p>
                 <p className="text-sm text-muted-foreground">Críticos</p>
               </div>
@@ -169,7 +232,7 @@ const UserDashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-chakra font-bold text-foreground">
-                  {mockLastDiagnostic.attention}
+                  {stats.attention}
                 </p>
                 <p className="text-sm text-muted-foreground">Atenção</p>
               </div>
@@ -183,7 +246,7 @@ const UserDashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-chakra font-bold text-foreground">
-                  {mockLastDiagnostic.preventive}
+                  {stats.preventive}
                 </p>
                 <p className="text-sm text-muted-foreground">Preventivos</p>
               </div>
@@ -197,7 +260,7 @@ const UserDashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-chakra font-bold text-foreground">
-                  {mockLastDiagnostic.totalIssues}
+                  {stats.total}
                 </p>
                 <p className="text-sm text-muted-foreground">Total</p>
               </div>
@@ -211,16 +274,16 @@ const UserDashboard = () => {
             <CardTitle className="font-chakra text-lg uppercase">
               Alertas Ativos
             </CardTitle>
-            <Link to="/dashboard/diagnostics">
+            <Link to="/dashboard/history">
               <Button variant="ghost" className="text-primary font-chakra uppercase text-sm">
                 Ver Todos <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
           </CardHeader>
           <CardContent>
-            {mockAlerts.length > 0 ? (
+            {recentAlerts.length > 0 ? (
               <div className="space-y-4">
-                {mockAlerts.map((alert) => (
+                {recentAlerts.map((alert) => (
                   <div 
                     key={alert.id}
                     className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
@@ -229,16 +292,17 @@ const UserDashboard = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-chakra font-bold text-foreground">
-                          {alert.code}
+                          {alert.dtc_code}
                         </span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(alert.priority)} text-white`}>
                           {getPriorityLabel(alert.priority)}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-foreground">{alert.title}</p>
-                      <p className="text-sm text-muted-foreground">{alert.description}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {alert.description_human}
+                      </p>
                     </div>
-                    <Link to={`/dashboard/diagnostics/${alert.id}`}>
+                    <Link to={`/dashboard/solutions/${alert.id}`}>
                       <Button variant="ghost" size="sm" className="text-primary">
                         <ChevronRight className="w-5 h-5" />
                       </Button>
