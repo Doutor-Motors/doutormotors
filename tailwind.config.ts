@@ -2,7 +2,12 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -13,6 +18,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        chakra: ["Chakra Petch", "sans-serif"],
+        mulish: ["Mulish", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -57,33 +66,50 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Cores específicas do Doutor Motors
+        "dm-orange": "hsl(var(--international-orange-engineering))",
+        "dm-blue-1": "hsl(var(--oxford-blue-1))",
+        "dm-blue-2": "hsl(var(--oxford-blue-2))",
+        "dm-blue-3": "hsl(var(--oxford-blue-3))",
+        "dm-cadet": "hsl(var(--cadet-blue-creyola))",
+        "dm-space": "hsl(var(--space-cadet))",
+        "dm-silver": "hsl(var(--sonic-silver))",
+        "dm-pink": "hsl(var(--pastel-pink))",
+        "dm-gray": "hsl(var(--light-gray))",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        pill: "var(--radius-pill)",
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        "slide-in": {
+          from: { opacity: "0", transform: "translateX(-20px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "float": "float 3s ease-in-out infinite",
+        "slide-in": "slide-in 0.3s ease-out",
+      },
+      backgroundImage: {
+        "hero-gradient": "linear-gradient(135deg, hsl(var(--oxford-blue-1)) 0%, hsl(var(--oxford-blue-3)) 100%)",
+        "card-gradient": "linear-gradient(180deg, hsl(var(--space-cadet)) 0%, hsl(var(--oxford-blue-2)) 100%)",
       },
     },
   },
