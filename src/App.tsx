@@ -41,6 +41,9 @@ import StudyCarPage from "./pages/StudyCarPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import FAQPage from "./pages/FAQPage";
+import SupportCenter from "./pages/dashboard/SupportCenter";
+import TicketDetail from "./pages/dashboard/TicketDetail";
+import AdminTickets from "./pages/admin/AdminTickets";
 
 const queryClient = new QueryClient();
 
@@ -79,10 +82,13 @@ const App = () => (
                 <Route path="/dashboard/diagnostics/:id" element={<ProtectedRoute><DiagnosticReport /></ProtectedRoute>} />
                 <Route path="/dashboard/solutions/:diagnosticItemId" element={<ProtectedRoute><SolutionGuide /></ProtectedRoute>} />
                 <Route path="/dashboard/history" element={<ProtectedRoute><DiagnosticHistory /></ProtectedRoute>} />
+                <Route path="/dashboard/support" element={<ProtectedRoute><SupportCenter /></ProtectedRoute>} />
+                <Route path="/dashboard/support/:id" element={<ProtectedRoute><TicketDetail /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<ProtectedRoute><AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute></ProtectedRoute>} />
+                <Route path="/admin/tickets" element={<ProtectedRoute><AdminProtectedRoute><AdminTickets /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute><AdminProtectedRoute><AdminUsers /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/vehicles" element={<ProtectedRoute><AdminProtectedRoute><AdminVehicles /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/diagnostics" element={<ProtectedRoute><AdminProtectedRoute><AdminDiagnostics /></AdminProtectedRoute></ProtectedRoute>} />

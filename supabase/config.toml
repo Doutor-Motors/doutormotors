@@ -3,6 +3,12 @@ project_id = "txxgmxxssnogumcwsfvn"
 [functions.send-contact-email]
 verify_jwt = false
 
+[functions.send-notification]
+verify_jwt = false
+
+[functions.diagnose]
+verify_jwt = false
+
 [functions.fetch-solution]
 verify_jwt = false
 
