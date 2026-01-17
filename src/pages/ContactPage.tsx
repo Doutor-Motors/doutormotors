@@ -266,19 +266,30 @@ const ContactPage = () => {
                 {supportTopics.map((topic, index) => (
                   <div 
                     key={index}
-                    className="bg-card p-5 rounded-lg shadow hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer group"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, subject: topic.title }));
+                      document.querySelector('input[name="subject"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      toast({
+                        title: "Tópico selecionado",
+                        description: `"${topic.title}" foi adicionado ao assunto do formulário.`,
+                      });
+                    }}
+                    className="bg-card p-5 rounded-lg shadow hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer group border-2 border-transparent hover:border-primary"
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                        <MessageCircle className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-primary transition-colors">
+                        <MessageCircle className="w-5 h-5 text-primary group-hover:text-primary-foreground transition-colors" />
                       </div>
                       <div>
-                        <h3 className="font-chakra text-base font-semibold text-foreground mb-1">
+                        <h3 className="font-chakra text-base font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
                           {topic.title}
                         </h3>
                         <p className="text-muted-foreground text-sm">
                           {topic.description}
                         </p>
+                        <span className="text-xs text-primary mt-2 inline-block opacity-0 group-hover:opacity-100 transition-opacity">
+                          Clique para selecionar →
+                        </span>
                       </div>
                     </div>
                   </div>
