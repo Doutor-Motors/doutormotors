@@ -95,6 +95,7 @@ Deno.serve(async (req) => {
         warnings: extractWarnings(markdown),
         estimatedTime: "30 min",
         difficulty: "intermediário",
+        videoUrl: extractVideoUrl(markdown, scrapeData.data?.html),
         sourceUrl: url,
       };
 
@@ -188,6 +189,7 @@ ${markdown.substring(0, 6000)}`;
         warnings: extractWarnings(markdown),
         estimatedTime: "30 min",
         difficulty: "intermediário",
+        videoUrl: extractVideoUrl(markdown, scrapeData.data?.html),
         sourceUrl: url,
       };
 
@@ -212,6 +214,7 @@ ${markdown.substring(0, 6000)}`;
     
     const content: TutorialContent = {
       ...processedContent,
+      videoUrl: extractVideoUrl(markdown, scrapeData.data?.html),
       sourceUrl: url,
     };
 
@@ -335,4 +338,44 @@ function extractWarnings(markdown: string): string[] {
   }
 
   return warnings.length > 0 ? warnings : ["Siga todas as precauções de segurança"];
+}
+
+function extractVideoUrl(markdown: string, html?: string): string | undefined {
+  // Try to find YouTube URLs in markdown
+  const youtubePatterns = [
+    /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/g,
+    /https?:\/\/(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/g,
+    /https?:\/\/youtu\.be\/([a-zA-Z0-9_-]{11})/g,
+  ];
+
+  for (const pattern of youtubePatterns) {
+    const match = markdown.match(pattern);
+    if (match) {
+      return match[0];
+    }
+  }
+
+  // Try to find in HTML if available
+  if (html) {
+    for (const pattern of youtubePatterns) {
+      const match = html.match(pattern);
+      if (match) {
+        return match[0];
+      }
+    }
+
+    // Look for iframe src with YouTube
+    const iframeMatch = html.match(/iframe[^>]+src=["']([^"']*youtube[^"']*)/i);
+    if (iframeMatch) {
+      return iframeMatch[1];
+    }
+
+    // Look for video elements
+    const videoMatch = html.match(/<video[^>]+src=["']([^"']+)/i);
+    if (videoMatch) {
+      return videoMatch[1];
+    }
+  }
+
+  return undefined;
 }
