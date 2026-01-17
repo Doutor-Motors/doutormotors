@@ -4,6 +4,7 @@ import HeroSection from "@/components/landing/HeroSection";
 import ServicesSection from "@/components/landing/ServicesSection";
 import AboutSection from "@/components/landing/AboutSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
+import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import CTASection from "@/components/landing/CTASection";
 
 const LandingPage = () => {
@@ -15,6 +16,7 @@ const LandingPage = () => {
         <ServicesSection />
         <AboutSection />
         <HowItWorksSection />
+        <TestimonialsSection />
         <CTASection />
       </main>
       <Footer />
