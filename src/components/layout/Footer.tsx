@@ -93,7 +93,9 @@ const Footer = () => {
       <div className="bg-dm-blue-1 py-5 relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
           <p className="text-center text-xs text-white/70">
-            Copyright © 2024 Doutor Motors. Todos os direitos reservados.
+            Copyright © {new Date().getFullYear()} Doutor Motors. Todos os direitos reservados. 
+            <span className="mx-2">|</span>
+            <span className="italic">Plataforma informativa e educativa.</span>
           </p>
         </div>
         <img 
