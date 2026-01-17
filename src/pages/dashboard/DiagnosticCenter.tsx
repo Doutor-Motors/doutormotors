@@ -31,8 +31,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAppStore, Vehicle, Diagnostic, DiagnosticItem } from "@/store/useAppStore";
 import { analyzeDTCCodes, saveDiagnostic, runDemoDiagnostic } from "@/services/diagnostics/engine";
 import { generateMockDTCCodes } from "@/services/diagnostics/dtcDatabase";
+import { OBDConnectionSelector } from "@/components/obd/OBDConnectionSelector";
+import { useOBDConnection } from "@/components/obd/useOBDConnection";
 
-type ConnectionStatus = "disconnected" | "connecting" | "connected";
 type DiagnosticStatus = "idle" | "running" | "completed";
 
 const DiagnosticCenter = () => {
@@ -48,7 +49,9 @@ const DiagnosticCenter = () => {
     setCurrentDiagnosticId
   } = useAppStore();
 
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
+  // Use the new OBD connection hook
+  const obd = useOBDConnection();
+
   const [diagnosticStatus, setDiagnosticStatus] = useState<DiagnosticStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [currentDiagnostic, setCurrentDiagnostic] = useState<Diagnostic | null>(null);
@@ -87,7 +90,7 @@ const DiagnosticCenter = () => {
 
   const activeVehicle = vehicles.find(v => v.id === activeVehicleId);
 
-  const handleConnect = () => {
+  const handleConnectBluetooth = async () => {
     if (!activeVehicle) {
       toast({
         title: "Selecione um veículo",
@@ -97,21 +100,30 @@ const DiagnosticCenter = () => {
       return;
     }
 
-    setConnectionStatus("connecting");
-    
-    // Simular conexão OBD2
-    setTimeout(() => {
-      setConnectionStatus("connected");
+    const success = await obd.connectBluetooth();
+    if (success) {
+      notifySuccess("OBD2 Conectado", "Adaptador Bluetooth detectado e pronto para diagnóstico");
+    }
+  };
+
+  const handleConnectWifi = async () => {
+    if (!activeVehicle) {
       toast({
-        title: "Conectado!",
-        description: "Adaptador OBD2 conectado com sucesso.",
+        title: "Selecione um veículo",
+        description: "Escolha um veículo antes de conectar.",
+        variant: "destructive",
       });
-      notifySuccess("OBD2 Conectado", "Adaptador detectado e pronto para diagnóstico");
-    }, 2000);
+      return;
+    }
+
+    const success = await obd.connectWifi();
+    if (success) {
+      notifySuccess("OBD2 Conectado", "Adaptador WiFi detectado e pronto para diagnóstico");
+    }
   };
 
   const handleDisconnect = () => {
-    setConnectionStatus("disconnected");
+    obd.disconnect();
     setDiagnosticStatus("idle");
     setProgress(0);
     setCurrentDiagnostic(null);
@@ -128,7 +140,7 @@ const DiagnosticCenter = () => {
       return;
     }
 
-    if (connectionStatus !== "connected") {
+    if (obd.connectionStatus !== "connected") {
       toast({
         title: "Erro",
         description: "Conecte o adaptador OBD2 primeiro.",
@@ -154,10 +166,12 @@ const DiagnosticCenter = () => {
     }, 300);
 
     try {
-      // Run demo diagnostic (simulates OBD2 reading + AI analysis)
-      const result = await runDemoDiagnostic(
-        activeVehicle.id,
-        user.id,
+      // Read DTC codes from OBD2 adapter (or simulated)
+      const obdData = await obd.readDTCCodes();
+      
+      // Run AI analysis on the codes
+      const result = await analyzeDTCCodes(
+        obdData.dtcCodes,
         {
           brand: activeVehicle.brand,
           model: activeVehicle.model,
@@ -165,21 +179,29 @@ const DiagnosticCenter = () => {
         }
       );
 
+      // Save to database
+      const saveResult = await saveDiagnostic(
+        activeVehicle.id,
+        user.id,
+        result.items,
+        obdData.rawData
+      );
+
       clearInterval(interval);
       setProgress(100);
 
-      if (result.success && result.diagnosticId) {
+      if (saveResult.diagnosticId) {
         // Fetch the complete diagnostic with items
         const { data: diagnostic, error } = await supabase
           .from('diagnostics')
           .select('*')
-          .eq('id', result.diagnosticId)
+          .eq('id', saveResult.diagnosticId)
           .single();
 
         const { data: items } = await supabase
           .from('diagnostic_items')
           .select('*')
-          .eq('diagnostic_id', result.diagnosticId)
+          .eq('diagnostic_id', saveResult.diagnosticId)
           .order('severity', { ascending: false });
 
         if (diagnostic) {
@@ -191,14 +213,14 @@ const DiagnosticCenter = () => {
           
           setCurrentDiagnostic(fullDiagnostic);
           setDiagnosticItems(items || []);
-          setCurrentDiagnosticId(result.diagnosticId);
+          setCurrentDiagnosticId(saveResult.diagnosticId);
           addDiagnostic(fullDiagnostic);
         }
 
         setDiagnosticStatus("completed");
         toast({
           title: "Diagnóstico concluído!",
-          description: `${result.items.length} item(s) encontrado(s).`,
+          description: `${result.items.length} item(s) encontrado(s) via ${obd.connectionType === 'wifi' ? 'WiFi' : 'Bluetooth'}.`,
         });
         notifyDiagnosticComplete();
         
@@ -211,7 +233,7 @@ const DiagnosticCenter = () => {
           }
         });
       } else {
-        throw new Error(result.error || 'Erro desconhecido');
+        throw new Error(saveResult.error || 'Erro ao salvar diagnóstico');
       }
     } catch (error) {
       clearInterval(interval);
@@ -315,7 +337,7 @@ const DiagnosticCenter = () => {
               Centro de Diagnóstico
             </h1>
             <p className="text-muted-foreground">
-              Conecte seu OBD2 e execute uma leitura completa do veículo.
+              Conecte seu OBD2 via Bluetooth ou WiFi e execute uma leitura completa do veículo.
             </p>
           </div>
           
@@ -340,105 +362,69 @@ const DiagnosticCenter = () => {
           </div>
         </div>
 
-        {/* Connection Card */}
-        <Card className="bg-gradient-to-br from-dm-space to-dm-blue-2 text-primary-foreground border-0">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className={`p-4 rounded-full ${
-                  connectionStatus === "connected" 
-                    ? "bg-green-500/20" 
-                    : connectionStatus === "connecting"
-                    ? "bg-yellow-500/20"
-                    : "bg-red-500/20"
-                }`}>
-                  {connectionStatus === "connected" ? (
-                    <Wifi className="w-8 h-8 text-green-400" />
-                  ) : connectionStatus === "connecting" ? (
-                    <Bluetooth className="w-8 h-8 text-yellow-400 animate-pulse" />
-                  ) : (
-                    <WifiOff className="w-8 h-8 text-red-400" />
-                  )}
-                </div>
+        {/* Connection Card - Now with Bluetooth and WiFi options */}
+        <OBDConnectionSelector
+          connectionStatus={obd.connectionStatus}
+          connectionType={obd.connectionType}
+          device={obd.device}
+          isBluetoothSupported={obd.isBluetoothSupported}
+          isSimulated={obd.isSimulated}
+          wifiConfig={obd.wifiConfig}
+          onWifiConfigChange={obd.setWifiConfig}
+          onConnectBluetooth={handleConnectBluetooth}
+          onConnectWifi={handleConnectWifi}
+          onDisconnect={handleDisconnect}
+        />
+
+        {/* Diagnostic Controls - Show when connected */}
+        {obd.connectionStatus === "connected" && (
+          <Card className="bg-card border-border">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-chakra text-xl font-bold uppercase">
-                    {connectionStatus === "connected" 
-                      ? "Conectado" 
-                      : connectionStatus === "connecting"
-                      ? "Conectando..."
-                      : "Desconectado"
-                    }
-                  </h2>
-                  <p className="text-dm-cadet">
+                  <h3 className="font-chakra text-lg font-bold uppercase text-foreground">
+                    Pronto para Diagnóstico
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
                     {activeVehicle 
                       ? `${activeVehicle.brand} ${activeVehicle.model} (${activeVehicle.year})`
                       : "Selecione um veículo"
                     }
                   </p>
                 </div>
+                <Button
+                  onClick={handleStartDiagnostic}
+                  disabled={diagnosticStatus === "running"}
+                  size="lg"
+                  className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase flex items-center gap-2"
+                >
+                  {diagnosticStatus === "running" ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Analisando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5" />
+                      <span>Iniciar Diagnóstico</span>
+                    </>
+                  )}
+                </Button>
               </div>
-              <div className="flex gap-3">
-                {connectionStatus === "connected" ? (
-                  <>
-                    <Button
-                      onClick={handleDisconnect}
-                      variant="outline"
-                      className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-secondary font-chakra uppercase"
-                    >
-                      Desconectar
-                    </Button>
-                    <Button
-                      onClick={handleStartDiagnostic}
-                      disabled={diagnosticStatus === "running"}
-                      className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase flex items-center gap-2"
-                    >
-                      {diagnosticStatus === "running" ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>Analisando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-5 h-5" />
-                          <span>Iniciar Diagnóstico</span>
-                        </>
-                      )}
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    onClick={handleConnect}
-                    disabled={connectionStatus === "connecting" || !activeVehicle}
-                    className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase flex items-center gap-2"
-                  >
-                    {connectionStatus === "connecting" ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Conectando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Bluetooth className="w-5 h-5" />
-                        <span>Conectar OBD2</span>
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            </div>
 
-            {/* Progress Bar */}
-            {diagnosticStatus === "running" && (
-              <div className="mt-6">
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Progresso do diagnóstico</span>
-                  <span>{progress}%</span>
+              {/* Progress Bar */}
+              {diagnosticStatus === "running" && (
+                <div className="mt-6">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">Progresso do diagnóstico</span>
+                    <span className="text-foreground font-medium">{progress}%</span>
+                  </div>
+                  <Progress value={progress} className="h-3" />
                 </div>
-                <Progress value={progress} className="h-3" />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Results */}
         {diagnosticStatus === "completed" && diagnosticItems.length > 0 && (
@@ -551,24 +537,42 @@ const DiagnosticCenter = () => {
         )}
 
         {/* Empty State */}
-        {diagnosticStatus === "idle" && connectionStatus !== "connected" && (
+        {diagnosticStatus === "idle" && obd.connectionStatus !== "connected" && (
           <Card className="p-12 text-center">
-            <Bluetooth className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <div className="flex justify-center gap-4 mb-4">
+              <Bluetooth className="w-12 h-12 text-blue-500" />
+              <Wifi className="w-12 h-12 text-green-500" />
+            </div>
             <h3 className="font-chakra text-xl font-bold uppercase text-foreground mb-2">
               Conecte seu OBD2
             </h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Plugue o adaptador OBD2 na porta de diagnóstico do seu veículo 
-              e conecte via Bluetooth ou Wi-Fi para iniciar.
+              e conecte via <strong>Bluetooth</strong> ou <strong>WiFi</strong> para iniciar.
             </p>
-            <Button
-              onClick={handleConnect}
-              disabled={!activeVehicle}
-              className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase"
-            >
-              <Bluetooth className="w-5 h-5 mr-2" />
-              Conectar Agora
-            </Button>
+            <div className="flex justify-center gap-3">
+              <Button
+                onClick={handleConnectBluetooth}
+                disabled={!activeVehicle}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-chakra uppercase"
+              >
+                <Bluetooth className="w-5 h-5 mr-2" />
+                Bluetooth
+              </Button>
+              <Button
+                onClick={handleConnectWifi}
+                disabled={!activeVehicle}
+                className="bg-green-600 hover:bg-green-700 text-white font-chakra uppercase"
+              >
+                <Wifi className="w-5 h-5 mr-2" />
+                WiFi
+              </Button>
+            </div>
+            {!activeVehicle && (
+              <p className="text-yellow-600 text-sm mt-4">
+                Selecione um veículo acima para conectar
+              </p>
+            )}
           </Card>
         )}
       </div>

@@ -8,7 +8,9 @@ import {
   Clock,
   Plus,
   ChevronRight,
-  Loader2
+  Loader2,
+  Bluetooth,
+  Wifi
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAppStore } from "@/store/useAppStore";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useLegalConsent } from "@/hooks/useLegalConsent";
-import OBDConnector from "@/components/obd/OBDConnector";
+import { useOBDConnection } from "@/components/obd/useOBDConnection";
 import TermsAcceptanceModal from "@/components/legal/TermsAcceptanceModal";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -46,7 +48,7 @@ const UserDashboard = () => {
   const [hasNotifiedAlerts, setHasNotifiedAlerts] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
-  const obd = OBDConnector({});
+  const obd = useOBDConnection();
 
   // Verificar se precisa mostrar modal de termos
   useEffect(() => {
@@ -197,7 +199,39 @@ const UserDashboard = () => {
               Bem-vindo de volta! Aqui está o resumo do seu veículo.
             </p>
           </div>
-          <obd.ConnectButton />
+          <div className="flex gap-2">
+            {obd.connectionStatus === 'connected' ? (
+              <Button
+                onClick={obd.disconnect}
+                variant="outline"
+                className="font-chakra uppercase"
+              >
+                Desconectar
+              </Button>
+            ) : obd.connectionStatus === 'connecting' ? (
+              <Button disabled className="font-chakra uppercase">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Conectando...
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={obd.connectBluetooth}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-chakra uppercase"
+                >
+                  <Bluetooth className="w-4 h-4 mr-2" />
+                  Bluetooth
+                </Button>
+                <Button
+                  onClick={() => obd.connectWifi()}
+                  className="bg-green-600 hover:bg-green-700 text-white font-chakra uppercase"
+                >
+                  <Wifi className="w-4 h-4 mr-2" />
+                  WiFi
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Vehicle Card */}
