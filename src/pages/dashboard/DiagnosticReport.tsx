@@ -12,7 +12,8 @@ import {
   Loader2,
   FileText,
   Wrench,
-  ShieldAlert
+  ShieldAlert,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DiagnosticDisclaimer from "@/components/legal/DiagnosticDisclaimer";
 import { shouldBlockDIY, getContextualWarning } from "@/components/legal/LegalDisclaimers";
+import { generateDiagnosticPDF, downloadPDF } from "@/services/pdf/diagnosticReportGenerator";
 
 const DiagnosticReport = () => {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +44,7 @@ const DiagnosticReport = () => {
   });
   
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [diagnostic, setDiagnostic] = useState<Diagnostic | null>(null);
   const [items, setItems] = useState<DiagnosticItem[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -118,6 +121,66 @@ const DiagnosticReport = () => {
         title: "Item marcado como resolvido",
         description: "O problema foi marcado como resolvido.",
       });
+    }
+  };
+
+  // Export to PDF
+  const handleExportPDF = async () => {
+    if (!diagnostic || !vehicle) {
+      toast({
+        title: "Erro ao exportar",
+        description: "Dados do diagnóstico incompletos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const pdfBlob = await generateDiagnosticPDF({
+        diagnostic: {
+          id: diagnostic.id,
+          created_at: diagnostic.created_at,
+          status: diagnostic.status,
+          notes: diagnostic.notes,
+        },
+        items: items.map(item => ({
+          dtc_code: item.dtc_code,
+          description_human: item.description_human,
+          priority: item.priority as 'critical' | 'attention' | 'preventive',
+          severity: item.severity,
+          can_diy: item.can_diy,
+          diy_difficulty: item.diy_difficulty,
+          probable_causes: item.probable_causes,
+          status: item.status,
+        })),
+        vehicle: {
+          brand: vehicle.brand,
+          model: vehicle.model,
+          year: vehicle.year,
+          license_plate: vehicle.license_plate,
+          engine: vehicle.engine,
+          fuel_type: vehicle.fuel_type,
+        },
+        userName: user?.email,
+        includeDisclaimer: true,
+      });
+
+      downloadPDF(pdfBlob, vehicle, diagnostic);
+
+      toast({
+        title: "PDF exportado com sucesso!",
+        description: "O relatório foi baixado para seu dispositivo.",
+      });
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast({
+        title: "Erro ao exportar PDF",
+        description: "Não foi possível gerar o relatório. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -206,20 +269,41 @@ const DiagnosticReport = () => {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link to="/dashboard/history">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase text-foreground">
-              Relatório de Diagnóstico
-            </h1>
-            <p className="text-muted-foreground">
-              Detalhes completos do diagnóstico realizado
-            </p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Link to="/dashboard/history">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase text-foreground">
+                Relatório de Diagnóstico
+              </h1>
+              <p className="text-muted-foreground">
+                Detalhes completos do diagnóstico realizado
+              </p>
+            </div>
           </div>
+          
+          {/* Export PDF Button */}
+          <Button
+            onClick={handleExportPDF}
+            disabled={isExporting || !vehicle}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase gap-2"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                Exportar PDF
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Disclaimer Legal */}
