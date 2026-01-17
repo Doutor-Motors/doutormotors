@@ -434,7 +434,7 @@ const DiagnosticCenter = () => {
               <div className="flex gap-2">
                 {currentDiagnostic && (
                   <Link to={`/dashboard/diagnostics/${currentDiagnostic.id}`}>
-                    <Button variant="outline" className="font-chakra uppercase flex items-center gap-2">
+                    <Button variant="outline" className="border-border text-foreground hover:bg-accent hover:text-accent-foreground font-chakra uppercase flex items-center gap-2">
                       Ver Relatório Completo
                       <ChevronRight className="w-4 h-4" />
                     </Button>
@@ -443,7 +443,7 @@ const DiagnosticCenter = () => {
                 <Button
                   onClick={handleStartDiagnostic}
                   variant="outline"
-                  className="font-chakra uppercase flex items-center gap-2"
+                  className="border-border text-foreground hover:bg-accent hover:text-accent-foreground font-chakra uppercase flex items-center gap-2"
                 >
                   <RefreshCw className="w-4 h-4" />
                   Nova Leitura
@@ -520,7 +520,7 @@ const DiagnosticCenter = () => {
                           </div>
                         )}
                         <Link to={`/dashboard/solutions/${item.id}`}>
-                          <Button variant="outline" className="font-chakra uppercase text-sm flex items-center gap-2">
+                          <Button variant="outline" className="border-border text-foreground hover:bg-accent hover:text-accent-foreground font-chakra uppercase text-sm flex items-center gap-2">
                             Ver Solução
                             <ChevronRight className="w-4 h-4" />
                           </Button>
