@@ -8,7 +8,7 @@ import textBarsLight from "@/assets/images/text-bars-light.png";
 const HeroSection = () => {
   return (
     <section 
-      className="relative min-h-screen pt-32 pb-20 overflow-hidden text-center lg:text-left"
+      className="relative min-h-screen pt-44 pb-20 overflow-hidden text-center lg:text-left"
       style={{ 
         backgroundImage: `url(${heroBg})`,
         backgroundRepeat: 'no-repeat',
