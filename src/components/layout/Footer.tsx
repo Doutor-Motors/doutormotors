@@ -16,7 +16,7 @@ const Footer = () => {
           {/* Brand */}
           <div>
             <Link to="/">
-              <img src={logo} alt="Doutor Motors" className="w-36 mb-4" />
+              <img src={logo} alt="Doutor Motors" className="h-[70px] w-[130px] object-contain mb-4" />
             </Link>
             <p className="text-white/80 mb-5 text-sm leading-relaxed">
               Doutor Motors é seu diagnóstico automotivo inteligente. 
