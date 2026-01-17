@@ -58,15 +58,15 @@ const HeroSection = () => {
           <div className="grid grid-cols-3 gap-4 mt-12 pt-8 border-t border-dm-blue-3">
             <div className="text-center lg:text-left">
               <span className="font-chakra text-2xl md:text-3xl font-bold text-primary-foreground">500+</span>
-              <p className="text-dm-cadet text-xs md:text-sm">Códigos Suportados</p>
+              <p className="text-white/80 text-xs md:text-sm">Códigos Suportados</p>
             </div>
             <div className="text-center lg:text-left">
               <span className="font-chakra text-2xl md:text-3xl font-bold text-primary-foreground">100%</span>
-              <p className="text-dm-cadet text-xs md:text-sm">Em Português</p>
+              <p className="text-white/80 text-xs md:text-sm">Em Português</p>
             </div>
             <div className="text-center lg:text-left">
               <span className="font-chakra text-2xl md:text-3xl font-bold text-primary-foreground">24/7</span>
-              <p className="text-dm-cadet text-xs md:text-sm">Disponível</p>
+              <p className="text-white/80 text-xs md:text-sm">Disponível</p>
             </div>
           </div>
         </div>
