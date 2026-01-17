@@ -39,6 +39,24 @@ import brandRenault from '@/assets/cars/brand-renault.jpg';
 import brandCitroen from '@/assets/cars/brand-citroen.jpg';
 import brandSaab from '@/assets/cars/brand-saab.jpg';
 import brandDefault from '@/assets/cars/brand-default.jpg';
+// Additional brands
+import brandSuzuki from '@/assets/cars/brand-suzuki.jpg';
+import brandSmart from '@/assets/cars/brand-smart.jpg';
+import brandSaturn from '@/assets/cars/brand-saturn.jpg';
+import brandScion from '@/assets/cars/brand-scion.jpg';
+import brandSeat from '@/assets/cars/brand-seat.jpg';
+import brandSkoda from '@/assets/cars/brand-skoda.jpg';
+import brandPontiac from '@/assets/cars/brand-pontiac.jpg';
+import brandPlymouth from '@/assets/cars/brand-plymouth.jpg';
+import brandOldsmobile from '@/assets/cars/brand-oldsmobile.jpg';
+import brandMercury from '@/assets/cars/brand-mercury.jpg';
+import brandLada from '@/assets/cars/brand-lada.jpg';
+import brandLancia from '@/assets/cars/brand-lancia.jpg';
+import brandIsuzu from '@/assets/cars/brand-isuzu.jpg';
+import brandHummer from '@/assets/cars/brand-hummer.jpg';
+import brandGenesis from '@/assets/cars/brand-genesis.jpg';
+import brandDaewoo from '@/assets/cars/brand-daewoo.jpg';
+import brandDacia from '@/assets/cars/brand-dacia.jpg';
 
 // Brand name to image mapping (case-insensitive)
 const brandImages: Record<string, string> = {
@@ -88,22 +106,29 @@ const brandImages: Record<string, string> = {
   'citroen': brandCitroen,
   'citroën': brandCitroen,
   'saab': brandSaab,
-  // Aliases for common brands
-  'saturn': brandDefault,
-  'pontiac': brandDefault,
-  'oldsmobile': brandDefault,
-  'scion': brandDefault,
-  'suzuki': brandDefault,
-  'isuzu': brandDefault,
+  // Additional brands with unique images
+  'suzuki': brandSuzuki,
+  'smart': brandSmart,
+  'saturn': brandSaturn,
+  'scion': brandScion,
+  'seat': brandSeat,
+  'skoda': brandSkoda,
+  'škoda': brandSkoda,
+  'pontiac': brandPontiac,
+  'plymouth': brandPlymouth,
+  'oldsmobile': brandOldsmobile,
+  'mercury': brandMercury,
+  'lada': brandLada,
+  'lancia': brandLancia,
+  'isuzu': brandIsuzu,
+  'hummer': brandHummer,
+  'genesis': brandGenesis,
+  'daewoo': brandDaewoo,
+  'dacia': brandDacia,
+  // Fallback brands
   'geo': brandDefault,
-  'mercury': brandDefault,
-  'plymouth': brandDefault,
-  'hummer': brandDefault,
-  'daewoo': brandDefault,
   'daihatsu': brandDefault,
   'opel': brandVolkswagen, // Opel uses VW style
-  'skoda': brandVolkswagen, // Skoda uses VW style
-  'seat': brandVolkswagen, // SEAT uses VW style
 };
 
 /**
