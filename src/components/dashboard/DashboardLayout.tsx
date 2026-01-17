@@ -11,6 +11,7 @@ import {
   X,
   ChevronRight,
   GraduationCap,
+  Headphones,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +26,7 @@ const menuItems = [
   { icon: Car, label: "Veículos", path: "/dashboard/vehicles" },
   { icon: Activity, label: "Diagnósticos", path: "/dashboard/diagnostics" },
   { icon: History, label: "Histórico", path: "/dashboard/history" },
+  { icon: Headphones, label: "Suporte", path: "/dashboard/support" },
   { icon: GraduationCap, label: "Estude seu Carro", path: "/estude-seu-carro" },
   { icon: User, label: "Perfil", path: "/profile" },
 ];
