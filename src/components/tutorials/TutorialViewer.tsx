@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Clock, Wrench, AlertTriangle, CheckCircle, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Clock, Wrench, AlertTriangle, CheckCircle, ExternalLink, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,15 @@ const TutorialViewer = ({ content, onClose }: TutorialViewerProps) => {
 
   const currentStepData = content.steps[currentStep];
 
+  // Extrai o ID do vídeo do YouTube se houver
+  const getYouTubeEmbedUrl = (url?: string): string | null => {
+    if (!url) return null;
+    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+  };
+
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(content.videoUrl);
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -65,6 +74,44 @@ const TutorialViewer = ({ content, onClose }: TutorialViewerProps) => {
           <Progress value={progress} className="h-2" />
         </CardContent>
       </Card>
+
+      {/* Video Section */}
+      {(youtubeEmbedUrl || content.videoUrl) && (
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="font-chakra text-lg flex items-center gap-2">
+              <Play className="w-5 h-5 text-primary" />
+              Vídeo Tutorial
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {youtubeEmbedUrl ? (
+              <div className="aspect-video w-full">
+                <iframe
+                  src={youtubeEmbedUrl}
+                  title={content.title}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : content.videoUrl ? (
+              <div className="p-4">
+                <a
+                  href={content.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-primary hover:underline"
+                >
+                  <Play className="w-5 h-5" />
+                  Assistir vídeo externo
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Info Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
