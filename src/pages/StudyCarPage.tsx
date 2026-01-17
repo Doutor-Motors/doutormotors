@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { 
   Search, Loader2, Car, ChevronRight, ArrowLeft, Play, 
-  BookOpen, Video, ExternalLink, Home, Filter, RefreshCw
+  BookOpen, Video, ExternalLink, Home, Filter, RefreshCw, Sparkles, Bot
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,7 @@ interface VideoDetails {
   sourceUrl?: string;
   steps?: string[];
   markdown?: string;
+  transcriptionUsed?: boolean; // Indicates if steps came from AI transcription
 }
 
 type ViewState = "brands" | "models" | "categories" | "procedures" | "video";
@@ -76,6 +77,7 @@ const StudyCarPage = () => {
   // Navigation state
   const [currentView, setCurrentView] = useState<ViewState>("brands");
   const [isLoading, setIsLoading] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   
   // Data state
   const [brands, setBrands] = useState<CarBrand[]>([]);
@@ -208,12 +210,18 @@ const StudyCarPage = () => {
   const handleProcedureSelect = async (procedure: Procedure) => {
     setSelectedProcedure(procedure);
     setIsLoading(true);
+    setIsTranscribing(true);
+    setVideoDetails(null);
+    setCurrentView("video");
     
     try {
       const { data, error } = await supabase.functions.invoke("carcare-api", {
         body: { 
           action: "video-details", 
-          procedure: procedure.url
+          procedure: procedure.url,
+          brand: selectedBrand?.name,
+          model: selectedModel?.name,
+          year: selectedModel?.years?.split("-")[0]
         },
       });
 
@@ -226,7 +234,7 @@ const StudyCarPage = () => {
       console.error("Error loading video details:", err);
     }
     
-    setCurrentView("video");
+    setIsTranscribing(false);
     setIsLoading(false);
   };
 
@@ -935,8 +943,28 @@ const StudyCarPage = () => {
                     {/* Main Video */}
                     <div className="lg:col-span-2">
                       <Card className="overflow-hidden">
-                        {isLoading ? (
-                          <Skeleton className="aspect-video" />
+                        {isLoading && !videoDetails ? (
+                          <div className="aspect-video bg-muted flex flex-col items-center justify-center p-8 text-center">
+                            <div className="relative mb-6">
+                              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                              {isTranscribing && (
+                                <Sparkles className="w-5 h-5 text-primary absolute -top-1 -right-1 animate-pulse" />
+                              )}
+                            </div>
+                            {isTranscribing ? (
+                              <>
+                                <p className="text-lg font-medium mb-2 flex items-center gap-2">
+                                  <Bot className="w-5 h-5 text-primary" />
+                                  Transcrevendo e traduzindo vídeo...
+                                </p>
+                                <p className="text-sm text-muted-foreground max-w-md">
+                                  Estamos usando IA para transcrever o áudio do vídeo e gerar um passo a passo detalhado em português para você.
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-lg font-medium">Carregando vídeo...</p>
+                            )}
+                          </div>
                         ) : videoDetails?.videoUrl ? (
                           <AspectRatio ratio={16 / 9}>
                             <iframe
@@ -1015,19 +1043,36 @@ const StudyCarPage = () => {
                       {videoDetails?.steps && videoDetails.steps.length > 0 && (
                         <Card className="mt-6">
                           <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                              <BookOpen className="w-5 h-5 text-primary" />
-                              Passo a Passo
+                            <CardTitle className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="w-5 h-5 text-primary" />
+                                Passo a Passo
+                              </div>
+                              {videoDetails.transcriptionUsed && (
+                                <Badge variant="secondary" className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary border-primary/30">
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                  Transcrição IA
+                                </Badge>
+                              )}
                             </CardTitle>
+                            {videoDetails.transcriptionUsed && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Gerado automaticamente a partir da transcrição do vídeo e traduzido para português
+                              </p>
+                            )}
                           </CardHeader>
                           <CardContent>
-                            <ol className="space-y-3">
+                            <ol className="space-y-4">
                               {videoDetails.steps.map((step, index) => (
                                 <li key={index} className="flex gap-3">
-                                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
-                                    {index + 1}
+                                  {!videoDetails.transcriptionUsed && (
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                                      {index + 1}
+                                    </span>
+                                  )}
+                                  <span className={`${videoDetails.transcriptionUsed ? 'text-foreground' : 'text-muted-foreground'} leading-relaxed`}>
+                                    {step}
                                   </span>
-                                  <span className="text-muted-foreground">{step}</span>
                                 </li>
                               ))}
                             </ol>
