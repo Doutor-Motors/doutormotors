@@ -9,3 +9,4 @@ export * from './useCapacitorTCP';
 export * from './useOBDConnection';
 export { OBDConnectionSelector } from './OBDConnectionSelector';
 export { ConnectionMethodGuide } from './ConnectionMethodGuide';
+export { VehicleDataDisplay } from './VehicleDataDisplay';
