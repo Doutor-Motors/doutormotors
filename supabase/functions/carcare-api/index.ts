@@ -12,6 +12,200 @@ interface CarCareRequest {
   query?: string;
 }
 
+// Extrair áudio do YouTube e transcrever usando ElevenLabs
+async function transcribeYouTubeVideo(videoUrl: string): Promise<string | null> {
+  const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
+  
+  if (!ELEVENLABS_API_KEY) {
+    console.log("ELEVENLABS_API_KEY not configured, skipping transcription");
+    return null;
+  }
+
+  try {
+    // Extrair video ID do YouTube
+    const videoIdMatch = videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (!videoIdMatch) {
+      console.log("Could not extract YouTube video ID");
+      return null;
+    }
+    const videoId = videoIdMatch[1];
+    
+    console.log(`Transcribing YouTube video: ${videoId}...`);
+
+    // Usar serviço de download de áudio do YouTube (via API pública)
+    // Tentar obter o áudio via cobalt.tools (serviço gratuito)
+    const cobaltResponse = await fetch("https://api.cobalt.tools/", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        downloadMode: "audio",
+        audioBitrate: "128",
+      }),
+    });
+
+    if (!cobaltResponse.ok) {
+      console.log("Cobalt API error, trying alternative method...");
+      
+      // Tentar método alternativo: usar transcrição do próprio YouTube via API
+      // Se não conseguir áudio, retornar null e usar passos do HTML
+      return null;
+    }
+
+    const cobaltData = await cobaltResponse.json();
+    const audioUrl = cobaltData.url;
+
+    if (!audioUrl) {
+      console.log("No audio URL received from Cobalt");
+      return null;
+    }
+
+    // Baixar o áudio
+    console.log("Downloading audio from:", audioUrl);
+    const audioResponse = await fetch(audioUrl);
+    if (!audioResponse.ok) {
+      console.log("Failed to download audio");
+      return null;
+    }
+
+    const audioBuffer = await audioResponse.arrayBuffer();
+    const audioBlob = new Blob([audioBuffer], { type: "audio/mp3" });
+
+    // Criar FormData para enviar ao ElevenLabs
+    const formData = new FormData();
+    formData.append("file", audioBlob, "audio.mp3");
+    formData.append("model_id", "scribe_v2");
+    formData.append("language_code", "eng");
+
+    console.log("Sending audio to ElevenLabs for transcription...");
+
+    const transcribeResponse = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY,
+      },
+      body: formData,
+    });
+
+    if (!transcribeResponse.ok) {
+      console.error("ElevenLabs transcription error:", transcribeResponse.status);
+      const errorText = await transcribeResponse.text();
+      console.error("Error details:", errorText);
+      return null;
+    }
+
+    const transcription = await transcribeResponse.json();
+    console.log("Transcription successful:", transcription.text?.slice(0, 200) + "...");
+    
+    return transcription.text || null;
+  } catch (error) {
+    console.error("Transcription error:", error);
+    return null;
+  }
+}
+
+// Gerar passo a passo elaborado a partir da transcrição
+async function generateElaboratedSteps(
+  transcription: string,
+  title: string,
+  vehicleContext?: string
+): Promise<string[]> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  
+  if (!LOVABLE_API_KEY) {
+    console.log("LOVABLE_API_KEY not configured, skipping step generation");
+    return [];
+  }
+
+  try {
+    console.log("Generating elaborated steps from transcription...");
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `Você é um mecânico experiente brasileiro que cria tutoriais de manutenção automotiva detalhados e fáceis de seguir.
+
+Sua tarefa é analisar a transcrição de um vídeo tutorial automotivo e criar um passo a passo ELABORADO e BEM ESTRUTURADO em português brasileiro.
+
+REGRAS IMPORTANTES:
+1. Crie passos CLAROS, DETALHADOS e em SEQUÊNCIA LÓGICA
+2. Inclua dicas de segurança quando relevante (use ⚠️)
+3. Mencione ferramentas específicas necessárias em cada passo
+4. Adicione observações úteis baseadas na transcrição
+5. Use linguagem técnica mas acessível
+6. Numere cada passo com emoji (1️⃣, 2️⃣, 3️⃣...)
+7. Cada passo deve ter 2-4 frases explicativas
+8. Máximo de 10-15 passos
+
+FORMATO DE SAÍDA: JSON array de strings, cada string é um passo completo.
+Exemplo: ["1️⃣ Primeiro passo...", "2️⃣ Segundo passo..."]
+
+RETORNE APENAS O JSON, sem explicações adicionais.`
+          },
+          {
+            role: "user",
+            content: `TÍTULO DO VÍDEO: ${title}
+${vehicleContext ? `VEÍCULO: ${vehicleContext}` : ""}
+
+TRANSCRIÇÃO DO VÍDEO:
+${transcription.slice(0, 8000)}
+
+Crie o passo a passo elaborado em português brasileiro:`
+          }
+        ],
+        temperature: 0.4,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Step generation API error:", response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      console.error("No content received from step generation");
+      return [];
+    }
+
+    // Parse the JSON response
+    let cleanedContent = content.trim();
+    if (cleanedContent.startsWith("```json")) {
+      cleanedContent = cleanedContent.slice(7);
+    } else if (cleanedContent.startsWith("```")) {
+      cleanedContent = cleanedContent.slice(3);
+    }
+    if (cleanedContent.endsWith("```")) {
+      cleanedContent = cleanedContent.slice(0, -3);
+    }
+
+    const steps = JSON.parse(cleanedContent.trim());
+    
+    if (Array.isArray(steps)) {
+      console.log(`Generated ${steps.length} elaborated steps`);
+      return steps;
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Step generation error:", error);
+    return [];
+  }
+}
+
 // Traduzir conteúdo para português usando Lovable AI
 async function translateToPortuguese(content: {
   title?: string;
@@ -259,7 +453,9 @@ Deno.serve(async (req) => {
           );
         }
         
-        const videoDetails = await fetchVideoDetails(FIRECRAWL_API_KEY, procedure);
+        // Build vehicle context for better step generation
+        const vehicleContext = [brand, model, year].filter(Boolean).join(" ");
+        const videoDetails = await fetchVideoDetails(FIRECRAWL_API_KEY, procedure, vehicleContext || undefined);
         return new Response(
           JSON.stringify({ success: true, data: videoDetails }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -575,7 +771,7 @@ async function fetchVideosFromCarCareKiosk(
 }
 
 // Buscar detalhes de um vídeo específico
-async function fetchVideoDetails(apiKey: string, videoUrl: string): Promise<any> {
+async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContext?: string): Promise<any> {
   try {
     const url = videoUrl.startsWith('http') 
       ? videoUrl 
@@ -622,13 +818,14 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string): Promise<any>
     const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
     const title = titleMatch ? titleMatch[1].trim() : metadata.title || "Tutorial";
 
-    const steps: string[] = [];
+    // Extract basic steps from HTML as fallback
+    const htmlSteps: string[] = [];
     const stepRegex = /<li[^>]*>([^<]+)<\/li>/gi;
     let stepMatch;
     while ((stepMatch = stepRegex.exec(html)) !== null) {
       const step = stepMatch[1].trim();
       if (step.length > 10 && step.length < 500) {
-        steps.push(step);
+        htmlSteps.push(step);
       }
     }
 
@@ -675,21 +872,48 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string): Promise<any>
 
     console.log(`Extracted video description: ${videoDescription.slice(0, 100)}...`);
 
-    // Traduzir conteúdo para português
-    const translatedContent = await translateToPortuguese({
+    // ========== PASSO A PASSO ELABORADO VIA TRANSCRIÇÃO ==========
+    let elaboratedSteps: string[] = [];
+    let transcriptionUsed = false;
+
+    // Tentar transcrever o vídeo do YouTube
+    if (videoEmbedUrl) {
+      console.log("Attempting to transcribe YouTube video...");
+      const transcription = await transcribeYouTubeVideo(videoEmbedUrl);
+      
+      if (transcription && transcription.length > 100) {
+        console.log("Transcription successful, generating elaborated steps...");
+        elaboratedSteps = await generateElaboratedSteps(transcription, title, vehicleContext);
+        transcriptionUsed = elaboratedSteps.length > 0;
+      }
+    }
+
+    // Se não conseguiu transcrição, traduzir passos do HTML
+    let finalSteps = elaboratedSteps;
+    
+    if (!transcriptionUsed && htmlSteps.length > 0) {
+      console.log("Using HTML steps with translation...");
+      const translatedContent = await translateToPortuguese({
+        steps: htmlSteps,
+      });
+      finalSteps = translatedContent.steps || htmlSteps;
+    }
+
+    // Traduzir título e descrição
+    const translatedMeta = await translateToPortuguese({
       title,
       description: metadata.description || "",
       videoDescription: videoDescription || undefined,
-      steps: steps.length > 0 ? steps : undefined,
     });
 
     return {
-      title: translatedContent.title || title,
-      description: translatedContent.description || metadata.description || "",
-      videoDescription: translatedContent.videoDescription || videoDescription || undefined,
+      title: translatedMeta.title || title,
+      description: translatedMeta.description || metadata.description || "",
+      videoDescription: translatedMeta.videoDescription || videoDescription || undefined,
       videoUrl: videoEmbedUrl,
       sourceUrl: url,
-      steps: translatedContent.steps || steps,
+      steps: finalSteps.length > 0 ? finalSteps : htmlSteps,
+      transcriptionUsed,
       markdown: markdown.slice(0, 5000),
     };
   } catch (error) {
