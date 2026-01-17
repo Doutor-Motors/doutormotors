@@ -37,7 +37,19 @@ const DiagnosticReport = () => {
 
   useEffect(() => {
     const fetchDiagnostic = async () => {
-      if (!id || !user) return;
+      if (!user) return;
+      
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!id || !uuidRegex.test(id)) {
+        toast({
+          title: "Erro ao carregar diagnóstico",
+          description: "ID de diagnóstico inválido",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
 
