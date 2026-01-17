@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database, Bell } from "lucide-react";
+import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database, Bell, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import CacheStatsPanel from "@/components/dashboard/CacheStatsPanel";
 import DataDeletionSection from "@/components/profile/DataDeletionSection";
 import NotificationSettings from "@/components/profile/NotificationSettings";
+import AlertsHistorySection from "@/components/profile/AlertsHistorySection";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Tables } from "@/integrations/supabase/types";
@@ -196,22 +197,26 @@ const UserProfile = () => {
 
         {/* Tabs for Profile and Settings */}
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile" className="font-chakra uppercase text-xs sm:text-sm gap-2">
-              <User className="w-4 h-4" />
-              Perfil
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="profile" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
+              <User className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Perfil</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="font-chakra uppercase text-xs sm:text-sm gap-2">
-              <Bell className="w-4 h-4" />
-              Notificações
+            <TabsTrigger value="alerts" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
+              <History className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Alertas</span>
             </TabsTrigger>
-            <TabsTrigger value="privacy" className="font-chakra uppercase text-xs sm:text-sm gap-2">
-              <Database className="w-4 h-4" />
-              Privacidade
+            <TabsTrigger value="notifications" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
+              <Bell className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Notif.</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="font-chakra uppercase text-xs sm:text-sm gap-2">
-              <Settings className="w-4 h-4" />
-              Config
+            <TabsTrigger value="privacy" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
+              <Database className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Privac.</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
+              <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Config</span>
             </TabsTrigger>
           </TabsList>
 
@@ -330,6 +335,12 @@ const UserProfile = () => {
               </CardContent>
             </Card>
 
+          </TabsContent>
+
+          <TabsContent value="alerts" className="mt-6">
+            {user && (
+              <AlertsHistorySection userId={user.id} />
+            )}
           </TabsContent>
 
           <TabsContent value="notifications" className="mt-6">
