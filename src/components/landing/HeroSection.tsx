@@ -28,7 +28,7 @@ const HeroSection = () => {
             Diagnóstico Automotivo Inteligente
           </h1>
           
-          <p className="text-dm-cadet text-base md:text-lg mb-8 leading-relaxed">
+          <p className="text-white/90 text-base md:text-lg mb-8 leading-relaxed">
             Conecte seu OBD2, entenda os problemas do seu carro em linguagem simples, 
             descubra a urgência e saiba se pode resolver sozinho.
           </p>
