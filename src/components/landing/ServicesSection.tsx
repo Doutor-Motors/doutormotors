@@ -84,18 +84,10 @@ const ServicesSection = () => {
             </div>
           ))}
 
-          {/* Featured Car Image */}
-          <div className="hidden lg:flex items-center justify-center">
-            <img 
-              src={services5} 
-              alt="Carro vermelho" 
-              className="w-full max-w-sm move-anim"
-            />
-          </div>
         </div>
 
-        {/* Featured Car Image - Mobile & Tablet */}
-        <div className="flex lg:hidden items-center justify-center mb-10">
+        {/* Featured Car Image - Between cards and button */}
+        <div className="flex items-center justify-center mb-10">
           <img 
             src={services5} 
             alt="Carro vermelho" 
