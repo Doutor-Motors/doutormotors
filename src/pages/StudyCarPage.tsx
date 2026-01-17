@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { 
   Search, Loader2, Car, ChevronRight, ArrowLeft, Play, 
-  BookOpen, Video, ExternalLink, Home 
+  BookOpen, Video, ExternalLink, Home, Filter, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
   Select,
   SelectContent,
@@ -20,23 +21,48 @@ import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  fetchBrands, 
-  fetchModels, 
-  fetchMaintenanceCategories,
-  getYouTubeEmbedUrl,
-  getYouTubeThumbnail,
-  CarBrand,
-  CarModel,
-  MaintenanceCategory,
-} from "@/services/carcare/api";
 import { motion, AnimatePresence } from "framer-motion";
 
-type ViewState = "brands" | "models" | "tutorials" | "video";
+// Types
+interface CarBrand {
+  id: string;
+  name: string;
+  image: string;
+  url?: string;
+}
+
+interface CarModel {
+  id: string;
+  name: string;
+  years: string;
+  image: string;
+  url?: string;
+}
+
+interface VideoCategory {
+  id: string;
+  name: string;
+  nameEn: string;
+  icon: string;
+  thumbnail?: string;
+  url?: string;
+  vehicleContext?: string;
+}
+
+interface VideoDetails {
+  title: string;
+  description?: string;
+  videoUrl?: string;
+  sourceUrl?: string;
+  steps?: string[];
+  markdown?: string;
+}
+
+type ViewState = "brands" | "models" | "categories" | "video";
 
 const StudyCarPage = () => {
   const { user } = useAuth();
-  const { notifyError, notifyInfo } = useNotifications();
+  const { notifyError } = useNotifications();
   
   // Navigation state
   const [currentView, setCurrentView] = useState<ViewState>("brands");
@@ -45,15 +71,15 @@ const StudyCarPage = () => {
   // Data state
   const [brands, setBrands] = useState<CarBrand[]>([]);
   const [models, setModels] = useState<CarModel[]>([]);
-  const [categories, setCategories] = useState<MaintenanceCategory[]>([]);
+  const [categories, setCategories] = useState<VideoCategory[]>([]);
+  const [videoDetails, setVideoDetails] = useState<VideoDetails | null>(null);
   
   // Selection state
   const [selectedBrand, setSelectedBrand] = useState<CarBrand | null>(null);
   const [selectedModel, setSelectedModel] = useState<CarModel | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<MaintenanceCategory | null>(null);
-  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<VideoCategory | null>(null);
   
-  // Search state
+  // Search/Filter state
   const [brandSearch, setBrandSearch] = useState("");
   const [quickSelectBrand, setQuickSelectBrand] = useState("");
   const [quickSelectModel, setQuickSelectModel] = useState("");
@@ -89,11 +115,18 @@ const StudyCarPage = () => {
 
   const loadBrands = async () => {
     setIsLoading(true);
-    const response = await fetchBrands();
-    
-    if (response.success && response.data) {
-      setBrands(response.data);
-    } else {
+    try {
+      const { data, error } = await supabase.functions.invoke("carcare-api", {
+        body: { action: "brands" },
+      });
+
+      if (error) throw error;
+      
+      if (data.success && data.data) {
+        setBrands(data.data);
+      }
+    } catch (err) {
+      console.error("Error loading brands:", err);
       notifyError("Erro", "Não foi possível carregar as marcas");
     }
     setIsLoading(false);
@@ -103,12 +136,19 @@ const StudyCarPage = () => {
     setSelectedBrand(brand);
     setIsLoading(true);
     
-    const response = await fetchModels(brand.name);
-    
-    if (response.success && response.data) {
-      setModels(response.data);
-      setCurrentView("models");
-    } else {
+    try {
+      const { data, error } = await supabase.functions.invoke("carcare-api", {
+        body: { action: "models", brand: brand.name },
+      });
+
+      if (error) throw error;
+      
+      if (data.success && data.data) {
+        setModels(data.data);
+        setCurrentView("models");
+      }
+    } catch (err) {
+      console.error("Error loading models:", err);
       notifyError("Erro", "Não foi possível carregar os modelos");
     }
     setIsLoading(false);
@@ -118,25 +158,52 @@ const StudyCarPage = () => {
     setSelectedModel(model);
     setIsLoading(true);
     
-    const response = await fetchMaintenanceCategories(
-      selectedBrand?.name,
-      model.name,
-      model.years.split("-")[1] || model.years
-    );
-    
-    if (response.success && response.data) {
-      setCategories(response.data);
-      setCurrentView("tutorials");
-    } else {
+    try {
+      const { data, error } = await supabase.functions.invoke("carcare-api", {
+        body: { 
+          action: "videos", 
+          brand: selectedBrand?.name,
+          model: model.name,
+          year: model.years.split("-")[0] || model.years
+        },
+      });
+
+      if (error) throw error;
+      
+      if (data.success && data.data) {
+        setCategories(data.data);
+        setCurrentView("categories");
+      }
+    } catch (err) {
+      console.error("Error loading categories:", err);
       notifyError("Erro", "Não foi possível carregar as categorias");
     }
     setIsLoading(false);
   };
 
-  const handleCategorySelect = (category: MaintenanceCategory) => {
+  const handleCategorySelect = async (category: VideoCategory) => {
     setSelectedCategory(category);
-    setSelectedVideoIndex(0);
+    setIsLoading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("carcare-api", {
+        body: { 
+          action: "video-details", 
+          procedure: category.url || category.id 
+        },
+      });
+
+      if (error) throw error;
+      
+      if (data.success && data.data) {
+        setVideoDetails(data.data);
+      }
+    } catch (err) {
+      console.error("Error loading video details:", err);
+    }
+    
     setCurrentView("video");
+    setIsLoading(false);
   };
 
   const handleQuickSelect = async () => {
@@ -144,39 +211,46 @@ const StudyCarPage = () => {
     
     setIsLoading(true);
     
-    // Find brand
     const brand = brands.find(b => b.name.toLowerCase() === quickSelectBrand.toLowerCase());
-    if (brand) {
-      setSelectedBrand(brand);
-    } else {
-      setSelectedBrand({ id: quickSelectBrand, name: quickSelectBrand, image: "" });
-    }
+    setSelectedBrand(brand || { id: quickSelectBrand, name: quickSelectBrand, image: "" });
     
-    // If model selected, go directly to tutorials
     if (quickSelectModel) {
       setSelectedModel({ 
         id: quickSelectModel, 
         name: quickSelectModel, 
-        years: quickSelectYear || "2020-2024",
+        years: quickSelectYear || new Date().getFullYear().toString(),
         image: "" 
       });
       
-      const response = await fetchMaintenanceCategories(
-        quickSelectBrand,
-        quickSelectModel,
-        quickSelectYear
-      );
-      
-      if (response.success && response.data) {
-        setCategories(response.data);
-        setCurrentView("tutorials");
+      try {
+        const { data, error } = await supabase.functions.invoke("carcare-api", {
+          body: { 
+            action: "videos", 
+            brand: quickSelectBrand,
+            model: quickSelectModel,
+            year: quickSelectYear
+          },
+        });
+
+        if (!error && data.success && data.data) {
+          setCategories(data.data);
+          setCurrentView("categories");
+        }
+      } catch (err) {
+        console.error("Error:", err);
       }
     } else {
-      // Just go to models
-      const response = await fetchModels(quickSelectBrand);
-      if (response.success && response.data) {
-        setModels(response.data);
-        setCurrentView("models");
+      try {
+        const { data, error } = await supabase.functions.invoke("carcare-api", {
+          body: { action: "models", brand: quickSelectBrand },
+        });
+
+        if (!error && data.success && data.data) {
+          setModels(data.data);
+          setCurrentView("models");
+        }
+      } catch (err) {
+        console.error("Error:", err);
       }
     }
     
@@ -189,13 +263,14 @@ const StudyCarPage = () => {
         setCurrentView("brands");
         setSelectedBrand(null);
         break;
-      case "tutorials":
+      case "categories":
         setCurrentView("models");
         setSelectedModel(null);
         break;
       case "video":
-        setCurrentView("tutorials");
+        setCurrentView("categories");
         setSelectedCategory(null);
+        setVideoDetails(null);
         break;
     }
   };
@@ -205,14 +280,28 @@ const StudyCarPage = () => {
     setSelectedBrand(null);
     setSelectedModel(null);
     setSelectedCategory(null);
+    setVideoDetails(null);
   };
 
   const filteredBrands = brands.filter(brand =>
     brand.name.toLowerCase().includes(brandSearch.toLowerCase())
   );
 
-  // Get years for dropdown
   const years = Array.from({ length: 15 }, (_, i) => (new Date().getFullYear() - i).toString());
+
+  // Extrair YouTube video ID
+  const getYouTubeEmbedUrl = (url: string | undefined): string | null => {
+    if (!url) return null;
+    
+    // Se já é uma URL de embed
+    if (url.includes('/embed/')) {
+      return url;
+    }
+    
+    // Extrair video ID
+    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -279,7 +368,8 @@ const StudyCarPage = () => {
                       >
                         <Card>
                           <CardContent className="p-6">
-                            <h3 className="font-chakra font-bold text-lg mb-4 text-center">
+                            <h3 className="font-chakra font-bold text-lg mb-4 flex items-center gap-2">
+                              <Filter className="w-5 h-5 text-primary" />
                               Selecione seu Veículo
                             </h3>
                             <div className="space-y-3">
@@ -297,7 +387,7 @@ const StudyCarPage = () => {
                               </Select>
 
                               <Input
-                                placeholder="Digite o Modelo"
+                                placeholder="Digite o Modelo (ex: Civic, Corolla)"
                                 value={quickSelectModel}
                                 onChange={(e) => setQuickSelectModel(e.target.value)}
                               />
@@ -336,10 +426,10 @@ const StudyCarPage = () => {
                     {/* Right Side - Brand Grid Title */}
                     <div>
                       <h2 className="font-chakra text-xl font-bold uppercase mb-4 text-center lg:text-left">
-                        Navegue por vídeos tutoriais para consertar seu carro
+                        Ou navegue por marca
                       </h2>
                       <p className="text-muted-foreground text-sm mb-4 text-center lg:text-left">
-                        Toque em um carro parecido com o seu e veja como consertá-lo
+                        Clique em uma marca para ver os modelos disponíveis
                       </p>
                       
                       {/* Search */}
@@ -360,6 +450,16 @@ const StudyCarPage = () => {
               {/* Brands Grid */}
               <section className="py-8">
                 <div className="container mx-auto px-4">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-chakra font-bold text-lg">
+                      {filteredBrands.length} Marcas Disponíveis
+                    </h3>
+                    <Button variant="ghost" size="sm" onClick={loadBrands}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Atualizar
+                    </Button>
+                  </div>
+                  
                   {isLoading ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                       {[...Array(12)].map((_, i) => (
@@ -388,8 +488,8 @@ const StudyCarPage = () => {
                                   e.currentTarget.src = "/placeholder.svg";
                                 }}
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                              <Badge className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-gray-800 hover:bg-gray-700">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                              <Badge className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
                                 {brand.name}
                               </Badge>
                             </div>
@@ -413,7 +513,7 @@ const StudyCarPage = () => {
               transition={{ duration: 0.3 }}
             >
               {/* Breadcrumb */}
-              <section className="bg-muted/50 py-4">
+              <section className="bg-muted/50 py-4 border-b">
                 <div className="container mx-auto px-4">
                   <div className="flex items-center gap-2 text-sm">
                     <Button variant="ghost" size="sm" onClick={goHome}>
@@ -433,11 +533,12 @@ const StudyCarPage = () => {
                       <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
-                      <h1 className="font-chakra text-3xl font-bold uppercase">
+                      <h1 className="font-chakra text-3xl font-bold uppercase flex items-center gap-3">
+                        <Car className="w-8 h-8 text-primary" />
                         {selectedBrand.name}
                       </h1>
                       <p className="text-muted-foreground">
-                        Selecione o modelo do seu veículo
+                        Selecione o modelo do seu veículo • {models.length} modelos
                       </p>
                     </div>
                   </div>
@@ -450,23 +551,17 @@ const StudyCarPage = () => {
                   {isLoading ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                       {[...Array(8)].map((_, i) => (
-                        <Card key={i}>
-                          <Skeleton className="aspect-[4/3]" />
-                          <CardContent className="p-4">
-                            <Skeleton className="h-5 w-3/4 mb-2" />
-                            <Skeleton className="h-4 w-1/2" />
-                          </CardContent>
-                        </Card>
+                        <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
                       ))}
                     </div>
-                  ) : (
+                  ) : models.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                       {models.map((model, index) => (
                         <motion.div
                           key={model.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
+                          transition={{ delay: index * 0.03 }}
                         >
                           <Card 
                             className="cursor-pointer hover:border-primary hover:shadow-lg transition-all group overflow-hidden"
@@ -481,19 +576,24 @@ const StudyCarPage = () => {
                                   e.currentTarget.src = "/placeholder.svg";
                                 }}
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                              <div className="absolute bottom-3 left-0 right-0 text-center">
+                                <p className="font-bold text-white text-lg drop-shadow-lg">{model.name}</p>
+                                <Badge variant="secondary" className="mt-1">
+                                  {model.years}
+                                </Badge>
+                              </div>
                             </div>
-                            <CardContent className="p-4 text-center">
-                              <Badge className="bg-primary mb-2">
-                                {model.name}
-                              </Badge>
-                              <p className="text-sm text-muted-foreground">
-                                {model.years}
-                              </p>
-                            </CardContent>
                           </Card>
                         </motion.div>
                       ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Car className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-lg text-muted-foreground">
+                        Nenhum modelo encontrado para esta marca.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -501,29 +601,32 @@ const StudyCarPage = () => {
             </motion.div>
           )}
 
-          {/* TUTORIALS VIEW */}
-          {currentView === "tutorials" && selectedBrand && selectedModel && (
+          {/* CATEGORIES VIEW */}
+          {currentView === "categories" && selectedBrand && selectedModel && (
             <motion.div
-              key="tutorials"
+              key="categories"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
               {/* Breadcrumb */}
-              <section className="bg-muted/50 py-4">
+              <section className="bg-muted/50 py-4 border-b">
                 <div className="container mx-auto px-4">
                   <div className="flex items-center gap-2 text-sm flex-wrap">
                     <Button variant="ghost" size="sm" onClick={goHome}>
                       <Home className="w-4 h-4" />
                     </Button>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <Button variant="ghost" size="sm" onClick={() => setCurrentView("brands")}>
+                    <span 
+                      className="text-muted-foreground hover:text-primary cursor-pointer"
+                      onClick={() => { setCurrentView("brands"); setSelectedBrand(null); }}
+                    >
                       {selectedBrand.name}
-                    </Button>
+                    </span>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     <span className="text-primary font-medium">
-                      {selectedModel.name} {selectedModel.years}
+                      {selectedModel.name} ({selectedModel.years})
                     </span>
                   </div>
                 </div>
@@ -538,10 +641,10 @@ const StudyCarPage = () => {
                     </Button>
                     <div>
                       <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase">
-                        {selectedBrand.name} {selectedModel.name} {selectedModel.years}
+                        {selectedBrand.name} {selectedModel.name}
                       </h1>
                       <p className="text-muted-foreground">
-                        Selecione uma categoria de manutenção para ver os tutoriais
+                        Selecione um tutorial de manutenção • {categories.length} categorias
                       </p>
                     </div>
                   </div>
@@ -552,76 +655,45 @@ const StudyCarPage = () => {
               <section className="py-8">
                 <div className="container mx-auto px-4">
                   {isLoading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                      {[...Array(9)].map((_, i) => (
-                        <Card key={i}>
-                          <Skeleton className="aspect-video" />
-                          <CardContent className="p-4">
-                            <Skeleton className="h-5 w-3/4 mb-2" />
-                            <Skeleton className="h-4 w-full" />
-                          </CardContent>
-                        </Card>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {[...Array(10)].map((_, i) => (
+                        <Skeleton key={i} className="h-32 rounded-lg" />
                       ))}
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  ) : categories.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {categories.map((category, index) => (
                         <motion.div
                           key={category.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: index * 0.03 }}
                         >
                           <Card 
-                            className="cursor-pointer hover:border-primary hover:shadow-lg transition-all group overflow-hidden"
+                            className="cursor-pointer hover:border-primary hover:shadow-lg transition-all group h-full"
                             onClick={() => handleCategorySelect(category)}
                           >
-                            <div className="aspect-video relative bg-gradient-to-br from-primary/20 to-secondary/20">
-                              {category.videos[0] && (
-                                <img
-                                  src={getYouTubeThumbnail(category.videos[0].url) || "/placeholder.svg"}
-                                  alt={category.name}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                  onError={(e) => {
-                                    e.currentTarget.src = "/placeholder.svg";
-                                  }}
-                                />
-                              )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-16 h-16 bg-primary/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                                  <Play className="w-8 h-8 text-primary-foreground ml-1" />
-                                </div>
-                              </div>
-                              <div className="absolute top-3 left-3">
-                                <span className="text-3xl">{category.icon}</span>
-                              </div>
-                            </div>
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h3 className="font-chakra font-bold text-lg group-hover:text-primary transition-colors">
-                                    {category.name}
-                                  </h3>
-                                  <p className="text-sm text-muted-foreground">
-                                    {category.videos.length} vídeo{category.videos.length > 1 ? "s" : ""} disponíve{category.videos.length > 1 ? "is" : "l"}
-                                  </p>
-                                </div>
-                                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                              </div>
-                              {category.procedures.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {category.procedures.slice(0, 3).map(proc => (
-                                    <Badge key={proc.id} variant="secondary" className="text-xs">
-                                      {proc.name}
-                                    </Badge>
-                                  ))}
-                                </div>
+                            <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full min-h-[120px]">
+                              <span className="text-4xl mb-2">{category.icon}</span>
+                              <p className="font-medium text-sm group-hover:text-primary transition-colors">
+                                {category.name}
+                              </p>
+                              {category.nameEn !== category.name && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {category.nameEn}
+                                </p>
                               )}
                             </CardContent>
                           </Card>
                         </motion.div>
                       ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Video className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-lg text-muted-foreground">
+                        Nenhuma categoria encontrada para este modelo.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -630,7 +702,7 @@ const StudyCarPage = () => {
           )}
 
           {/* VIDEO VIEW */}
-          {currentView === "video" && selectedCategory && (
+          {currentView === "video" && selectedBrand && selectedModel && selectedCategory && (
             <motion.div
               key="video"
               initial={{ opacity: 0, x: 20 }}
@@ -639,176 +711,159 @@ const StudyCarPage = () => {
               transition={{ duration: 0.3 }}
             >
               {/* Breadcrumb */}
-              <section className="bg-muted/50 py-4">
+              <section className="bg-muted/50 py-4 border-b">
                 <div className="container mx-auto px-4">
                   <div className="flex items-center gap-2 text-sm flex-wrap">
                     <Button variant="ghost" size="sm" onClick={goHome}>
                       <Home className="w-4 h-4" />
                     </Button>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <Button variant="ghost" size="sm" onClick={() => setCurrentView("brands")}>
-                      {selectedBrand?.name}
-                    </Button>
+                    <span 
+                      className="text-muted-foreground hover:text-primary cursor-pointer"
+                      onClick={() => { setCurrentView("brands"); setSelectedBrand(null); }}
+                    >
+                      {selectedBrand.name}
+                    </span>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <Button variant="ghost" size="sm" onClick={() => setCurrentView("models")}>
-                      {selectedModel?.name}
-                    </Button>
+                    <span 
+                      className="text-muted-foreground hover:text-primary cursor-pointer"
+                      onClick={() => { setCurrentView("models"); setSelectedModel(null); }}
+                    >
+                      {selectedModel.name}
+                    </span>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     <span className="text-primary font-medium">{selectedCategory.name}</span>
                   </div>
                 </div>
               </section>
 
-              {/* Video Player Section */}
-              <section className="py-6">
+              {/* Video Content */}
+              <section className="py-8">
                 <div className="container mx-auto px-4">
                   <div className="flex items-center gap-4 mb-6">
                     <Button variant="outline" size="icon" onClick={goBack}>
                       <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">{selectedCategory.icon}</span>
-                        <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase">
-                          {selectedCategory.name}
-                        </h1>
-                      </div>
-                      {selectedBrand && selectedModel && (
-                        <p className="text-muted-foreground">
-                          {selectedBrand.name} {selectedModel.name} {selectedModel.years}
-                        </p>
-                      )}
+                      <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase">
+                        {selectedCategory.icon} {selectedCategory.name}
+                      </h1>
+                      <p className="text-muted-foreground">
+                        {selectedBrand.name} {selectedModel.name} ({selectedModel.years})
+                      </p>
                     </div>
                   </div>
 
-                  <div className="grid lg:grid-cols-3 gap-6">
-                    {/* Main Video Player */}
+                  <div className="grid lg:grid-cols-3 gap-8">
+                    {/* Main Video */}
                     <div className="lg:col-span-2">
                       <Card className="overflow-hidden">
-                        <div className="aspect-video bg-black">
-                          {selectedCategory.videos[selectedVideoIndex] && (
+                        {isLoading ? (
+                          <Skeleton className="aspect-video" />
+                        ) : videoDetails?.videoUrl ? (
+                          <AspectRatio ratio={16 / 9}>
                             <iframe
-                              src={getYouTubeEmbedUrl(selectedCategory.videos[selectedVideoIndex].url) || ""}
-                              title={selectedCategory.videos[selectedVideoIndex].title}
+                              src={getYouTubeEmbedUrl(videoDetails.videoUrl) || videoDetails.videoUrl}
+                              title={videoDetails.title || selectedCategory.name}
                               className="w-full h-full"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                             />
-                          )}
-                        </div>
-                        <CardContent className="p-4">
-                          <h2 className="font-bold text-lg mb-2">
-                            {selectedCategory.videos[selectedVideoIndex]?.title}
-                          </h2>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Video className="w-4 h-4" />
-                              Vídeo {selectedVideoIndex + 1} de {selectedCategory.videos.length}
-                            </span>
-                            <a 
-                              href={selectedCategory.videos[selectedVideoIndex]?.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 hover:text-primary transition-colors"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                              Abrir no YouTube
-                            </a>
+                          </AspectRatio>
+                        ) : (
+                          <div className="aspect-video bg-muted flex flex-col items-center justify-center p-8 text-center">
+                            <Video className="w-16 h-16 text-muted-foreground mb-4" />
+                            <p className="text-lg font-medium mb-2">Vídeo em carregamento...</p>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              Clique abaixo para assistir no CarCareKiosk
+                            </p>
+                            {selectedCategory.url && (
+                              <Button asChild>
+                                <a 
+                                  href={selectedCategory.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLink className="w-4 h-4 mr-2" />
+                                  Abrir no CarCareKiosk
+                                </a>
+                              </Button>
+                            )}
                           </div>
+                        )}
+                        
+                        <CardContent className="p-6">
+                          <h2 className="font-chakra font-bold text-xl mb-2">
+                            {videoDetails?.title || `${selectedCategory.name} - ${selectedBrand.name} ${selectedModel.name}`}
+                          </h2>
+                          {videoDetails?.description && (
+                            <p className="text-muted-foreground">{videoDetails.description}</p>
+                          )}
+                          
+                          {selectedCategory.url && (
+                            <Button variant="outline" asChild className="mt-4">
+                              <a 
+                                href={selectedCategory.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Ver tutorial completo no CarCareKiosk
+                              </a>
+                            </Button>
+                          )}
                         </CardContent>
                       </Card>
 
-                      {/* Procedures Info */}
-                      {selectedCategory.procedures.length > 0 && (
-                        <Card className="mt-4">
-                          <CardContent className="p-4">
-                            <h3 className="font-chakra font-bold mb-3 flex items-center gap-2">
+                      {/* Steps */}
+                      {videoDetails?.steps && videoDetails.steps.length > 0 && (
+                        <Card className="mt-6">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
                               <BookOpen className="w-5 h-5 text-primary" />
-                              Procedimentos Disponíveis
-                            </h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                              {selectedCategory.procedures.map(proc => (
-                                <div 
-                                  key={proc.id}
-                                  className="p-3 bg-muted rounded-lg"
-                                >
-                                  <p className="font-medium">{proc.name}</p>
-                                  <p className="text-xs text-muted-foreground">{proc.nameEn}</p>
-                                </div>
+                              Passo a Passo
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ol className="space-y-3">
+                              {videoDetails.steps.map((step, index) => (
+                                <li key={index} className="flex gap-3">
+                                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                                    {index + 1}
+                                  </span>
+                                  <span className="text-muted-foreground">{step}</span>
+                                </li>
                               ))}
-                            </div>
+                            </ol>
                           </CardContent>
                         </Card>
                       )}
                     </div>
 
-                    {/* Video List */}
-                    <div className="lg:col-span-1">
+                    {/* Sidebar - Other Categories */}
+                    <div>
                       <Card>
-                        <CardContent className="p-4">
-                          <h3 className="font-chakra font-bold mb-4 flex items-center gap-2">
-                            <Play className="w-5 h-5 text-primary" />
-                            Vídeos Relacionados
-                          </h3>
-                          <div className="space-y-3">
-                            {selectedCategory.videos.map((video, index) => (
-                              <button
-                                key={index}
-                                onClick={() => setSelectedVideoIndex(index)}
-                                className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                                  selectedVideoIndex === index
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border hover:border-primary/50"
-                                }`}
-                              >
-                                <div className="flex gap-3">
-                                  <div className="relative w-24 aspect-video bg-muted rounded overflow-hidden flex-shrink-0">
-                                    <img
-                                      src={getYouTubeThumbnail(video.url) || "/placeholder.svg"}
-                                      alt={video.title}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.src = "/placeholder.svg";
-                                      }}
-                                    />
-                                    {selectedVideoIndex === index && (
-                                      <div className="absolute inset-0 bg-primary/30 flex items-center justify-center">
-                                        <Play className="w-6 h-6 text-white" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium line-clamp-2">
-                                      {video.title}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      YouTube
-                                    </p>
-                                  </div>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Quick Links */}
-                      <Card className="mt-4">
-                        <CardContent className="p-4">
-                          <h3 className="font-chakra font-bold mb-3">Outras Categorias</h3>
-                          <div className="space-y-2">
+                        <CardHeader>
+                          <CardTitle className="text-lg">Outros Tutoriais</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          <div className="divide-y">
                             {categories
                               .filter(c => c.id !== selectedCategory.id)
-                              .slice(0, 5)
-                              .map(cat => (
+                              .slice(0, 8)
+                              .map((category) => (
                                 <button
-                                  key={cat.id}
-                                  onClick={() => handleCategorySelect(cat)}
-                                  className="w-full flex items-center gap-2 p-2 rounded hover:bg-muted transition-colors text-left"
+                                  key={category.id}
+                                  className="w-full p-4 text-left hover:bg-muted/50 transition-colors flex items-center gap-3"
+                                  onClick={() => handleCategorySelect(category)}
                                 >
-                                  <span>{cat.icon}</span>
-                                  <span className="text-sm">{cat.name}</span>
-                                  <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground" />
+                                  <span className="text-2xl">{category.icon}</span>
+                                  <div>
+                                    <p className="font-medium text-sm">{category.name}</p>
+                                    {category.nameEn !== category.name && (
+                                      <p className="text-xs text-muted-foreground">{category.nameEn}</p>
+                                    )}
+                                  </div>
                                 </button>
                               ))}
                           </div>
@@ -821,23 +876,8 @@ const StudyCarPage = () => {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Loading Overlay */}
-        {isLoading && (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center pointer-events-none">
-            <Card className="max-w-sm w-full mx-4">
-              <CardContent className="p-8 text-center">
-                <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-                <h3 className="font-chakra font-bold text-lg mb-2">Carregando...</h3>
-                <p className="text-muted-foreground text-sm">
-                  Buscando informações do veículo
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </main>
-
+      
       <Footer />
     </div>
   );
