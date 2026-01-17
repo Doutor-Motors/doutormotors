@@ -46,6 +46,8 @@ import SupportCenter from "./pages/dashboard/SupportCenter";
 import TicketDetail from "./pages/dashboard/TicketDetail";
 import AdminTickets from "./pages/admin/AdminTickets";
 import NativeAppGuide from "./pages/NativeAppGuide";
+import UpgradePage from "./pages/dashboard/UpgradePage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -86,6 +88,7 @@ const App = () => (
                 <Route path="/dashboard/support" element={<ProtectedRoute><SupportCenter /></ProtectedRoute>} />
                 <Route path="/dashboard/support/:id" element={<ProtectedRoute><TicketDetail /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                <Route path="/dashboard/upgrade" element={<ProtectedRoute><UpgradePage /></ProtectedRoute>} />
                 <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
                 
