@@ -152,7 +152,7 @@ const StudyCarPage = () => {
               exit={{ opacity: 0 }}
             >
               {/* Hero Section */}
-              <section className="relative bg-gradient-to-br from-primary/10 via-background to-secondary/10 py-16 md:py-24">
+              <section className="relative bg-gradient-to-br from-primary/10 via-background to-secondary/10 py-16 md:py-24 pt-32 md:pt-40">
                 <div className="container mx-auto px-4">
                   <div className="max-w-3xl mx-auto text-center">
                     <motion.div
