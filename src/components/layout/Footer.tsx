@@ -10,7 +10,7 @@ import footerShape3 from "@/assets/images/footer-shape-3.png";
 
 const Footer = () => {
   return (
-    <footer className="text-dm-cadet">
+    <footer className="text-white/90">
       <div className="bg-dm-space py-16 relative overflow-hidden">
         <div className="container mx-auto px-4 grid md:grid-cols-3 gap-10 relative z-10">
           {/* Brand */}
@@ -18,7 +18,7 @@ const Footer = () => {
             <Link to="/">
               <img src={logo} alt="Doutor Motors" className="w-28 mb-4" />
             </Link>
-            <p className="text-dm-cadet mb-5 text-sm leading-relaxed">
+            <p className="text-white/80 mb-5 text-sm leading-relaxed">
               Doutor Motors é seu diagnóstico automotivo inteligente. 
               Entenda os problemas do seu veículo e saiba como resolver.
             </p>
@@ -91,7 +91,7 @@ const Footer = () => {
       {/* Bottom Bar */}
       <div className="bg-dm-blue-1 py-5 relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
-          <p className="text-center text-xs">
+          <p className="text-center text-xs text-white/70">
             Copyright © 2024 Doutor Motors. Todos os direitos reservados.
           </p>
         </div>
