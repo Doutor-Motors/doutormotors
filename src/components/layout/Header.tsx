@@ -23,7 +23,7 @@ const Header = () => {
       <div className="container mx-auto flex justify-between items-center">
         <Link to="/" className="flex flex-col items-center">
           <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
-          <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-8">DOUTOR MOTORS</span>
+          <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-10">DOUTOR MOTORS</span>
         </Link>
 
         {/* Desktop Navigation */}
