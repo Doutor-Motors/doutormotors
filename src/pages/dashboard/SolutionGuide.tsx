@@ -71,12 +71,13 @@ const SolutionGuide = () => {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [solution, setSolution] = useState<SolutionData | null>(null);
   const [usedAI, setUsedAI] = useState(false);
+  const [fromCache, setFromCache] = useState(false);
   const [activeSource, setActiveSource] = useState<ContentSource>('loveble');
   const [showIntegratedViewer, setShowIntegratedViewer] = useState(false);
 
   const fetchAISolution = async (diagnosticItem: DiagnosticItem, vehicleData: Vehicle) => {
     setIsFetchingAI(true);
-    notifyInfo("Buscando solução", "Consultando base de dados CarCareKiosk...");
+    notifyInfo("Buscando solução", "Verificando cache local...");
 
     try {
       const response = await fetchSolutionFromCarCareKiosk({
@@ -96,7 +97,13 @@ const SolutionGuide = () => {
         };
         setSolution(aiSolution);
         setUsedAI(true);
-        notifySuccess("Solução encontrada!", "Guia detalhado gerado com sucesso.");
+        setFromCache(response.fromCache || false);
+        
+        if (response.fromCache) {
+          notifySuccess("Solução carregada!", "Recuperada do cache local (offline)");
+        } else {
+          notifySuccess("Solução encontrada!", "Guia detalhado gerado e salvo no cache.");
+        }
       } else {
         console.error("AI solution error:", response.error);
         notifyError("Erro ao buscar", response.error || "Usando solução padrão");
@@ -299,9 +306,9 @@ const SolutionGuide = () => {
               </Badge>
             )}
             {usedAI && !isFetchingAI && (
-              <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
+              <Badge className={`${fromCache ? 'bg-green-600' : 'bg-gradient-to-r from-primary to-primary/80'} text-primary-foreground`}>
                 <Sparkles className="w-3 h-3 mr-1" />
-                CarCareKiosk + IA
+                {fromCache ? 'Cache Local' : 'CarCareKiosk + IA'}
               </Badge>
             )}
           </div>
