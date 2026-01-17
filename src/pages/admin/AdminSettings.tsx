@@ -7,6 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +20,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
   Settings, 
   Bell, 
@@ -34,7 +44,12 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle,
-  Info
+  Info,
+  HardDrive,
+  Sparkles,
+  Clock,
+  FileText,
+  Video
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,15 +64,40 @@ interface SystemSetting {
   updated_at: string;
 }
 
+interface CacheStats {
+  totalEntries: number;
+  transcribedEntries: number;
+  htmlFallbackEntries: number;
+  expiredEntries: number;
+  estimatedStorageKB: number;
+  oldestEntry: string | null;
+  newestEntry: string | null;
+  recentEntries: Array<{
+    id: string;
+    video_url: string;
+    youtube_video_id: string | null;
+    transcription_used: boolean;
+    vehicle_context: string | null;
+    created_at: string;
+    expires_at: string;
+  }>;
+}
+
 const AdminSettings = () => {
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [originalSettings, setOriginalSettings] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Cache management state
+  const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
+  const [loadingCache, setLoadingCache] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
 
   useEffect(() => {
     fetchSettings();
+    fetchCacheStats();
   }, []);
 
   useEffect(() => {
@@ -170,6 +210,111 @@ const AdminSettings = () => {
     }
   };
 
+  // Cache management functions
+  const fetchCacheStats = async () => {
+    setLoadingCache(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cache-admin", {
+        body: { action: "stats" },
+      });
+
+      if (error) throw error;
+      
+      if (data.success) {
+        setCacheStats(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching cache stats:", error);
+    } finally {
+      setLoadingCache(false);
+    }
+  };
+
+  const handleClearAllCache = async () => {
+    setClearingCache(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cache-admin", {
+        body: { action: "clear-all" },
+      });
+
+      if (error) throw error;
+      
+      if (data.success) {
+        toast.success("Cache limpo com sucesso!");
+        fetchCacheStats();
+      } else {
+        toast.error(data.error || "Erro ao limpar cache");
+      }
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      toast.error("Erro ao limpar cache");
+    } finally {
+      setClearingCache(false);
+    }
+  };
+
+  const handleClearExpiredCache = async () => {
+    setClearingCache(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cache-admin", {
+        body: { action: "clear-expired" },
+      });
+
+      if (error) throw error;
+      
+      if (data.success) {
+        toast.success(data.message);
+        fetchCacheStats();
+      } else {
+        toast.error(data.error || "Erro ao limpar cache expirado");
+      }
+    } catch (error) {
+      console.error("Error clearing expired cache:", error);
+      toast.error("Erro ao limpar cache expirado");
+    } finally {
+      setClearingCache(false);
+    }
+  };
+
+  const handleDeleteCacheEntry = async (entryId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("cache-admin", {
+        body: { action: "delete-entry", entryId },
+      });
+
+      if (error) throw error;
+      
+      if (data.success) {
+        toast.success("Entrada removida!");
+        fetchCacheStats();
+      } else {
+        toast.error(data.error || "Erro ao remover entrada");
+      }
+    } catch (error) {
+      console.error("Error deleting cache entry:", error);
+      toast.error("Erro ao remover entrada");
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getVideoTitle = (url: string) => {
+    // Extract meaningful part from URL
+    const match = url.match(/\/video\/(\d+)_([^/]+)/);
+    if (match) {
+      return match[2].replace(/_/g, " ");
+    }
+    return url.slice(-50);
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -216,7 +361,7 @@ const AdminSettings = () => {
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 gap-1">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 gap-1">
             <TabsTrigger value="general" className="font-chakra text-xs">
               <Globe className="w-4 h-4 mr-1" />
               Geral
@@ -236,6 +381,10 @@ const AdminSettings = () => {
             <TabsTrigger value="limits" className="font-chakra text-xs">
               <Lock className="w-4 h-4 mr-1" />
               Limites
+            </TabsTrigger>
+            <TabsTrigger value="cache" className="font-chakra text-xs">
+              <HardDrive className="w-4 h-4 mr-1" />
+              Cache
             </TabsTrigger>
             <TabsTrigger value="system" className="font-chakra text-xs">
               <Database className="w-4 h-4 mr-1" />
@@ -538,6 +687,340 @@ const AdminSettings = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Cache Settings */}
+          <TabsContent value="cache" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="border-dm-cadet/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total de Entradas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Database className="w-5 h-5 text-primary" />
+                    <span className="text-2xl font-bold">
+                      {loadingCache ? <Loader2 className="w-5 h-5 animate-spin" /> : cacheStats?.totalEntries || 0}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-dm-cadet/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Transcrições IA
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <span className="text-2xl font-bold">
+                      {loadingCache ? <Loader2 className="w-5 h-5 animate-spin" /> : cacheStats?.transcribedEntries || 0}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {cacheStats?.htmlFallbackEntries || 0} usaram fallback HTML
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-dm-cadet/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Armazenamento Estimado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <HardDrive className="w-5 h-5 text-primary" />
+                    <span className="text-2xl font-bold">
+                      {loadingCache ? <Loader2 className="w-5 h-5 animate-spin" /> : `${cacheStats?.estimatedStorageKB || 0} KB`}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-dm-cadet/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Entradas Expiradas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-orange-500" />
+                    <span className="text-2xl font-bold text-orange-500">
+                      {loadingCache ? <Loader2 className="w-5 h-5 animate-spin" /> : cacheStats?.expiredEntries || 0}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Cache ratio visualization */}
+            {cacheStats && cacheStats.totalEntries > 0 && (
+              <Card className="border-dm-cadet/20">
+                <CardHeader>
+                  <CardTitle className="font-chakra flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Taxa de Sucesso de Transcrição
+                  </CardTitle>
+                  <CardDescription>
+                    Proporção de vídeos processados com transcrição IA vs. fallback HTML
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Transcrição IA</span>
+                      <span>{Math.round((cacheStats.transcribedEntries / cacheStats.totalEntries) * 100)}%</span>
+                    </div>
+                    <Progress 
+                      value={(cacheStats.transcribedEntries / cacheStats.totalEntries) * 100} 
+                      className="h-3"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{cacheStats.transcribedEntries} com transcrição</span>
+                      <span>{cacheStats.htmlFallbackEntries} com fallback HTML</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Cache Actions */}
+              <Card className="border-dm-cadet/20">
+                <CardHeader>
+                  <CardTitle className="font-chakra flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    Gerenciar Cache
+                  </CardTitle>
+                  <CardDescription>
+                    Limpar cache de transcrições de vídeo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={fetchCacheStats} 
+                    className="w-full"
+                    disabled={loadingCache}
+                  >
+                    {loadingCache ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    Atualizar Estatísticas
+                  </Button>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label>Limpar Entradas Expiradas</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Remove apenas entradas com cache expirado
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleClearExpiredCache} 
+                      className="w-full"
+                      disabled={clearingCache || (cacheStats?.expiredEntries || 0) === 0}
+                    >
+                      {clearingCache ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Clock className="w-4 h-4 mr-2" />
+                      )}
+                      Limpar {cacheStats?.expiredEntries || 0} Expiradas
+                    </Button>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label className="text-destructive">Zona de Perigo</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Remover todo o cache de transcrições
+                    </p>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="destructive" 
+                          className="w-full"
+                          disabled={clearingCache || (cacheStats?.totalEntries || 0) === 0}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Limpar Todo o Cache
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Limpar todo o cache de transcrições?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação irá remover permanentemente todas as {cacheStats?.totalEntries || 0} entradas de cache.
+                            Os próximos usuários terão que aguardar novas transcrições, consumindo créditos de API.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleClearAllCache}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Sim, limpar tudo
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Cache Info */}
+              <Card className="border-dm-cadet/20">
+                <CardHeader>
+                  <CardTitle className="font-chakra flex items-center gap-2">
+                    <Info className="w-5 h-5" />
+                    Informações do Cache
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Entrada mais antiga:</span>
+                      <span className="text-sm font-medium">
+                        {cacheStats?.oldestEntry ? formatDate(cacheStats.oldestEntry) : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Entrada mais recente:</span>
+                      <span className="text-sm font-medium">
+                        {cacheStats?.newestEntry ? formatDate(cacheStats.newestEntry) : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Duração do cache:</span>
+                      <span className="text-sm font-medium">30 dias</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-500/10 p-4 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-5 h-5 text-blue-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Sobre o cache</p>
+                        <p className="text-sm text-muted-foreground">
+                          O cache armazena transcrições de vídeos do CarCareKiosk para evitar 
+                          reprocessamento e economizar créditos de API (ElevenLabs + Lovable AI).
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Cache Entries */}
+            {cacheStats?.recentEntries && cacheStats.recentEntries.length > 0 && (
+              <Card className="border-dm-cadet/20">
+                <CardHeader>
+                  <CardTitle className="font-chakra flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Entradas Recentes
+                  </CardTitle>
+                  <CardDescription>
+                    Últimas {cacheStats.recentEntries.length} entradas no cache
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Vídeo</TableHead>
+                          <TableHead>Veículo</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Criado em</TableHead>
+                          <TableHead>Expira em</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {cacheStats.recentEntries.map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell className="max-w-[200px]">
+                              <div className="flex items-center gap-2">
+                                <Video className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="truncate text-sm" title={entry.video_url}>
+                                  {getVideoTitle(entry.video_url)}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {entry.vehicle_context || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {entry.transcription_used ? (
+                                <Badge variant="secondary" className="bg-primary/10 text-primary">
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                  IA
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">
+                                  HTML
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(entry.created_at)}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {new Date(entry.expires_at) < new Date() ? (
+                                <Badge variant="destructive">Expirado</Badge>
+                              ) : (
+                                formatDate(entry.expires_at)
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remover entrada?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Isso irá remover esta entrada do cache. O próximo acesso a este vídeo
+                                      irá gerar uma nova transcrição.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteCacheEntry(entry.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Remover
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* System Settings */}
