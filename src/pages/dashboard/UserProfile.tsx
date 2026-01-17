@@ -13,6 +13,7 @@ import CacheStatsPanel from "@/components/dashboard/CacheStatsPanel";
 import DataDeletionSection from "@/components/profile/DataDeletionSection";
 import NotificationSettings from "@/components/profile/NotificationSettings";
 import AlertsHistorySection from "@/components/profile/AlertsHistorySection";
+import PushNotificationManager from "@/components/notifications/PushNotificationManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Tables } from "@/integrations/supabase/types";
@@ -343,7 +344,11 @@ const UserProfile = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="notifications" className="mt-6">
+          <TabsContent value="notifications" className="mt-6 space-y-6">
+            {/* Push Notifications */}
+            <PushNotificationManager showTestButtons={true} />
+            
+            {/* Email Notification Settings */}
             {user && (
               <NotificationSettings userId={user.id} />
             )}

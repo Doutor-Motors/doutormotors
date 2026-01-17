@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePushNotifications, AlertPriority } from '@/hooks/usePushNotifications';
 
 export type NotificationType = 'success' | 'warning' | 'info' | 'error';
 export type NotificationStyle = 'default' | 'filled';
@@ -25,6 +26,9 @@ interface NotificationContextType {
   notifyError: (title: string, description: string) => string;
   notifyWarning: (title: string, description: string) => string;
   notifyInfo: (title: string, description: string) => string;
+  // Push notification functions
+  pushEnabled: boolean;
+  enablePushNotifications: () => Promise<boolean>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -44,6 +48,15 @@ interface NotificationProviderProps {
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { user } = useAuth();
+  const {
+    swState,
+    permission,
+    registerServiceWorker,
+    requestPermission,
+    showLocalNotification,
+  } = usePushNotifications();
+  
+  const pushEnabled = permission === 'granted' && swState.isRegistered;
 
   const generateId = () => `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -94,6 +107,47 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     return addNotification({ type: 'info', title, description });
   }, [addNotification]);
 
+  // Enable push notifications
+  const enablePushNotifications = useCallback(async (): Promise<boolean> => {
+    try {
+      // Register SW first
+      const registration = await registerServiceWorker();
+      if (!registration) {
+        console.warn('[Notification] Failed to register service worker');
+        return false;
+      }
+      
+      // Request permission
+      const granted = await requestPermission();
+      if (!granted) {
+        console.warn('[Notification] Push permission denied');
+        return false;
+      }
+      
+      console.log('[Notification] Push notifications enabled');
+      return true;
+    } catch (error) {
+      console.error('[Notification] Error enabling push:', error);
+      return false;
+    }
+  }, [registerServiceWorker, requestPermission]);
+
+  // Send push notification for critical alerts
+  const sendPushForCritical = useCallback(async (title: string, body: string, priority: AlertPriority = 'urgent') => {
+    if (!pushEnabled) return;
+    
+    try {
+      await showLocalNotification({
+        title,
+        body,
+        priority,
+        url: '/dashboard/diagnostics',
+      });
+    } catch (error) {
+      console.error('[Notification] Push notification failed:', error);
+    }
+  }, [pushEnabled, showLocalNotification]);
+
   // Real-time subscription for user-specific notifications
   useEffect(() => {
     if (!user) return;
@@ -111,12 +165,20 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         },
         (payload) => {
           const item = payload.new as any;
+          // In-app notification
           addNotification({
             type: 'error',
             title: 'Alerta Crítico Detectado!',
             description: `Código ${item.dtc_code}: ${item.description_human}`,
             duration: 10000,
           });
+          
+          // Also send push notification for critical alerts
+          sendPushForCritical(
+            '🚨 Alerta Crítico Detectado!',
+            `Código ${item.dtc_code}: ${item.description_human}`,
+            'urgent'
+          );
         }
       )
       .subscribe();
@@ -180,7 +242,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       supabase.removeChannel(statusSubscription);
       supabase.removeChannel(vehicleSubscription);
     };
-  }, [user, addNotification]);
+  }, [user, addNotification, sendPushForCritical]);
 
   return (
     <NotificationContext.Provider
@@ -193,6 +255,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         notifyError,
         notifyWarning,
         notifyInfo,
+        pushEnabled,
+        enablePushNotifications,
       }}
     >
       {children}
