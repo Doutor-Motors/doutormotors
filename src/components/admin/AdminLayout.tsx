@@ -34,6 +34,7 @@ const menuItems = [
   { icon: Activity, label: "Diagnósticos", path: "/admin/diagnostics" },
   { icon: Ticket, label: "Tickets", path: "/admin/tickets" },
   { icon: MessageSquare, label: "Mensagens", path: "/admin/messages" },
+  { icon: Bell, label: "Alertas", path: "/admin/alerts" },
   { icon: BarChart3, label: "Relatórios", path: "/admin/reports" },
   { icon: FileText, label: "Logs", path: "/admin/logs" },
   { icon: Settings, label: "Configurações", path: "/admin/settings" },

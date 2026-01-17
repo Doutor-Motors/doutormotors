@@ -282,6 +282,60 @@ export type Database = {
           },
         ]
       }
+      system_alerts: {
+        Row: {
+          created_at: string
+          email_sent_count: number | null
+          expires_at: string | null
+          id: string
+          message: string
+          priority: string
+          read_by: string[] | null
+          send_email: boolean
+          sent_by: string
+          target_role: string | null
+          target_type: string
+          target_user_ids: string[] | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email_sent_count?: number | null
+          expires_at?: string | null
+          id?: string
+          message: string
+          priority?: string
+          read_by?: string[] | null
+          send_email?: boolean
+          sent_by: string
+          target_role?: string | null
+          target_type?: string
+          target_user_ids?: string[] | null
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email_sent_count?: number | null
+          expires_at?: string | null
+          id?: string
+          message?: string
+          priority?: string
+          read_by?: string[] | null
+          send_email?: boolean
+          sent_by?: string
+          target_role?: string | null
+          target_type?: string
+          target_user_ids?: string[] | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           category: string
