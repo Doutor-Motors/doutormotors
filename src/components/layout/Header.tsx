@@ -28,9 +28,9 @@ const Header = () => {
   };
 
   return (
-    <header className={`absolute top-0 left-0 w-full z-50 px-4 md:px-10 py-8 ${isLandingPage ? "" : "bg-secondary"}`}>
-      <div className="container mx-auto flex justify-between items-center">
-        <div className="flex items-center gap-4">
+    <header className={`absolute top-0 left-0 w-full z-50 px-4 md:px-10 py-10 ${isLandingPage ? "" : "bg-secondary"}`}>
+      <div className="container mx-auto flex flex-col lg:flex-row justify-between items-center gap-4">
+        <div className="flex flex-col lg:flex-row items-center gap-4">
           {/* Botão Voltar - aparece em todas as páginas exceto landing */}
           {!isLandingPage && (
             <Button
@@ -45,7 +45,7 @@ const Header = () => {
           
           {/* Logo sem link de redirecionamento */}
           <div className="flex flex-col items-center cursor-default">
-            <img src={logo} alt="Doutor Motors" className="h-[200px] w-[200px] object-contain" />
+            <img src={logo} alt="Doutor Motors" className="h-[250px] w-[250px] object-contain" />
             <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider mt-1">DOUTOR MOTORS</span>
           </div>
         </div>
