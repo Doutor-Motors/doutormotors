@@ -60,8 +60,9 @@ const ServicesSection = () => {
           Diagnóstico Completo Para Seu Veículo
         </h2>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          {services.map((service, index) => (
+        {/* First 3 cards */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {services.slice(0, 3).map((service, index) => (
             <div 
               key={index}
               className="bg-card p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-2 group"
@@ -83,7 +84,32 @@ const ServicesSection = () => {
               </Link>
             </div>
           ))}
+        </div>
 
+        {/* Last 2 cards - centered */}
+        <div className="flex flex-col sm:flex-row justify-center gap-6 mb-10">
+          {services.slice(3, 5).map((service, index) => (
+            <div 
+              key={index}
+              className="bg-card p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-2 group sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+            >
+              <figure className="w-24 h-24 mx-auto mb-4">
+                <img src={service.icon} alt={service.title} className="w-full h-full object-contain" />
+              </figure>
+              <h3 className="font-chakra text-lg font-semibold uppercase text-foreground mb-2">
+                {service.title}
+              </h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                {service.description}
+              </p>
+              <Link 
+                to="/signup" 
+                className="font-chakra text-sm uppercase text-primary font-bold hover:underline"
+              >
+                Saiba Mais
+              </Link>
+            </div>
+          ))}
         </div>
 
         {/* Featured Car Image - Between cards and button */}
