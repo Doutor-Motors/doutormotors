@@ -18,6 +18,10 @@ const Header = () => {
   ];
 
   const isLandingPage = location.pathname === "/";
+  
+  // Páginas onde a logo e nome devem ser menores
+  const compactLogoPages = ["/sobre", "/servicos", "/como-funciona", "/contato", "/termos", "/privacidade"];
+  const isCompactLogo = compactLogoPages.includes(location.pathname);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -30,9 +34,15 @@ const Header = () => {
   return (
     <>
       {/* Logo e nome fixos - fora do header */}
-      <div className="absolute top-[-120px] left-8 md:left-16 flex flex-col items-start cursor-default z-50">
-        <img src={logo} alt="Doutor Motors" className="h-[350px] w-[350px] object-contain -ml-[60px]" />
-        <span className="font-chakra text-primary-foreground text-2xl md:text-3xl font-bold tracking-wider -mt-[140px] -ml-[48px]">DOUTOR MOTORS</span>
+      <div className={`absolute left-8 md:left-16 flex flex-col items-start cursor-default z-50 ${isCompactLogo ? "top-[-60px]" : "top-[-120px]"}`}>
+        <img 
+          src={logo} 
+          alt="Doutor Motors" 
+          className={`object-contain ${isCompactLogo ? "h-[200px] w-[200px] -ml-[35px]" : "h-[350px] w-[350px] -ml-[60px]"}`} 
+        />
+        <span className={`font-chakra text-primary-foreground font-bold tracking-wider ${isCompactLogo ? "text-lg md:text-xl -mt-[80px] -ml-[28px]" : "text-2xl md:text-3xl -mt-[140px] -ml-[48px]"}`}>
+          DOUTOR MOTORS
+        </span>
       </div>
 
       <header className={`absolute top-0 left-0 w-full z-40 px-4 md:px-10 ${isLandingPage ? "" : "bg-secondary"}`}>
