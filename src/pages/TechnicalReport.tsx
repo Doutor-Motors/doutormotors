@@ -1,11 +1,8 @@
-import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, ArrowLeft } from "lucide-react";
+import { Download, ArrowLeft, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const TechnicalReport = () => {
-  const reportRef = useRef<HTMLDivElement>(null);
-
   const handleDownloadPDF = () => {
     window.print();
   };
@@ -16,38 +13,21 @@ const TechnicalReport = () => {
       <style>
         {`
           @media print {
-            body * {
-              visibility: hidden;
-            }
-            #report-content, #report-content * {
-              visibility: visible;
-            }
-            #report-content {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              padding: 20px;
-            }
-            .no-print {
-              display: none !important;
-            }
-            table {
-              page-break-inside: avoid;
-            }
-            h2 {
-              page-break-after: avoid;
-            }
+            .no-print { display: none !important; }
+            body { background: white !important; font-size: 11px; }
+            table { page-break-inside: avoid; font-size: 10px; }
+            h2 { page-break-after: avoid; }
+            pre { font-size: 9px; white-space: pre-wrap; }
           }
         `}
       </style>
 
-      {/* Header with download button */}
-      <div className="no-print bg-background border-b sticky top-0 z-50 p-4">
+      {/* Header */}
+      <div className="no-print bg-dm-space text-primary-foreground border-b sticky top-0 z-50 p-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80">
             <ArrowLeft className="w-4 h-4" />
-            Voltar
+            <span className="font-chakra uppercase">Voltar</span>
           </Link>
           <Button onClick={handleDownloadPDF} className="flex items-center gap-2">
             <Download className="w-4 h-4" />
@@ -57,7 +37,7 @@ const TechnicalReport = () => {
       </div>
 
       {/* Report Content */}
-      <div id="report-content" ref={reportRef} className="max-w-5xl mx-auto p-8 bg-white text-black">
+      <div id="report-content" className="max-w-5xl mx-auto p-8 bg-background text-foreground">
         {/* Header */}
         <div className="text-center mb-8 border-b-2 border-gray-800 pb-6">
           <h1 className="text-3xl font-bold mb-2">RELATÓRIO TÉCNICO COMPLETO</h1>
