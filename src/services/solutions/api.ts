@@ -49,7 +49,8 @@ async function ensureCacheCleanup() {
 }
 
 export async function fetchSolutionFromCarCareKiosk(
-  params: FetchSolutionParams
+  params: FetchSolutionParams,
+  options?: { forceRefresh?: boolean }
 ): Promise<FetchSolutionResponse> {
   // Garante limpeza de cache expirado
   ensureCacheCleanup();
@@ -62,18 +63,22 @@ export async function fetchSolutionFromCarCareKiosk(
   );
 
   try {
-    // 1. Tenta buscar do cache local primeiro
-    const cached = await getCachedSolution(cacheKey);
-    if (cached) {
-      console.log("✅ Solução encontrada no cache local:", cacheKey);
-      return {
-        success: true,
-        solution: cached.solution,
-        fromCache: true,
-      };
+    // 1. Tenta buscar do cache local primeiro (a menos que forceRefresh)
+    if (!options?.forceRefresh) {
+      const cached = await getCachedSolution(cacheKey);
+      if (cached) {
+        console.log("✅ Solução encontrada no cache local:", cacheKey);
+        return {
+          success: true,
+          solution: cached.solution,
+          fromCache: true,
+        };
+      }
+    } else {
+      console.log("🔄 Refresh forçado solicitado, ignorando cache:", cacheKey);
     }
 
-    console.log("🔄 Cache miss, buscando do servidor:", cacheKey);
+    console.log("🔄 Buscando do servidor:", cacheKey);
 
     // 2. Se não está no cache, busca da edge function
     const { data, error } = await supabase.functions.invoke("fetch-solution", {
