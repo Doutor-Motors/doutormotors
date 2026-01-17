@@ -71,10 +71,10 @@ const App = () => (
                 <Route path="/signup" element={<SignUpPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
-                <Route path="/estude-seu-carro" element={<StudyCarPage />} />
                 <Route path="/termos" element={<TermsPage />} />
                 <Route path="/privacidade" element={<PrivacyPolicyPage />} />
                 <Route path="/faq" element={<FAQPage />} />
+                <Route path="/app-nativo" element={<NativeAppGuide />} />
                 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
@@ -86,6 +86,8 @@ const App = () => (
                 <Route path="/dashboard/support" element={<ProtectedRoute><SupportCenter /></ProtectedRoute>} />
                 <Route path="/dashboard/support/:id" element={<ProtectedRoute><TicketDetail /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
+                <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<ProtectedRoute><AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute></ProtectedRoute>} />
@@ -98,10 +100,6 @@ const App = () => (
                 <Route path="/admin/logs" element={<ProtectedRoute><AdminProtectedRoute><AdminLogs /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/settings" element={<ProtectedRoute><AdminProtectedRoute><AdminSettings /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/alerts" element={<ProtectedRoute><AdminProtectedRoute><AdminAlerts /></AdminProtectedRoute></ProtectedRoute>} />
-                
-                {/* Public Pages */}
-                <Route path="/relatorio-tecnico" element={<TechnicalReport />} />
-                <Route path="/app-nativo" element={<NativeAppGuide />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
