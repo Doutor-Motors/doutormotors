@@ -72,7 +72,7 @@ const CTASection = () => {
             <Button 
               size="lg"
               variant="outline"
-              className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-secondary font-chakra uppercase rounded-pill px-8"
+              className="border-white text-white hover:bg-white hover:text-secondary font-chakra uppercase rounded-pill px-8"
             >
               Já Tenho Conta
             </Button>
