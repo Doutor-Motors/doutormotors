@@ -25,6 +25,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminVehicles from "./pages/admin/AdminVehicles";
 import AdminDiagnostics from "./pages/admin/AdminDiagnostics";
+import AdminMessages from "./pages/admin/AdminMessages";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminLogs from "./pages/admin/AdminLogs";
 import AdminSettings from "./pages/admin/AdminSettings";
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/admin/users" element={<ProtectedRoute><AdminProtectedRoute><AdminUsers /></AdminProtectedRoute></ProtectedRoute>} />
             <Route path="/admin/vehicles" element={<ProtectedRoute><AdminProtectedRoute><AdminVehicles /></AdminProtectedRoute></ProtectedRoute>} />
             <Route path="/admin/diagnostics" element={<ProtectedRoute><AdminProtectedRoute><AdminDiagnostics /></AdminProtectedRoute></ProtectedRoute>} />
+            <Route path="/admin/messages" element={<ProtectedRoute><AdminProtectedRoute><AdminMessages /></AdminProtectedRoute></ProtectedRoute>} />
             <Route path="/admin/reports" element={<ProtectedRoute><AdminProtectedRoute><AdminReports /></AdminProtectedRoute></ProtectedRoute>} />
             <Route path="/admin/logs" element={<ProtectedRoute><AdminProtectedRoute><AdminLogs /></AdminProtectedRoute></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute><AdminProtectedRoute><AdminSettings /></AdminProtectedRoute></ProtectedRoute>} />
