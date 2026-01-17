@@ -362,17 +362,23 @@ const DiagnosticCenter = () => {
           </div>
         </div>
 
-        {/* Connection Card - Now with Bluetooth and WiFi options */}
+        {/* Connection Card - Now with Bluetooth, WiFi and Native options */}
         <OBDConnectionSelector
           connectionStatus={obd.connectionStatus}
           connectionType={obd.connectionType}
           device={obd.device}
           isBluetoothSupported={obd.isBluetoothSupported}
           isSimulated={obd.isSimulated}
+          isNativePlatform={obd.isNativePlatform}
           wifiConfig={obd.wifiConfig}
+          availableDevices={obd.availableDevices}
+          isScanning={obd.isScanning}
           onWifiConfigChange={obd.setWifiConfig}
           onConnectBluetooth={handleConnectBluetooth}
           onConnectWifi={handleConnectWifi}
+          onConnectCapacitorBluetooth={obd.connectCapacitorBluetooth}
+          onConnectCapacitorWifi={obd.connectCapacitorWifi}
+          onScanDevices={obd.scanDevices}
           onDisconnect={handleDisconnect}
         />
 
