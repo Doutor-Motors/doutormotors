@@ -1,4 +1,5 @@
 import { useNotification } from '@/contexts/NotificationContext';
+import { isCacheAlmostFull, CACHE_WARNING_THRESHOLD } from '@/services/solutions/cache';
 
 /**
  * Hook personalizado para notificações de usuário
@@ -91,6 +92,26 @@ export const useNotifications = () => {
     return notifyInfo('Veículo Removido', `${vehicleName} foi removido da sua lista`);
   };
 
+  // Notificação de cache quase cheio
+  const checkAndNotifyCacheStatus = async () => {
+    try {
+      const { isFull, count } = await isCacheAlmostFull();
+      if (isFull) {
+        return addNotification({
+          type: 'warning',
+          title: 'Cache Quase Cheio',
+          description: `Você tem ${count} soluções salvas (limite: ${CACHE_WARNING_THRESHOLD}). Considere limpar o cache nas configurações.`,
+          styleVariant: 'filled',
+          duration: 10000,
+        });
+      }
+      return null;
+    } catch (error) {
+      console.error('Erro ao verificar status do cache:', error);
+      return null;
+    }
+  };
+
   // Notificações de perfil
   const notifyProfileUpdated = () => {
     return notifySuccess('Perfil Atualizado', 'Suas informações foram salvas com sucesso!');
@@ -130,6 +151,9 @@ export const useNotifications = () => {
     // Notificações de veículo
     notifyVehicleAdded,
     notifyVehicleRemoved,
+    
+    // Notificações de cache
+    checkAndNotifyCacheStatus,
     
     // Notificações de perfil
     notifyProfileUpdated,
