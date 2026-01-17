@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { 
   Search, Loader2, Car, ChevronRight, ArrowLeft, Play, 
-  BookOpen, Video, ExternalLink, Home, Filter, RefreshCw, Sparkles, Bot
+  BookOpen, Video, ExternalLink, Home, Filter, RefreshCw, Sparkles, Bot, Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +66,7 @@ interface VideoDetails {
   steps?: string[];
   markdown?: string;
   transcriptionUsed?: boolean; // Indicates if steps came from AI transcription
+  fromCache?: boolean; // Indicates if data came from cache
 }
 
 type ViewState = "brands" | "models" | "categories" | "procedures" | "video";
@@ -207,7 +208,7 @@ const StudyCarPage = () => {
     }
   };
 
-  const handleProcedureSelect = async (procedure: Procedure) => {
+  const handleProcedureSelect = async (procedure: Procedure, forceRefresh: boolean = false) => {
     setSelectedProcedure(procedure);
     setIsLoading(true);
     setIsTranscribing(true);
@@ -221,7 +222,8 @@ const StudyCarPage = () => {
           procedure: procedure.url,
           brand: selectedBrand?.name,
           model: selectedModel?.name,
-          year: selectedModel?.years?.split("-")[0]
+          year: selectedModel?.years?.split("-")[0],
+          skipCache: forceRefresh,
         },
       });
 
@@ -236,6 +238,12 @@ const StudyCarPage = () => {
     
     setIsTranscribing(false);
     setIsLoading(false);
+  };
+
+  const handleForceRefresh = () => {
+    if (selectedProcedure) {
+      handleProcedureSelect(selectedProcedure, true);
+    }
   };
 
   const handleQuickSelect = async () => {
@@ -1043,17 +1051,34 @@ const StudyCarPage = () => {
                       {videoDetails?.steps && videoDetails.steps.length > 0 && (
                         <Card className="mt-6">
                           <CardHeader>
-                            <CardTitle className="flex items-center justify-between">
+                            <CardTitle className="flex items-center justify-between flex-wrap gap-2">
                               <div className="flex items-center gap-2">
                                 <BookOpen className="w-5 h-5 text-primary" />
                                 Passo a Passo
                               </div>
-                              {videoDetails.transcriptionUsed && (
-                                <Badge variant="secondary" className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary border-primary/30">
-                                  <Sparkles className="w-3 h-3 mr-1" />
-                                  Transcrição IA
-                                </Badge>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {videoDetails.fromCache && (
+                                  <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">
+                                    <Database className="w-3 h-3 mr-1" />
+                                    Cache
+                                  </Badge>
+                                )}
+                                {videoDetails.transcriptionUsed && (
+                                  <Badge variant="secondary" className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary border-primary/30">
+                                    <Sparkles className="w-3 h-3 mr-1" />
+                                    Transcrição IA
+                                  </Badge>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={handleForceRefresh}
+                                  disabled={isLoading}
+                                  title="Reprocessar transcrição (ignorar cache)"
+                                >
+                                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                </Button>
+                              </div>
                             </CardTitle>
                             {videoDetails.transcriptionUsed && (
                               <p className="text-xs text-muted-foreground mt-1">

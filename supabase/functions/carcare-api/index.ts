@@ -12,6 +12,7 @@ interface CarCareRequest {
   year?: string;
   procedure?: string;
   query?: string;
+  skipCache?: boolean; // Force reprocessing, ignore cache
 }
 
 interface CachedTranscription {
@@ -449,9 +450,9 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json() as CarCareRequest;
-    const { action, brand, model, year, procedure, query } = body;
+    const { action, brand, model, year, procedure, query, skipCache } = body;
 
-    console.log("CarCare API request:", { action, brand, model, year, procedure, query });
+    console.log("CarCare API request:", { action, brand, model, year, procedure, query, skipCache });
 
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     
@@ -538,7 +539,7 @@ Deno.serve(async (req) => {
         
         // Build vehicle context for better step generation
         const vehicleContext = [brand, model, year].filter(Boolean).join(" ");
-        const videoDetails = await fetchVideoDetails(FIRECRAWL_API_KEY, procedure, vehicleContext || undefined);
+        const videoDetails = await fetchVideoDetails(FIRECRAWL_API_KEY, procedure, vehicleContext || undefined, skipCache);
         return new Response(
           JSON.stringify({ success: true, data: videoDetails }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -854,28 +855,32 @@ async function fetchVideosFromCarCareKiosk(
 }
 
 // Buscar detalhes de um vídeo específico
-async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContext?: string): Promise<any> {
+async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContext?: string, skipCache?: boolean): Promise<any> {
   try {
     const url = videoUrl.startsWith('http') 
       ? videoUrl 
       : `https://www.carcarekiosk.com${videoUrl}`;
     
-    console.log(`Fetching video details from ${url}...`);
+    console.log(`Fetching video details from ${url}... (skipCache: ${skipCache})`);
 
-    // ========== VERIFICAR CACHE PRIMEIRO ==========
-    const cached = await getCachedTranscription(url);
-    if (cached) {
-      console.log("Returning cached transcription data");
-      return {
-        title: cached.translated_title || "Tutorial",
-        description: cached.translated_description || "",
-        videoDescription: cached.translated_video_description || undefined,
-        videoUrl: cached.youtube_video_id ? `https://www.youtube.com/embed/${cached.youtube_video_id}` : null,
-        sourceUrl: url,
-        steps: cached.elaborated_steps || [],
-        transcriptionUsed: cached.transcription_used,
-        cached: true,
-      };
+    // ========== VERIFICAR CACHE PRIMEIRO (se não skipCache) ==========
+    if (!skipCache) {
+      const cached = await getCachedTranscription(url);
+      if (cached) {
+        console.log("Returning cached transcription data");
+        return {
+          title: cached.translated_title || "Tutorial",
+          description: cached.translated_description || "",
+          videoDescription: cached.translated_video_description || undefined,
+          videoUrl: cached.youtube_video_id ? `https://www.youtube.com/embed/${cached.youtube_video_id}` : null,
+          sourceUrl: url,
+          steps: cached.elaborated_steps || [],
+          transcriptionUsed: cached.transcription_used,
+          fromCache: true,
+        };
+      }
+    } else {
+      console.log("Skipping cache, forcing reprocessing...");
     }
 
     const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
@@ -1018,6 +1023,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       sourceUrl: url,
       steps: finalSteps.length > 0 ? finalSteps : htmlSteps,
       transcriptionUsed,
+      fromCache: false,
       markdown: markdown.slice(0, 5000),
     };
 
