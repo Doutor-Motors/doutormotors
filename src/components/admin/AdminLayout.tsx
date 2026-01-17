@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Bell,
   Ticket,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,13 +51,24 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     navigate("/");
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/admin");
+    }
+  };
+
+  const isAdminHome = location.pathname === "/admin";
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-gradient-to-b from-dm-space via-dm-blue-2 to-dm-space text-primary-foreground">
         <div className="p-6 border-b border-dm-cadet/20">
           <div className="flex items-center justify-between">
-            <Link to="/admin" className="flex flex-col items-center">
+            {/* Logo sem link de redirecionamento */}
+            <div className="flex flex-col items-center cursor-default">
               <img src={logo} alt="Doutor Motors" className="h-[90px] w-[130px] object-contain" />
               <div className="flex items-center gap-2 -mt-[40px]">
                 <span className="font-chakra text-primary-foreground text-[10px] font-bold tracking-wider">DOUTOR MOTORS</span>
@@ -64,7 +76,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                   Admin
                 </span>
               </div>
-            </Link>
+            </div>
             {unreadCount > 0 && (
               <button
                 onClick={clearAllNotifications}
@@ -124,15 +136,27 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-dm-space z-40 px-4 py-3 flex items-center justify-between">
-        <Link to="/admin" className="flex flex-col items-center">
-          <img src={logo} alt="Doutor Motors" className="h-[60px] w-[90px] object-contain" />
-          <div className="flex items-center gap-1 -mt-[25px]">
-            <span className="font-chakra text-primary-foreground text-[8px] font-bold tracking-wider">DOUTOR MOTORS</span>
-            <span className="font-chakra text-[6px] uppercase text-primary bg-primary/20 px-1 py-0.5 rounded">
-              Admin
-            </span>
+        <div className="flex items-center gap-2">
+          {/* Botão Voltar Mobile */}
+          {!isAdminHome && (
+            <button
+              onClick={handleBack}
+              className="text-primary-foreground p-2 hover:bg-dm-blue-2 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          {/* Logo sem link de redirecionamento */}
+          <div className="flex flex-col items-center cursor-default">
+            <img src={logo} alt="Doutor Motors" className="h-[60px] w-[90px] object-contain" />
+            <div className="flex items-center gap-1 -mt-[25px]">
+              <span className="font-chakra text-primary-foreground text-[8px] font-bold tracking-wider">DOUTOR MOTORS</span>
+              <span className="font-chakra text-[6px] uppercase text-primary bg-primary/20 px-1 py-0.5 rounded">
+                Admin
+              </span>
+            </div>
           </div>
-        </Link>
+        </div>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <button
@@ -211,6 +235,17 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       {/* Main Content */}
       <main className="flex-1 lg:ml-0 pt-16 lg:pt-0">
         <div className="p-4 md:p-6 lg:p-8">
+          {/* Botão Voltar Desktop - dentro do conteúdo */}
+          {!isAdminHome && (
+            <Button
+              variant="ghost"
+              onClick={handleBack}
+              className="mb-4 gap-2 font-chakra uppercase text-sm text-muted-foreground hover:text-foreground hidden lg:flex"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Voltar</span>
+            </Button>
+          )}
           {children}
         </div>
       </main>

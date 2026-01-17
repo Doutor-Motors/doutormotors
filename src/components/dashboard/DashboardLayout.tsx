@@ -12,6 +12,7 @@ import {
   ChevronRight,
   GraduationCap,
   Headphones,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,15 +43,26 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     navigate("/");
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/dashboard");
+    }
+  };
+
+  const isDashboardHome = location.pathname === "/dashboard";
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-dm-space text-primary-foreground">
         <div className="p-6 border-b border-dm-cadet/20">
-          <Link to="/" className="flex flex-col items-center">
+          {/* Logo sem link de redirecionamento */}
+          <div className="flex flex-col items-center cursor-default">
             <img src={logo} alt="Doutor Motors" className="h-[100px] w-[150px] object-contain" />
             <span className="font-chakra text-primary-foreground text-xs font-bold tracking-wider -mt-[45px]">DOUTOR MOTORS</span>
-          </Link>
+          </div>
         </div>
 
         <nav className="flex-1 px-4">
@@ -90,10 +102,22 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-dm-space z-40 px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="flex flex-col items-center">
-          <img src={logo} alt="Doutor Motors" className="h-[70px] w-[100px] object-contain" />
-          <span className="font-chakra text-primary-foreground text-[10px] font-bold tracking-wider -mt-[30px]">DOUTOR MOTORS</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* Botão Voltar Mobile */}
+          {!isDashboardHome && (
+            <button
+              onClick={handleBack}
+              className="text-primary-foreground p-2 hover:bg-dm-blue-2 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          {/* Logo sem link de redirecionamento */}
+          <div className="flex flex-col items-center cursor-default">
+            <img src={logo} alt="Doutor Motors" className="h-[70px] w-[100px] object-contain" />
+            <span className="font-chakra text-primary-foreground text-[10px] font-bold tracking-wider -mt-[30px]">DOUTOR MOTORS</span>
+          </div>
+        </div>
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="text-primary-foreground p-2"
@@ -151,6 +175,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Main Content */}
       <main className="flex-1 lg:ml-0 pt-16 lg:pt-0">
         <div className="p-4 md:p-6 lg:p-8">
+          {/* Botão Voltar Desktop - dentro do conteúdo */}
+          {!isDashboardHome && (
+            <Button
+              variant="ghost"
+              onClick={handleBack}
+              className="mb-4 gap-2 font-chakra uppercase text-sm text-muted-foreground hover:text-foreground hidden lg:flex"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Voltar</span>
+            </Button>
+          )}
           {children}
         </div>
       </main>
