@@ -179,3 +179,83 @@ export function getSolutionRecommendation(
     externalLinks,
   };
 }
+
+// Simplified solution getter for SolutionGuide
+export interface SolutionData {
+  title: string;
+  description: string;
+  steps: string[];
+  estimatedTime: string;
+  estimatedCost: string;
+  difficulty: number;
+  tools: string[];
+  parts: string[];
+  videoUrl?: string;
+  articleUrl?: string;
+  shopUrl?: string;
+  warnings: string[];
+  professionalRecommended: boolean;
+}
+
+export interface VehicleContext {
+  brand: string;
+  model: string;
+  year: number;
+}
+
+const solutionDatabase: Record<string, Partial<SolutionData>> = {
+  P0300: {
+    title: "Correção de Falhas de Ignição Múltiplas",
+    description: "As falhas de ignição em múltiplos cilindros podem ser causadas por diversos fatores.",
+    parts: ["Velas de ignição", "Cabos de vela", "Bobina de ignição"],
+  },
+  P0420: {
+    title: "Diagnóstico de Eficiência do Catalisador",
+    description: "O catalisador não está funcionando com eficiência ideal.",
+    parts: ["Sensor de O2", "Catalisador"],
+    professionalRecommended: true,
+  },
+  P0128: {
+    title: "Substituição da Válvula Termostática",
+    description: "O motor demora muito para atingir a temperatura operacional.",
+    parts: ["Válvula termostática", "Junta", "Líquido de arrefecimento"],
+  },
+};
+
+export function getSolutionForDTC(dtcCode: string, vehicle?: VehicleContext): SolutionData {
+  const dbSolution = solutionDatabase[dtcCode.toUpperCase()];
+  
+  const videoUrl = vehicle 
+    ? getYouTubeSearchUrl(vehicle.brand, vehicle.model, dtcCode)
+    : `https://www.youtube.com/results?search_query=${dtcCode}+repair`;
+  
+  const articleUrl = vehicle
+    ? getCarCareKioskUrl(vehicle.brand, vehicle.model, vehicle.year, dtcCode)
+    : `https://www.carcarekiosk.com/search?q=${dtcCode}`;
+
+  return {
+    title: dbSolution?.title || `Diagnóstico para ${dtcCode}`,
+    description: dbSolution?.description || `Código ${dtcCode} detectado. Recomendamos análise técnica.`,
+    steps: [
+      "Desligue o motor e aguarde esfriar",
+      "Desconecte o terminal negativo da bateria",
+      "Localize o componente afetado",
+      "Inspecione visualmente o componente",
+      "Realize o reparo ou substituição",
+      "Reconecte a bateria e limpe os códigos",
+      "Faça um test drive para verificar"
+    ],
+    estimatedTime: "1-3 horas",
+    estimatedCost: "R$ 100 - R$ 500",
+    difficulty: 5,
+    tools: ["Jogo de chaves", "Scanner OBD2", "Multímetro"],
+    parts: dbSolution?.parts || ["A determinar após diagnóstico"],
+    videoUrl,
+    articleUrl,
+    shopUrl: vehicle 
+      ? `https://www.mercadolivre.com.br/jm/search?as_word=${encodeURIComponent(`${vehicle.brand} ${vehicle.model}`)}`
+      : undefined,
+    warnings: ["Não ignore códigos de erro", "Consulte um profissional se não tiver experiência"],
+    professionalRecommended: dbSolution?.professionalRecommended ?? false,
+  };
+}
