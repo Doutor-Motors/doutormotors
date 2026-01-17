@@ -45,7 +45,7 @@ const Header = () => {
           
           {/* Logo sem link de redirecionamento */}
           <div className="flex flex-col items-center cursor-default">
-            <img src={logo} alt="Doutor Motors" className="h-[250px] w-[250px] object-contain" />
+            <img src={logo} alt="Doutor Motors" className="h-[300px] w-[300px] object-contain" />
             <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider mt-1">DOUTOR MOTORS</span>
           </div>
         </div>
