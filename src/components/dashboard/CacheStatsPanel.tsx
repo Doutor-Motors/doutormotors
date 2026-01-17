@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Database, 
   Trash2, 
@@ -6,16 +6,21 @@ import {
   HardDrive,
   Calendar,
   FileText,
-  Loader2
+  Loader2,
+  Download,
+  Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { 
   getCacheStats, 
   clearAllCache, 
-  cleanExpiredCache 
+  cleanExpiredCache,
+  exportCache,
+  importCache
 } from "@/services/solutions/cache";
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -31,7 +36,10 @@ const CacheStatsPanel = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isClearing, setIsClearing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
-  const { notifySuccess, notifyInfo } = useNotifications();
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { notifySuccess, notifyInfo, notifyError } = useNotifications();
 
   const loadStats = async () => {
     setIsLoading(true);
@@ -83,6 +91,54 @@ const CacheStatsPanel = () => {
       console.error("Erro ao limpar expirados:", error);
     } finally {
       setIsCleaning(false);
+    }
+  };
+
+  const handleExportCache = async () => {
+    setIsExporting(true);
+    try {
+      const jsonData = await exportCache();
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `loveble-cache-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      notifySuccess("Cache exportado!", "Arquivo de backup baixado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao exportar cache:", error);
+      notifyError("Erro ao exportar", "Não foi possível exportar o cache.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportCache = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const jsonData = await file.text();
+      const result = await importCache(jsonData);
+      
+      notifySuccess(
+        "Cache importado!", 
+        `${result.imported} soluções importadas${result.skipped > 0 ? `, ${result.skipped} ignoradas` : ''}.`
+      );
+      await loadStats();
+    } catch (error) {
+      console.error("Erro ao importar cache:", error);
+      notifyError("Erro ao importar", "Arquivo inválido ou corrompido.");
+    } finally {
+      setIsImporting(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -218,6 +274,55 @@ const CacheStatsPanel = () => {
             )}
             Limpar Tudo
           </Button>
+        </div>
+
+        <Separator />
+
+        {/* Export/Import Actions */}
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">Backup</p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCache}
+              disabled={isExporting || !stats?.totalEntries}
+              className="flex-1 gap-2"
+            >
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Exportar
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              className="flex-1 gap-2"
+            >
+              {isImporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              Importar
+            </Button>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleImportCache}
+              className="hidden"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Faça backup do cache para restaurar em outro dispositivo.
+          </p>
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
