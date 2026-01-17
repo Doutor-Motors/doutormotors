@@ -69,14 +69,33 @@ const AlertsHistorySection = ({ userId }: AlertsHistorySectionProps) => {
 
   const fetchAlerts = async () => {
     try {
+      // Buscar alertas direcionados ao usuário ou todos os usuários
       const { data, error } = await supabase
         .from('system_alerts')
-        .select('id, title, message, type, priority, read_by, created_at, expires_at')
+        .select('id, title, message, type, priority, read_by, created_at, expires_at, target_type, target_user_ids, target_role')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setAlerts(data || []);
+      // Filtrar alertas que são para este usuário específico ou para todos
+      const userAlerts = (data || []).filter(alert => {
+        // Alertas para todos os usuários
+        if (alert.target_type === 'all') return true;
+        
+        // Alertas para usuários específicos
+        if (alert.target_type === 'specific' && alert.target_user_ids) {
+          return alert.target_user_ids.includes(userId);
+        }
+        
+        // Alertas para role específico (verificar se é user)
+        if (alert.target_type === 'role' && alert.target_role === 'user') {
+          return true;
+        }
+        
+        return false;
+      });
+
+      setAlerts(userAlerts);
     } catch (error) {
       console.error('Error fetching alerts:', error);
       toast({
