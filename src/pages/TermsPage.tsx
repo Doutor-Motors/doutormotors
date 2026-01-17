@@ -18,7 +18,7 @@ const TermsPage = () => {
           {/* Header */}
           <div className="mb-8">
             <Link to="/">
-              <Button variant="ghost" className="mb-4">
+              <Button variant="ghost" className="mb-4 text-foreground hover:text-primary">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar ao início
               </Button>
