@@ -147,10 +147,6 @@ const SupportCenter = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <Link to="/dashboard" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar ao Dashboard
-            </Link>
             <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase text-foreground">
               Central de Suporte
             </h1>
