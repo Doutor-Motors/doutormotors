@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Search, Loader2, Car, ChevronRight, ArrowLeft, Play, 
-  BookOpen, Video, ExternalLink, Home, Filter, RefreshCw, Sparkles, Bot, Database
+  BookOpen, Video, ExternalLink, Home, Filter, RefreshCw, Sparkles, Bot, Database, Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,13 +77,14 @@ interface VideoCategory {
 interface VideoDetails {
   title: string;
   description?: string;
-  videoDescription?: string; // Full "Video Description" from CarCareKiosk sidebar
+  videoDescription?: string;
   videoUrl?: string;
   sourceUrl?: string;
   steps?: string[];
   markdown?: string;
-  transcriptionUsed?: boolean; // Indicates if steps came from AI transcription
-  fromCache?: boolean; // Indicates if data came from cache
+  transcriptionUsed?: boolean;
+  fromCache?: boolean;
+  cacheExpiresAt?: string; // ISO date string for cache expiration
 }
 
 type ViewState = "brands" | "models" | "categories" | "procedures" | "video";
@@ -245,6 +263,24 @@ const StudyCarPage = () => {
       handleProcedureSelect(selectedProcedure, true);
     }
   };
+
+  // Calculate remaining cache time
+  const cacheTimeRemaining = useMemo(() => {
+    if (!videoDetails?.cacheExpiresAt) return null;
+    const expiresAt = new Date(videoDetails.cacheExpiresAt);
+    const now = new Date();
+    const diffMs = expiresAt.getTime() - now.getTime();
+    if (diffMs <= 0) return "Expirado";
+    
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays > 0) return `${diffDays} dia${diffDays > 1 ? 's' : ''}`;
+    
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    if (diffHours > 0) return `${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+    
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    return `${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''}`;
+  }, [videoDetails?.cacheExpiresAt]);
 
   const handleQuickSelect = async () => {
     if (!quickSelectBrand) return;
@@ -1057,27 +1093,81 @@ const StudyCarPage = () => {
                                 Passo a Passo
                               </div>
                               <div className="flex items-center gap-2">
-                                {videoDetails.fromCache && (
-                                  <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">
-                                    <Database className="w-3 h-3 mr-1" />
-                                    Cache
-                                  </Badge>
-                                )}
-                                {videoDetails.transcriptionUsed && (
-                                  <Badge variant="secondary" className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary border-primary/30">
-                                    <Sparkles className="w-3 h-3 mr-1" />
-                                    Transcrição IA
-                                  </Badge>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={handleForceRefresh}
-                                  disabled={isLoading}
-                                  title="Reprocessar transcrição (ignorar cache)"
-                                >
-                                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                                </Button>
+                                <TooltipProvider>
+                                  {videoDetails.fromCache && cacheTimeRemaining && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30 cursor-help">
+                                          <Database className="w-3 h-3 mr-1" />
+                                          Cache
+                                          <span className="ml-1 text-xs opacity-70 flex items-center gap-0.5">
+                                            <Clock className="w-2.5 h-2.5" />
+                                            {cacheTimeRemaining}
+                                          </span>
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Dados em cache. Expira em {cacheTimeRemaining}.</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  {videoDetails.transcriptionUsed && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge variant="secondary" className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary border-primary/30 cursor-help">
+                                          <Sparkles className="w-3 h-3 mr-1" />
+                                          Transcrição IA
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Passos gerados por IA a partir da transcrição do vídeo.</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                </TooltipProvider>
+                                <AlertDialog>
+                                  <Tooltip>
+                                    <TooltipProvider>
+                                      <TooltipTrigger asChild>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            disabled={isLoading}
+                                          >
+                                            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Reprocessar transcrição (ignorar cache)</p>
+                                      </TooltipContent>
+                                    </TooltipProvider>
+                                  </Tooltip>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Reprocessar Transcrição?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Esta ação irá:
+                                        <ul className="list-disc list-inside mt-2 space-y-1">
+                                          <li>Baixar e transcrever o áudio do vídeo novamente</li>
+                                          <li>Gerar novos passos detalhados com IA</li>
+                                          <li>Consumir créditos de API (ElevenLabs + Lovable AI)</li>
+                                        </ul>
+                                        <p className="mt-3 text-sm">
+                                          Use apenas se os passos atuais parecem incorretos ou incompletos.
+                                        </p>
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction onClick={handleForceRefresh}>
+                                        <RefreshCw className="w-4 h-4 mr-2" />
+                                        Reprocessar
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </CardTitle>
                             {videoDetails.transcriptionUsed && (
