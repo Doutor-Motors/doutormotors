@@ -30,9 +30,9 @@ const baseMenuItems = [
   { icon: Car, label: "Veículos", path: "/dashboard/vehicles" },
   { icon: Activity, label: "Diagnósticos", path: "/dashboard/diagnostics" },
   { icon: History, label: "Histórico", path: "/dashboard/history" },
-  { icon: Headphones, label: "Suporte", path: "/dashboard/support" },
   { icon: GraduationCap, label: "Estude seu Carro", path: "/estude-seu-carro" },
   { icon: User, label: "Perfil", path: "/profile" },
+  { icon: Headphones, label: "Suporte", path: "/dashboard/support" },
 ];
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
