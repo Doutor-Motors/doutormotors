@@ -13,16 +13,18 @@ import {
   GraduationCap,
   Headphones,
   ArrowLeft,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import logo from "@/assets/images/logo-new.png";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-const menuItems = [
+const baseMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Car, label: "Veículos", path: "/dashboard/vehicles" },
   { icon: Activity, label: "Diagnósticos", path: "/dashboard/diagnostics" },
@@ -37,6 +39,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { isAdmin } = useAdmin();
+
+  // Build menu items dynamically based on admin status
+  const menuItems = isAdmin 
+    ? [...baseMenuItems, { icon: Shield, label: "Admin", path: "/admin" }]
+    : baseMenuItems;
 
   const handleLogout = async () => {
     await signOut();
