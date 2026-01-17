@@ -42,15 +42,15 @@ const HowItWorksSection = () => {
           </h2>
         </div>
 
-        {/* Steps Carousel */}
-        <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-thin scrollbar-track-dm-pink scrollbar-thumb-primary">
+        {/* Steps Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {steps.map((item, index) => (
             <div 
               key={index}
-              className="min-w-[300px] md:min-w-[350px] snap-start flex-shrink-0"
+              className="w-full"
             >
-              <div className="relative group">
-                <figure className="aspect-[350/406] overflow-hidden rounded-lg">
+              <div className="relative group h-full">
+                <figure className="aspect-[4/5] overflow-hidden rounded-lg">
                   <img 
                     src={item.image} 
                     alt={item.title} 
@@ -58,21 +58,21 @@ const HowItWorksSection = () => {
                   />
                 </figure>
                 
-                <div className="bg-card shadow-lg p-6 mx-4 -mt-16 relative text-center rounded-lg">
+                <div className="bg-card shadow-lg p-5 mx-3 -mt-14 relative text-center rounded-lg">
                   <p className="font-chakra text-sm uppercase text-primary font-bold mb-1">
                     {item.step}
                   </p>
-                  <h3 className="font-chakra text-lg font-semibold uppercase text-foreground mb-2">
+                  <h3 className="font-chakra text-base font-semibold uppercase text-foreground mb-2">
                     {item.title}
                   </h3>
-                  <p className="text-muted-foreground text-sm mb-4">
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
                     {item.description}
                   </p>
                   <Link 
                     to="/signup"
-                    className="bg-primary text-primary-foreground w-10 h-10 rounded-full flex items-center justify-center mx-auto hover:bg-dm-blue-3 transition-colors"
+                    className="bg-primary text-primary-foreground w-9 h-9 rounded-full flex items-center justify-center mx-auto hover:bg-dm-blue-3 transition-colors"
                   >
-                    <ArrowRight className="w-5 h-5" />
+                    <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
               </div>
