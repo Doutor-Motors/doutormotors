@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import textBarsDark from "@/assets/images/text-bars-dark.png";
@@ -77,6 +77,8 @@ const getRandomTestimonials = () => {
 
 const TestimonialsSection = () => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Generate random testimonials on component mount
   const testimonials = useMemo(() => getRandomTestimonials(), []);
@@ -88,6 +90,21 @@ const TestimonialsSection = () => {
   const prevTestimonial = () => {
     setActiveIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
+
+  // Autoplay with pause on hover
+  useEffect(() => {
+    if (!isPaused) {
+      intervalRef.current = setInterval(() => {
+        setActiveIndex((prev) => (prev + 1) % testimonials.length);
+      }, 5000); // Change every 5 seconds
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isPaused, testimonials.length]);
 
   return (
     <section className="py-20 bg-gradient-to-b from-background to-dm-blue-4/30">
@@ -104,7 +121,11 @@ const TestimonialsSection = () => {
         </div>
 
         {/* Testimonials Carousel */}
-        <div className="relative max-w-4xl mx-auto">
+        <div 
+          className="relative max-w-4xl mx-auto"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
           {/* Navigation Buttons */}
           <Button
             variant="ghost"
