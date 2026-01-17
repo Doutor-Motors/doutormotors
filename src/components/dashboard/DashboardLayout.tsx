@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/images/logo.png";
 
 interface DashboardLayoutProps {
@@ -30,9 +31,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
-  const handleLogout = () => {
-    // Será implementado com Supabase Auth
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
 
