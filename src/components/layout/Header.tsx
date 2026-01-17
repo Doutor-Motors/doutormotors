@@ -10,10 +10,10 @@ const Header = () => {
 
   const navLinks = [
     { name: "Home", path: "/" },
-    { name: "Sobre", path: "/#about" },
-    { name: "Serviços", path: "/#services" },
-    { name: "Como Funciona", path: "/#how-it-works" },
-    { name: "Contato", path: "/#contact" },
+    { name: "Sobre", path: "/sobre" },
+    { name: "Serviços", path: "/servicos" },
+    { name: "Como Funciona", path: "/como-funciona" },
+    { name: "Contato", path: "/contato" },
   ];
 
   const isLandingPage = location.pathname === "/";
