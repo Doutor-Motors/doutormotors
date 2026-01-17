@@ -1310,24 +1310,224 @@ const STATIC_MODELS_DATA: Record<string, any[]> = {
   ],
 };
 
-// Categorias de manutenção padrão
+// Helper para gerar URL de deep-link do CarCareKiosk
+function buildCarCareKioskUrl(year: string, brand: string, model: string, category?: string, procedure?: string): string {
+  // Formato: https://www.carcarekiosk.com/video/[Ano]_[Marca]_[Modelo]/[categoria]/[procedimento]
+  const brandSlug = brand.replace(/\s+/g, "_");
+  const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
+  
+  let baseUrl = `https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}`;
+  
+  if (category) {
+    baseUrl += `/${category}`;
+    if (procedure) {
+      baseUrl += `/${procedure}`;
+    }
+  }
+  
+  return baseUrl;
+}
+
+// Categorias de manutenção padrão com deep-links
 function getStaticCategories(brand?: string, model?: string, year?: string): any[] {
   const vehicleContext = `${brand || ""} ${model || ""} ${year || ""}`.trim();
+  const yearStr = year || new Date().getFullYear().toString();
+  const brandStr = brand || "";
+  const modelStr = model || "";
   
-  return [
-    { id: "oil-change", name: "Troca de Óleo", nameEn: "Oil Change", icon: "🛢️", vehicleContext },
-    { id: "brake-pads", name: "Pastilhas de Freio", nameEn: "Brake Pads", icon: "🛑", vehicleContext },
-    { id: "air-filter", name: "Filtro de Ar", nameEn: "Air Filter", icon: "🌬️", vehicleContext },
-    { id: "cabin-filter", name: "Filtro de Cabine", nameEn: "Cabin Air Filter", icon: "🌬️", vehicleContext },
-    { id: "battery", name: "Bateria", nameEn: "Battery", icon: "🔋", vehicleContext },
-    { id: "coolant", name: "Arrefecimento", nameEn: "Coolant", icon: "🌡️", vehicleContext },
-    { id: "headlights", name: "Faróis", nameEn: "Headlights", icon: "💡", vehicleContext },
-    { id: "taillights", name: "Lanternas", nameEn: "Tail Lights", icon: "💡", vehicleContext },
-    { id: "wipers", name: "Palhetas", nameEn: "Windshield Wipers", icon: "🪟", vehicleContext },
-    { id: "spark-plugs", name: "Velas", nameEn: "Spark Plugs", icon: "⚡", vehicleContext },
-    { id: "transmission", name: "Transmissão", nameEn: "Transmission Fluid", icon: "⚙️", vehicleContext },
-    { id: "tires", name: "Pneus", nameEn: "Tires", icon: "⭕", vehicleContext },
-    { id: "fuses", name: "Fusíveis", nameEn: "Fuses", icon: "🔌", vehicleContext },
-    { id: "serpentine-belt", name: "Correia", nameEn: "Serpentine Belt", icon: "🔧", vehicleContext },
+  // Mapeamento de categorias para slugs do CarCareKiosk
+  const categories = [
+    { 
+      id: "air_conditioner", 
+      name: "Ar Condicionado", 
+      nameEn: "Air Conditioner", 
+      icon: "❄️",
+      procedures: [
+        { id: "recharge_freon", name: "Recarregar Gás", nameEn: "Recharge Freon" },
+        { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
+      ]
+    },
+    { 
+      id: "air_filter_engine", 
+      name: "Filtro de Ar (Motor)", 
+      nameEn: "Air Filter (Engine)", 
+      icon: "🌬️",
+      procedures: [
+        { id: "replace", name: "Substituir", nameEn: "Replace" },
+      ]
+    },
+    { 
+      id: "air_filter_cabin", 
+      name: "Filtro de Ar (Cabine)", 
+      nameEn: "Cabin Air Filter", 
+      icon: "🌬️",
+      procedures: [
+        { id: "replace", name: "Substituir", nameEn: "Replace" },
+      ]
+    },
+    { 
+      id: "battery", 
+      name: "Bateria", 
+      nameEn: "Battery", 
+      icon: "🔋",
+      procedures: [
+        { id: "replace", name: "Substituir", nameEn: "Replace" },
+        { id: "clean_terminals", name: "Limpar Terminais", nameEn: "Clean Terminals" },
+        { id: "jumpstart", name: "Dar Partida", nameEn: "Jumpstart" },
+      ]
+    },
+    { 
+      id: "brakes", 
+      name: "Freios", 
+      nameEn: "Brakes", 
+      icon: "🛑",
+      procedures: [
+        { id: "replace_front_brakes", name: "Trocar Freios Dianteiros", nameEn: "Replace Front Brakes" },
+        { id: "replace_rear_brakes", name: "Trocar Freios Traseiros", nameEn: "Replace Rear Brakes" },
+        { id: "check_brake_fluid", name: "Verificar Fluido", nameEn: "Check Brake Fluid" },
+      ]
+    },
+    { 
+      id: "coolant_antifreeze", 
+      name: "Arrefecimento", 
+      nameEn: "Coolant (Antifreeze)", 
+      icon: "🌡️",
+      procedures: [
+        { id: "add", name: "Adicionar", nameEn: "Add" },
+        { id: "flush", name: "Trocar", nameEn: "Flush" },
+        { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
+      ]
+    },
+    { 
+      id: "headlight", 
+      name: "Faróis", 
+      nameEn: "Headlight", 
+      icon: "💡",
+      procedures: [
+        { id: "change_bulb", name: "Trocar Lâmpada", nameEn: "Change Bulb" },
+        { id: "replace_fuse", name: "Trocar Fusível", nameEn: "Replace Fuse" },
+      ]
+    },
+    { 
+      id: "highbeam", 
+      name: "Farol Alto", 
+      nameEn: "Highbeam (Brights)", 
+      icon: "💡",
+      procedures: [
+        { id: "change_bulb", name: "Trocar Lâmpada", nameEn: "Change Bulb" },
+      ]
+    },
+    { 
+      id: "brake_light", 
+      name: "Luz de Freio", 
+      nameEn: "Brake Light", 
+      icon: "🔴",
+      procedures: [
+        { id: "change_bulb", name: "Trocar Lâmpada", nameEn: "Change Bulb" },
+      ]
+    },
+    { 
+      id: "tail_light", 
+      name: "Lanterna Traseira", 
+      nameEn: "Tail Light", 
+      icon: "💡",
+      procedures: [
+        { id: "change_bulb", name: "Trocar Lâmpada", nameEn: "Change Bulb" },
+      ]
+    },
+    { 
+      id: "oil", 
+      name: "Óleo do Motor", 
+      nameEn: "Oil & Oil Filter", 
+      icon: "🛢️",
+      procedures: [
+        { id: "change_oil", name: "Trocar Óleo", nameEn: "Change Oil" },
+        { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
+      ]
+    },
+    { 
+      id: "power_steering", 
+      name: "Direção Hidráulica", 
+      nameEn: "Power Steering", 
+      icon: "🔧",
+      procedures: [
+        { id: "add_fluid", name: "Adicionar Fluido", nameEn: "Add Fluid" },
+        { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
+      ]
+    },
+    { 
+      id: "transmission_fluid", 
+      name: "Transmissão", 
+      nameEn: "Transmission Fluid", 
+      icon: "⚙️",
+      procedures: [
+        { id: "add", name: "Adicionar", nameEn: "Add" },
+        { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
+      ]
+    },
+    { 
+      id: "washer_fluid", 
+      name: "Fluido do Limpador", 
+      nameEn: "Washer Fluid", 
+      icon: "💧",
+      procedures: [
+        { id: "add", name: "Adicionar", nameEn: "Add" },
+        { id: "check_level", name: "Verificar Nível", nameEn: "Check Level" },
+      ]
+    },
+    { 
+      id: "wipers", 
+      name: "Palhetas", 
+      nameEn: "Windshield Wipers", 
+      icon: "🪟",
+      procedures: [
+        { id: "replace_wipers", name: "Substituir", nameEn: "Replace Wipers" },
+      ]
+    },
+    { 
+      id: "tires_wheels", 
+      name: "Pneus e Rodas", 
+      nameEn: "Tires & Wheels", 
+      icon: "⭕",
+      procedures: [
+        { id: "change_tire", name: "Trocar Pneu", nameEn: "Change Tire" },
+        { id: "add_air", name: "Calibrar", nameEn: "Add Air" },
+      ]
+    },
+    { 
+      id: "interior_fuse", 
+      name: "Fusíveis Internos", 
+      nameEn: "Interior Fuse Box", 
+      icon: "🔌",
+      procedures: [
+        { id: "replace", name: "Substituir", nameEn: "Replace" },
+        { id: "diagram", name: "Diagrama", nameEn: "Diagram" },
+      ]
+    },
+    { 
+      id: "engine_fuse", 
+      name: "Fusíveis do Motor", 
+      nameEn: "Engine Fuse Box", 
+      icon: "🔌",
+      procedures: [
+        { id: "replace", name: "Substituir", nameEn: "Replace" },
+        { id: "diagram", name: "Diagrama", nameEn: "Diagram" },
+      ]
+    },
   ];
+  
+  return categories.map(cat => ({
+    id: cat.id,
+    name: cat.name,
+    nameEn: cat.nameEn,
+    icon: cat.icon,
+    vehicleContext,
+    url: buildCarCareKioskUrl(yearStr, brandStr, modelStr, cat.id),
+    procedures: cat.procedures.map(proc => ({
+      id: proc.id,
+      name: proc.name,
+      nameEn: proc.nameEn,
+      url: buildCarCareKioskUrl(yearStr, brandStr, modelStr, cat.id, proc.id),
+    })),
+  }));
 }

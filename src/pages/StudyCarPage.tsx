@@ -39,6 +39,13 @@ interface CarModel {
   url?: string;
 }
 
+interface Procedure {
+  id: string;
+  name: string;
+  nameEn: string;
+  url: string;
+}
+
 interface VideoCategory {
   id: string;
   name: string;
@@ -47,6 +54,7 @@ interface VideoCategory {
   thumbnail?: string;
   url?: string;
   vehicleContext?: string;
+  procedures?: Procedure[];
 }
 
 interface VideoDetails {
@@ -58,7 +66,7 @@ interface VideoDetails {
   markdown?: string;
 }
 
-type ViewState = "brands" | "models" | "categories" | "video";
+type ViewState = "brands" | "models" | "categories" | "procedures" | "video";
 
 const StudyCarPage = () => {
   const { user } = useAuth();
@@ -78,6 +86,7 @@ const StudyCarPage = () => {
   const [selectedBrand, setSelectedBrand] = useState<CarBrand | null>(null);
   const [selectedModel, setSelectedModel] = useState<CarModel | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<VideoCategory | null>(null);
+  const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null);
   
   // Search/Filter state
   const [brandSearch, setBrandSearch] = useState("");
@@ -183,13 +192,27 @@ const StudyCarPage = () => {
 
   const handleCategorySelect = async (category: VideoCategory) => {
     setSelectedCategory(category);
+    
+    // Se a categoria tem procedimentos, mostrar a view de procedimentos
+    if (category.procedures && category.procedures.length > 0) {
+      setCurrentView("procedures");
+    } else {
+      // Abrir diretamente no CarCareKiosk
+      if (category.url) {
+        window.open(category.url, "_blank");
+      }
+    }
+  };
+
+  const handleProcedureSelect = async (procedure: Procedure) => {
+    setSelectedProcedure(procedure);
     setIsLoading(true);
     
     try {
       const { data, error } = await supabase.functions.invoke("carcare-api", {
         body: { 
           action: "video-details", 
-          procedure: category.url || category.id 
+          procedure: procedure.url
         },
       });
 
@@ -267,10 +290,20 @@ const StudyCarPage = () => {
         setCurrentView("models");
         setSelectedModel(null);
         break;
-      case "video":
+      case "procedures":
         setCurrentView("categories");
         setSelectedCategory(null);
-        setVideoDetails(null);
+        break;
+      case "video":
+        if (selectedProcedure) {
+          setCurrentView("procedures");
+          setSelectedProcedure(null);
+          setVideoDetails(null);
+        } else {
+          setCurrentView("categories");
+          setSelectedCategory(null);
+          setVideoDetails(null);
+        }
         break;
     }
   };
@@ -280,6 +313,7 @@ const StudyCarPage = () => {
     setSelectedBrand(null);
     setSelectedModel(null);
     setSelectedCategory(null);
+    setSelectedProcedure(null);
     setVideoDetails(null);
   };
 
@@ -673,7 +707,12 @@ const StudyCarPage = () => {
                             className="cursor-pointer hover:border-primary hover:shadow-lg transition-all group h-full"
                             onClick={() => handleCategorySelect(category)}
                           >
-                            <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full min-h-[120px]">
+                            <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full min-h-[120px] relative">
+                              {category.procedures && category.procedures.length > 0 && (
+                                <Badge className="absolute top-2 right-2 text-xs" variant="secondary">
+                                  {category.procedures.length}
+                                </Badge>
+                              )}
                               <span className="text-4xl mb-2">{category.icon}</span>
                               <p className="font-medium text-sm group-hover:text-primary transition-colors">
                                 {category.name}
@@ -694,6 +733,132 @@ const StudyCarPage = () => {
                       <p className="text-lg text-muted-foreground">
                         Nenhuma categoria encontrada para este modelo.
                       </p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </motion.div>
+          )}
+
+          {/* PROCEDURES VIEW */}
+          {currentView === "procedures" && selectedBrand && selectedModel && selectedCategory && (
+            <motion.div
+              key="procedures"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Breadcrumb */}
+              <section className="bg-muted/50 py-4 border-b">
+                <div className="container mx-auto px-4">
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <Button variant="ghost" size="sm" onClick={goHome}>
+                      <Home className="w-4 h-4" />
+                    </Button>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <span 
+                      className="text-muted-foreground hover:text-primary cursor-pointer"
+                      onClick={() => { setCurrentView("brands"); setSelectedBrand(null); }}
+                    >
+                      {selectedBrand.name}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <span 
+                      className="text-muted-foreground hover:text-primary cursor-pointer"
+                      onClick={() => { setCurrentView("models"); setSelectedModel(null); }}
+                    >
+                      {selectedModel.name}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-primary font-medium">{selectedCategory.name}</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Header */}
+              <section className="py-8 bg-gradient-to-r from-primary/5 to-transparent">
+                <div className="container mx-auto px-4">
+                  <div className="flex items-center gap-4 mb-2">
+                    <Button variant="outline" size="icon" onClick={goBack}>
+                      <ArrowLeft className="w-5 h-5" />
+                    </Button>
+                    <div>
+                      <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase flex items-center gap-3">
+                        <span className="text-4xl">{selectedCategory.icon}</span>
+                        {selectedCategory.name}
+                      </h1>
+                      <p className="text-muted-foreground">
+                        {selectedBrand.name} {selectedModel.name} ({selectedModel.years}) • Selecione um procedimento
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Procedures List */}
+              <section className="py-8">
+                <div className="container mx-auto px-4">
+                  <div className="grid gap-4 max-w-2xl">
+                    {selectedCategory.procedures?.map((procedure, index) => (
+                      <motion.div
+                        key={procedure.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <Card 
+                          className="cursor-pointer hover:border-primary hover:shadow-lg transition-all group"
+                          onClick={() => handleProcedureSelect(procedure)}
+                        >
+                          <CardContent className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Play className="w-5 h-5 text-primary" />
+                              </div>
+                              <div>
+                                <p className="font-medium group-hover:text-primary transition-colors">
+                                  {procedure.name}
+                                </p>
+                                {procedure.nameEn !== procedure.name && (
+                                  <p className="text-sm text-muted-foreground">
+                                    {procedure.nameEn}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(procedure.url, "_blank");
+                                }}
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Button>
+                              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Link para página do CarCareKiosk */}
+                  {selectedCategory.url && (
+                    <div className="mt-8 text-center">
+                      <Button variant="outline" asChild>
+                        <a 
+                          href={selectedCategory.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Ver todos os tutoriais de {selectedCategory.name} no CarCareKiosk
+                        </a>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -732,7 +897,18 @@ const StudyCarPage = () => {
                       {selectedModel.name}
                     </span>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-primary font-medium">{selectedCategory.name}</span>
+                    <span 
+                      className="text-muted-foreground hover:text-primary cursor-pointer"
+                      onClick={() => { setCurrentView("procedures"); setSelectedProcedure(null); }}
+                    >
+                      {selectedCategory.name}
+                    </span>
+                    {selectedProcedure && (
+                      <>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-primary font-medium">{selectedProcedure.name}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </section>
@@ -746,7 +922,7 @@ const StudyCarPage = () => {
                     </Button>
                     <div>
                       <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase">
-                        {selectedCategory.icon} {selectedCategory.name}
+                        {selectedCategory.icon} {selectedProcedure?.name || selectedCategory.name}
                       </h1>
                       <p className="text-muted-foreground">
                         {selectedBrand.name} {selectedModel.name} ({selectedModel.years})
@@ -777,10 +953,10 @@ const StudyCarPage = () => {
                             <p className="text-sm text-muted-foreground mb-4">
                               Clique abaixo para assistir no CarCareKiosk
                             </p>
-                            {selectedCategory.url && (
+                            {(selectedProcedure?.url || selectedCategory.url) && (
                               <Button asChild>
                                 <a 
-                                  href={selectedCategory.url} 
+                                  href={selectedProcedure?.url || selectedCategory.url} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                 >
@@ -794,16 +970,16 @@ const StudyCarPage = () => {
                         
                         <CardContent className="p-6">
                           <h2 className="font-chakra font-bold text-xl mb-2">
-                            {videoDetails?.title || `${selectedCategory.name} - ${selectedBrand.name} ${selectedModel.name}`}
+                            {videoDetails?.title || `${selectedProcedure?.name || selectedCategory.name} - ${selectedBrand.name} ${selectedModel.name}`}
                           </h2>
                           {videoDetails?.description && (
                             <p className="text-muted-foreground">{videoDetails.description}</p>
                           )}
                           
-                          {selectedCategory.url && (
+                          {(selectedProcedure?.url || selectedCategory.url) && (
                             <Button variant="outline" asChild className="mt-4">
                               <a 
-                                href={selectedCategory.url} 
+                                href={selectedProcedure?.url || selectedCategory.url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                               >
