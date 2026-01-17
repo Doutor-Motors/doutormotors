@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { 
   Calendar, 
@@ -5,57 +6,99 @@ import {
   AlertTriangle,
   Activity,
   CheckCircle,
-  Car
+  Car,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import type { Tables } from "@/integrations/supabase/types";
 
-// Mock data
-const mockHistory = [
-  {
-    id: "1",
-    date: "2024-01-15",
-    vehicle: "Volkswagen Golf 2020",
-    totalIssues: 3,
-    critical: 1,
-    attention: 1,
-    preventive: 1,
-    status: "completed",
-  },
-  {
-    id: "2",
-    date: "2024-01-10",
-    vehicle: "Volkswagen Golf 2020",
-    totalIssues: 2,
-    critical: 0,
-    attention: 1,
-    preventive: 1,
-    status: "completed",
-  },
-  {
-    id: "3",
-    date: "2024-01-05",
-    vehicle: "Honda Civic 2019",
-    totalIssues: 1,
-    critical: 0,
-    attention: 0,
-    preventive: 1,
-    status: "completed",
-  },
-  {
-    id: "4",
-    date: "2023-12-20",
-    vehicle: "Volkswagen Golf 2020",
-    totalIssues: 0,
-    critical: 0,
-    attention: 0,
-    preventive: 0,
-    status: "completed",
-  },
-];
+type Vehicle = Tables<"vehicles">;
+type DiagnosticItem = Tables<"diagnostic_items">;
+
+interface DiagnosticWithDetails {
+  id: string;
+  created_at: string;
+  status: string;
+  vehicle: Vehicle | null;
+  items: DiagnosticItem[];
+  stats: {
+    critical: number;
+    attention: number;
+    preventive: number;
+    total: number;
+  };
+}
 
 const DiagnosticHistory = () => {
+  const { user } = useAuth();
+  const [diagnostics, setDiagnostics] = useState<DiagnosticWithDetails[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchDiagnostics();
+    }
+  }, [user]);
+
+  const fetchDiagnostics = async () => {
+    if (!user) return;
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('diagnostics')
+        .select(`
+          id,
+          created_at,
+          status,
+          vehicle_id,
+          vehicles (*),
+          diagnostic_items (*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const formattedDiagnostics: DiagnosticWithDetails[] = data.map((diag: any) => {
+          const items: DiagnosticItem[] = diag.diagnostic_items || [];
+          let critical = 0, attention = 0, preventive = 0;
+
+          items.forEach((item: DiagnosticItem) => {
+            if (item.priority === 'critical') critical++;
+            else if (item.priority === 'attention') attention++;
+            else if (item.priority === 'preventive') preventive++;
+          });
+
+          return {
+            id: diag.id,
+            created_at: diag.created_at,
+            status: diag.status,
+            vehicle: diag.vehicles,
+            items,
+            stats: {
+              critical,
+              attention,
+              preventive,
+              total: items.length,
+            },
+          };
+        });
+
+        setDiagnostics(formattedDiagnostics);
+      }
+    } catch (error) {
+      console.error('Error fetching diagnostics:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("pt-BR", {
@@ -64,6 +107,16 @@ const DiagnosticHistory = () => {
       year: "numeric",
     });
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -86,9 +139,9 @@ const DiagnosticHistory = () => {
         </div>
 
         {/* History List */}
-        {mockHistory.length > 0 ? (
+        {diagnostics.length > 0 ? (
           <div className="space-y-4">
-            {mockHistory.map((item) => (
+            {diagnostics.map((item) => (
               <Card key={item.id} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -98,11 +151,14 @@ const DiagnosticHistory = () => {
                       </div>
                       <div>
                         <h3 className="font-chakra font-bold text-foreground uppercase">
-                          {item.vehicle}
+                          {item.vehicle 
+                            ? `${item.vehicle.brand} ${item.vehicle.model} ${item.vehicle.year}`
+                            : 'Veículo removido'
+                          }
                         </h3>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                           <Calendar className="w-4 h-4" />
-                          <span>{formatDate(item.date)}</span>
+                          <span>{formatDate(item.created_at)}</span>
                         </div>
                       </div>
                     </div>
@@ -110,25 +166,25 @@ const DiagnosticHistory = () => {
                     <div className="flex items-center gap-6">
                       {/* Stats */}
                       <div className="flex items-center gap-4">
-                        {item.critical > 0 && (
+                        {item.stats.critical > 0 && (
                           <div className="flex items-center gap-1">
                             <AlertTriangle className="w-4 h-4 text-red-600" />
-                            <span className="font-bold text-red-600">{item.critical}</span>
+                            <span className="font-bold text-red-600">{item.stats.critical}</span>
                           </div>
                         )}
-                        {item.attention > 0 && (
+                        {item.stats.attention > 0 && (
                           <div className="flex items-center gap-1">
                             <Activity className="w-4 h-4 text-orange-500" />
-                            <span className="font-bold text-orange-500">{item.attention}</span>
+                            <span className="font-bold text-orange-500">{item.stats.attention}</span>
                           </div>
                         )}
-                        {item.preventive > 0 && (
+                        {item.stats.preventive > 0 && (
                           <div className="flex items-center gap-1">
                             <CheckCircle className="w-4 h-4 text-yellow-500" />
-                            <span className="font-bold text-yellow-500">{item.preventive}</span>
+                            <span className="font-bold text-yellow-500">{item.stats.preventive}</span>
                           </div>
                         )}
-                        {item.totalIssues === 0 && (
+                        {item.stats.total === 0 && (
                           <div className="flex items-center gap-1">
                             <CheckCircle className="w-4 h-4 text-green-500" />
                             <span className="text-sm text-green-500">Sem problemas</span>
