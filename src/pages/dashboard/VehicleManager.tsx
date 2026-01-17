@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
   Car, 
@@ -8,7 +8,8 @@ import {
   MoreVertical,
   Fuel,
   Calendar,
-  Settings
+  Settings,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,107 +39,198 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useAppStore, Vehicle } from "@/store/useAppStore";
 
-// Mock data
-const mockVehicles = [
-  {
-    id: "1",
-    brand: "Volkswagen",
-    model: "Golf",
-    year: 2020,
-    engine: "1.4 TSI",
-    fuelType: "Flex",
-    isActive: true,
-  },
-  {
-    id: "2",
-    brand: "Honda",
-    model: "Civic",
-    year: 2019,
-    engine: "2.0",
-    fuelType: "Gasolina",
-    isActive: false,
-  },
-];
-
-const brands = ["Volkswagen", "Honda", "Toyota", "Fiat", "Chevrolet", "Ford", "Hyundai", "Renault", "Nissan", "Jeep"];
+const brands = ["Volkswagen", "Honda", "Toyota", "Fiat", "Chevrolet", "Ford", "Hyundai", "Renault", "Nissan", "Jeep", "BMW", "Mercedes-Benz", "Audi"];
 const fuelTypes = ["Gasolina", "Etanol", "Flex", "Diesel", "Elétrico", "Híbrido"];
 
 const VehicleManager = () => {
-  const [vehicles, setVehicles] = useState(mockVehicles);
+  const { user } = useAuth();
+  const { 
+    vehicles, 
+    setVehicles, 
+    addVehicle, 
+    updateVehicle, 
+    removeVehicle,
+    activeVehicleId,
+    setActiveVehicleId 
+  } = useAppStore();
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<typeof mockVehicles[0] | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [formData, setFormData] = useState({
     brand: "",
     model: "",
     year: "",
     engine: "",
     fuelType: "",
+    licensePlate: "",
   });
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch vehicles from Supabase
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching vehicles:', error);
+        toast({
+          title: "Erro ao carregar veículos",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setVehicles(data || []);
+        // Set active vehicle if none is set
+        if (!activeVehicleId && data && data.length > 0) {
+          setActiveVehicleId(data[0].id);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    fetchVehicles();
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
+
+    setIsSaving(true);
     
     if (editingVehicle) {
-      setVehicles(vehicles.map(v => 
-        v.id === editingVehicle.id 
-          ? { ...v, ...formData, year: parseInt(formData.year) }
-          : v
-      ));
-      toast({
-        title: "Veículo atualizado!",
-        description: `${formData.brand} ${formData.model} foi atualizado.`,
-      });
+      // Update existing vehicle
+      const { data, error } = await supabase
+        .from('vehicles')
+        .update({
+          brand: formData.brand,
+          model: formData.model,
+          year: parseInt(formData.year),
+          engine: formData.engine || null,
+          fuel_type: formData.fuelType || null,
+          license_plate: formData.licensePlate || null,
+        })
+        .eq('id', editingVehicle.id)
+        .select()
+        .single();
+
+      if (error) {
+        toast({
+          title: "Erro ao atualizar veículo",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        updateVehicle(data);
+        toast({
+          title: "Veículo atualizado!",
+          description: `${formData.brand} ${formData.model} foi atualizado.`,
+        });
+        setIsDialogOpen(false);
+      }
     } else {
-      const newVehicle = {
-        id: Date.now().toString(),
-        ...formData,
-        year: parseInt(formData.year),
-        isActive: vehicles.length === 0,
-      };
-      setVehicles([...vehicles, newVehicle]);
-      toast({
-        title: "Veículo adicionado!",
-        description: `${formData.brand} ${formData.model} foi adicionado.`,
-      });
+      // Create new vehicle
+      const { data, error } = await supabase
+        .from('vehicles')
+        .insert([{
+          user_id: user.id,
+          brand: formData.brand,
+          model: formData.model,
+          year: parseInt(formData.year),
+          engine: formData.engine || null,
+          fuel_type: formData.fuelType || null,
+          license_plate: formData.licensePlate || null,
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        toast({
+          title: "Erro ao adicionar veículo",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        addVehicle(data);
+        if (!activeVehicleId) {
+          setActiveVehicleId(data.id);
+        }
+        toast({
+          title: "Veículo adicionado!",
+          description: `${formData.brand} ${formData.model} foi adicionado.`,
+        });
+        setIsDialogOpen(false);
+      }
     }
 
-    setIsDialogOpen(false);
+    setIsSaving(false);
     setEditingVehicle(null);
-    setFormData({ brand: "", model: "", year: "", engine: "", fuelType: "" });
+    setFormData({ brand: "", model: "", year: "", engine: "", fuelType: "", licensePlate: "" });
   };
 
-  const handleEdit = (vehicle: typeof mockVehicles[0]) => {
+  const handleEdit = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
     setFormData({
       brand: vehicle.brand,
       model: vehicle.model,
       year: vehicle.year.toString(),
-      engine: vehicle.engine,
-      fuelType: vehicle.fuelType,
+      engine: vehicle.engine || "",
+      fuelType: vehicle.fuel_type || "",
+      licensePlate: vehicle.license_plate || "",
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setVehicles(vehicles.filter(v => v.id !== id));
-    toast({
-      title: "Veículo removido",
-      description: "O veículo foi removido da sua lista.",
-    });
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase
+      .from('vehicles')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Erro ao remover veículo",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      removeVehicle(id);
+      toast({
+        title: "Veículo removido",
+        description: "O veículo foi removido da sua lista.",
+      });
+    }
   };
 
   const handleSetActive = (id: string) => {
-    setVehicles(vehicles.map(v => ({
-      ...v,
-      isActive: v.id === id,
-    })));
+    setActiveVehicleId(id);
     toast({
       title: "Veículo ativo alterado",
       description: "O veículo selecionado agora está ativo.",
     });
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -158,7 +250,7 @@ const VehicleManager = () => {
               <Button
                 onClick={() => {
                   setEditingVehicle(null);
-                  setFormData({ brand: "", model: "", year: "", engine: "", fuelType: "" });
+                  setFormData({ brand: "", model: "", year: "", engine: "", fuelType: "", licensePlate: "" });
                 }}
                 className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2"
               >
@@ -216,7 +308,7 @@ const VehicleManager = () => {
                       onChange={(e) => setFormData({ ...formData, year: e.target.value })}
                       placeholder="Ex: 2020"
                       min="1990"
-                      max="2025"
+                      max="2026"
                       required
                     />
                   </div>
@@ -227,31 +319,53 @@ const VehicleManager = () => {
                       value={formData.engine}
                       onChange={(e) => setFormData({ ...formData, engine: e.target.value })}
                       placeholder="Ex: 1.4 TSI"
-                      required
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fuelType">Combustível</Label>
-                  <Select
-                    value={formData.fuelType}
-                    onValueChange={(value) => setFormData({ ...formData, fuelType: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fuelTypes.map((fuel) => (
-                        <SelectItem key={fuel} value={fuel}>
-                          {fuel}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fuelType">Combustível</Label>
+                    <Select
+                      value={formData.fuelType}
+                      onValueChange={(value) => setFormData({ ...formData, fuelType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fuelTypes.map((fuel) => (
+                          <SelectItem key={fuel} value={fuel}>
+                            {fuel}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="licensePlate">Placa</Label>
+                    <Input
+                      id="licensePlate"
+                      value={formData.licensePlate}
+                      onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value.toUpperCase() })}
+                      placeholder="Ex: ABC1234"
+                      maxLength={7}
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase">
-                    {editingVehicle ? "Salvar Alterações" : "Adicionar"}
+                  <Button 
+                    type="submit" 
+                    disabled={isSaving}
+                    className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      editingVehicle ? "Salvar Alterações" : "Adicionar"
+                    )}
                   </Button>
                 </DialogFooter>
               </form>
@@ -266,15 +380,15 @@ const VehicleManager = () => {
               <Card 
                 key={vehicle.id}
                 className={`relative overflow-hidden transition-all hover:shadow-lg ${
-                  vehicle.isActive ? "ring-2 ring-primary" : ""
+                  vehicle.id === activeVehicleId ? "ring-2 ring-primary" : ""
                 }`}
               >
-                {vehicle.isActive && (
+                {vehicle.id === activeVehicleId && (
                   <div className="absolute top-0 left-0 right-0 bg-primary text-primary-foreground text-xs font-chakra uppercase py-1 text-center">
                     Veículo Ativo
                   </div>
                 )}
-                <CardHeader className={`${vehicle.isActive ? "pt-8" : ""} flex flex-row items-start justify-between`}>
+                <CardHeader className={`${vehicle.id === activeVehicleId ? "pt-8" : ""} flex flex-row items-start justify-between`}>
                   <div className="flex items-center gap-3">
                     <div className="bg-primary/10 p-3 rounded-full">
                       <Car className="w-6 h-6 text-primary" />
@@ -283,6 +397,9 @@ const VehicleManager = () => {
                       <CardTitle className="font-chakra text-lg uppercase">
                         {vehicle.brand} {vehicle.model}
                       </CardTitle>
+                      {vehicle.license_plate && (
+                        <p className="text-sm text-muted-foreground">{vehicle.license_plate}</p>
+                      )}
                     </div>
                   </div>
                   <DropdownMenu>
@@ -292,7 +409,7 @@ const VehicleManager = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {!vehicle.isActive && (
+                      {vehicle.id !== activeVehicleId && (
                         <DropdownMenuItem onClick={() => handleSetActive(vehicle.id)}>
                           <Settings className="w-4 h-4 mr-2" />
                           Definir como Ativo
@@ -318,16 +435,20 @@ const VehicleManager = () => {
                       <Calendar className="w-4 h-4" />
                       <span>Ano: {vehicle.year}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Settings className="w-4 h-4" />
-                      <span>Motor: {vehicle.engine}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Fuel className="w-4 h-4" />
-                      <span>Combustível: {vehicle.fuelType}</span>
-                    </div>
+                    {vehicle.engine && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Settings className="w-4 h-4" />
+                        <span>Motor: {vehicle.engine}</span>
+                      </div>
+                    )}
+                    {vehicle.fuel_type && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Fuel className="w-4 h-4" />
+                        <span>Combustível: {vehicle.fuel_type}</span>
+                      </div>
+                    )}
                   </div>
-                  <Link to="/dashboard/diagnostics" className="block mt-4">
+                  <Link to={`/dashboard/diagnostics?vehicle=${vehicle.id}`} className="block mt-4">
                     <Button className="w-full bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase">
                       Iniciar Diagnóstico
                     </Button>
