@@ -19,7 +19,7 @@ const PrivacyPolicyPage = () => {
           {/* Header */}
           <div className="mb-8">
             <Link to="/">
-              <Button variant="ghost" className="mb-4 text-foreground hover:text-primary">
+              <Button variant="ghost" className="mt-8 mb-4 text-foreground hover:text-primary">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar ao início
               </Button>
