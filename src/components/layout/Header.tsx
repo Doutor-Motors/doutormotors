@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, ArrowRight, ArrowLeft } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { Menu, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/images/logo-new-car.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -23,13 +22,6 @@ const Header = () => {
   const compactLogoPages = ["/sobre", "/servicos", "/como-funciona", "/contato", "/termos", "/privacidade", "/faq"];
   const isCompactLogo = compactLogoPages.includes(location.pathname);
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/");
-    }
-  };
 
   return (
     <>
@@ -59,17 +51,6 @@ const Header = () => {
 
       <header className={`absolute top-0 left-0 w-full z-40 px-4 md:px-10 ${isLandingPage ? "" : "bg-secondary"}`}>
         <div className="container mx-auto flex justify-end items-center gap-6 lg:gap-12 py-6">
-          {/* Botão Voltar - aparece em todas as páginas exceto landing */}
-          {!isLandingPage && (
-            <Button
-              variant="ghost"
-              onClick={handleBack}
-              className="text-primary-foreground hover:bg-primary-foreground/10 gap-2 font-chakra uppercase text-sm mr-auto"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Voltar</span>
-            </Button>
-          )}
 
           {/* Espaçador para a logo fixa */}
           <div className="hidden lg:block w-[300px]" />
