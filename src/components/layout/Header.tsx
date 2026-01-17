@@ -28,7 +28,7 @@ const Header = () => {
   };
 
   return (
-    <header className={`absolute top-0 left-0 w-full z-50 px-4 md:px-10 py-6 ${isLandingPage ? "" : "bg-secondary"}`}>
+    <header className={`absolute top-0 left-0 w-full z-50 px-4 md:px-10 py-8 ${isLandingPage ? "" : "bg-secondary"}`}>
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center gap-4">
           {/* Botão Voltar - aparece em todas as páginas exceto landing */}
