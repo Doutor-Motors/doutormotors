@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database } from "lucide-react";
+import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import CacheStatsPanel from "@/components/dashboard/CacheStatsPanel";
 import DataDeletionSection from "@/components/profile/DataDeletionSection";
+import NotificationSettings from "@/components/profile/NotificationSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Tables } from "@/integrations/supabase/types";
@@ -195,10 +196,14 @@ const UserProfile = () => {
 
         {/* Tabs for Profile and Settings */}
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile" className="font-chakra uppercase text-xs sm:text-sm gap-2">
               <User className="w-4 h-4" />
               Perfil
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="font-chakra uppercase text-xs sm:text-sm gap-2">
+              <Bell className="w-4 h-4" />
+              Notificações
             </TabsTrigger>
             <TabsTrigger value="privacy" className="font-chakra uppercase text-xs sm:text-sm gap-2">
               <Database className="w-4 h-4" />
@@ -206,7 +211,7 @@ const UserProfile = () => {
             </TabsTrigger>
             <TabsTrigger value="settings" className="font-chakra uppercase text-xs sm:text-sm gap-2">
               <Settings className="w-4 h-4" />
-              Configurações
+              Config
             </TabsTrigger>
           </TabsList>
 
@@ -325,6 +330,12 @@ const UserProfile = () => {
               </CardContent>
             </Card>
 
+          </TabsContent>
+
+          <TabsContent value="notifications" className="mt-6">
+            {user && (
+              <NotificationSettings userId={user.id} />
+            )}
           </TabsContent>
 
           <TabsContent value="privacy" className="mt-6">
