@@ -160,7 +160,7 @@ const FAQPage = () => {
       
       <main className="flex-grow pt-20">
         {/* Hero Section */}
-        <section className="bg-gradient-to-br from-primary/10 via-background to-background py-16">
+        <section className="bg-gradient-to-br from-primary/10 via-background to-background pt-24 pb-16">
           <div className="container mx-auto px-4">
             <Link 
               to="/" 
