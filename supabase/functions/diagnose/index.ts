@@ -1,4 +1,8 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +14,9 @@ interface DiagnosticRequest {
   vehicleBrand: string;
   vehicleModel: string;
   vehicleYear: number;
+  diagnosticId?: string;
+  userId?: string;
+  vehicleId?: string;
 }
 
 interface DiagnosticItem {
@@ -23,13 +30,54 @@ interface DiagnosticItem {
   solution_url: string | null;
 }
 
+async function sendNotification(
+  supabaseUrl: string, 
+  serviceRoleKey: string, 
+  type: string, 
+  userId: string, 
+  data: Record<string, any>
+) {
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/send-notification`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({ type, userId, data }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to send notification:", await response.text());
+      return false;
+    }
+    
+    console.log(`${type} notification sent successfully`);
+    return true;
+  } catch (error) {
+    console.error("Error sending notification:", error);
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { dtcCodes, vehicleBrand, vehicleModel, vehicleYear } = await req.json() as DiagnosticRequest;
+    const { 
+      dtcCodes, 
+      vehicleBrand, 
+      vehicleModel, 
+      vehicleYear,
+      diagnosticId,
+      userId,
+      vehicleId
+    } = await req.json() as DiagnosticRequest;
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -151,11 +199,51 @@ Responda APENAS com o JSON, sem explicações adicionais.`;
       }));
     }
 
+    // Check for critical items
+    const criticalItems = diagnosticItems.filter(item => item.priority === 'critical');
+    const hasCritical = criticalItems.length > 0;
+    const vehicleName = `${vehicleBrand} ${vehicleModel} ${vehicleYear}`;
+
+    // Send email notifications if we have userId
+    if (userId && diagnosticId) {
+      // If there are critical items, send critical alert
+      if (hasCritical) {
+        await sendNotification(
+          SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY,
+          'critical_diagnostic',
+          userId,
+          {
+            diagnosticId,
+            vehicleName,
+            dtcCode: criticalItems[0]?.dtc_code || 'N/A',
+            description: criticalItems[0]?.description_human || 'Problema crítico detectado',
+          }
+        );
+      }
+
+      // Always send diagnostic completed notification
+      await sendNotification(
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY,
+        'diagnostic_completed',
+        userId,
+        {
+          diagnosticId,
+          vehicleName,
+          totalCodes: diagnosticItems.length,
+          criticalCount: criticalItems.length,
+        }
+      );
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
         diagnostics: diagnosticItems,
-        vehicleInfo: { brand: vehicleBrand, model: vehicleModel, year: vehicleYear }
+        vehicleInfo: { brand: vehicleBrand, model: vehicleModel, year: vehicleYear },
+        hasCritical,
+        totalItems: diagnosticItems.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
