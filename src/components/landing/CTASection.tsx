@@ -37,7 +37,7 @@ const CTASection = () => {
           Pronto para Entender Seu Carro?
         </h2>
         
-        <p className="text-dm-cadet text-lg max-w-2xl mx-auto mb-8">
+        <p className="text-white/90 text-lg max-w-2xl mx-auto mb-8">
           Comece agora gratuitamente e tenha acesso ao diagnóstico completo do seu veículo. 
           Sem surpresas, sem custos escondidos.
         </p>
@@ -53,7 +53,7 @@ const CTASection = () => {
               <h3 className="font-chakra text-lg font-semibold uppercase text-primary-foreground mb-1">
                 {feature.title}
               </h3>
-              <p className="text-dm-cadet text-sm">{feature.description}</p>
+              <p className="text-white/80 text-sm">{feature.description}</p>
             </div>
           ))}
         </div>
