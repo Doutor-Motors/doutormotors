@@ -44,7 +44,7 @@ import FAQPage from "./pages/FAQPage";
 import SupportCenter from "./pages/dashboard/SupportCenter";
 import TicketDetail from "./pages/dashboard/TicketDetail";
 import AdminTickets from "./pages/admin/AdminTickets";
-
+import NativeAppGuide from "./pages/NativeAppGuide";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -97,8 +97,9 @@ const App = () => (
                 <Route path="/admin/logs" element={<ProtectedRoute><AdminProtectedRoute><AdminLogs /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/settings" element={<ProtectedRoute><AdminProtectedRoute><AdminSettings /></AdminProtectedRoute></ProtectedRoute>} />
                 
-                {/* Public Report Page */}
+                {/* Public Pages */}
                 <Route path="/relatorio-tecnico" element={<TechnicalReport />} />
+                <Route path="/app-nativo" element={<NativeAppGuide />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
