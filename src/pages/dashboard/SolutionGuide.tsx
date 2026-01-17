@@ -75,18 +75,30 @@ const SolutionGuide = () => {
   const [activeSource, setActiveSource] = useState<ContentSource>('loveble');
   const [showIntegratedViewer, setShowIntegratedViewer] = useState(false);
 
-  const fetchAISolution = async (diagnosticItem: DiagnosticItem, vehicleData: Vehicle) => {
+  const fetchAISolution = async (
+    diagnosticItem: DiagnosticItem, 
+    vehicleData: Vehicle,
+    forceRefresh: boolean = false
+  ) => {
     setIsFetchingAI(true);
-    notifyInfo("Buscando solução", "Verificando cache local...");
+    
+    if (forceRefresh) {
+      notifyInfo("Atualizando solução", "Buscando nova versão do CarCareKiosk...");
+    } else {
+      notifyInfo("Buscando solução", "Verificando cache local...");
+    }
 
     try {
-      const response = await fetchSolutionFromCarCareKiosk({
-        dtcCode: diagnosticItem.dtc_code,
-        vehicleBrand: vehicleData.brand,
-        vehicleModel: vehicleData.model,
-        vehicleYear: vehicleData.year,
-        problemDescription: diagnosticItem.description_human,
-      });
+      const response = await fetchSolutionFromCarCareKiosk(
+        {
+          dtcCode: diagnosticItem.dtc_code,
+          vehicleBrand: vehicleData.brand,
+          vehicleModel: vehicleData.model,
+          vehicleYear: vehicleData.year,
+          problemDescription: diagnosticItem.description_human,
+        },
+        { forceRefresh }
+      );
 
       if (response.success && response.solution) {
         const aiSolution: SolutionData = {
@@ -99,7 +111,9 @@ const SolutionGuide = () => {
         setUsedAI(true);
         setFromCache(response.fromCache || false);
         
-        if (response.fromCache) {
+        if (forceRefresh) {
+          notifySuccess("Solução atualizada!", "Nova versão carregada e salva no cache.");
+        } else if (response.fromCache) {
           notifySuccess("Solução carregada!", "Recuperada do cache local (offline)");
         } else {
           notifySuccess("Solução encontrada!", "Guia detalhado gerado e salvo no cache.");
@@ -113,6 +127,12 @@ const SolutionGuide = () => {
       notifyError("Erro de conexão", "Não foi possível buscar a solução online");
     } finally {
       setIsFetchingAI(false);
+    }
+  };
+
+  const handleForceRefresh = () => {
+    if (item && vehicle) {
+      fetchAISolution(item, vehicle, true);
     }
   };
 
@@ -298,7 +318,7 @@ const SolutionGuide = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 sm:ml-auto">
+          <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
             {isFetchingAI && (
               <Badge variant="secondary" className="animate-pulse">
                 <Loader2 className="w-3 h-3 animate-spin mr-1" />
@@ -306,10 +326,25 @@ const SolutionGuide = () => {
               </Badge>
             )}
             {usedAI && !isFetchingAI && (
-              <Badge className={`${fromCache ? 'bg-green-600' : 'bg-gradient-to-r from-primary to-primary/80'} text-primary-foreground`}>
-                <Sparkles className="w-3 h-3 mr-1" />
-                {fromCache ? 'Cache Local' : 'CarCareKiosk + IA'}
-              </Badge>
+              <>
+                <Badge className={`${fromCache ? 'bg-green-600' : 'bg-gradient-to-r from-primary to-primary/80'} text-primary-foreground`}>
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  {fromCache ? 'Cache Local' : 'CarCareKiosk + IA'}
+                </Badge>
+                
+                {/* Botão de Refresh Forçado */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleForceRefresh}
+                  disabled={isFetchingAI}
+                  className="gap-1"
+                  title="Buscar nova versão da solução"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span className="hidden sm:inline">Atualizar</span>
+                </Button>
+              </>
             )}
           </div>
         </div>
