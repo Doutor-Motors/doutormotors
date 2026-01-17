@@ -40,6 +40,7 @@ import TechnicalReport from "./pages/TechnicalReport";
 import StudyCarPage from "./pages/StudyCarPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import FAQPage from "./pages/FAQPage";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="/estude-seu-carro" element={<StudyCarPage />} />
                 <Route path="/termos" element={<TermsPage />} />
                 <Route path="/privacidade" element={<PrivacyPolicyPage />} />
+                <Route path="/faq" element={<FAQPage />} />
                 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
