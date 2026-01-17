@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +17,7 @@ type Profile = Tables<"profiles">;
 const UserProfile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { notifyProfileUpdated, notifyPasswordChanged, notifyError } = useNotifications();
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [name, setName] = useState("");
@@ -90,6 +92,7 @@ const UserProfile = () => {
         title: "Perfil atualizado!",
         description: "Suas informações foram salvas com sucesso.",
       });
+      notifyProfileUpdated();
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -97,6 +100,7 @@ const UserProfile = () => {
         description: "Não foi possível atualizar o perfil.",
         variant: "destructive",
       });
+      notifyError("Erro ao atualizar", "Não foi possível atualizar o perfil.");
     } finally {
       setIsSaving(false);
     }
@@ -140,6 +144,7 @@ const UserProfile = () => {
         title: "Senha atualizada!",
         description: "Sua senha foi alterada com sucesso.",
       });
+      notifyPasswordChanged();
     } catch (error: any) {
       console.error('Error updating password:', error);
       toast({

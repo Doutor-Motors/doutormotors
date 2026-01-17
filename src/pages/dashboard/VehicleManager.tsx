@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -71,8 +72,7 @@ const VehicleManager = () => {
     licensePlate: "",
   });
   const { toast } = useToast();
-
-  // Fetch vehicles from Supabase
+  const { notifyVehicleAdded, notifyVehicleRemoved, notifyError } = useNotifications();
   useEffect(() => {
     const fetchVehicles = async () => {
       if (!user) return;
@@ -171,6 +171,8 @@ const VehicleManager = () => {
           title: "Veículo adicionado!",
           description: `${formData.brand} ${formData.model} foi adicionado.`,
         });
+        // Notificação visual animada
+        notifyVehicleAdded(`${formData.brand} ${formData.model}`);
         setIsDialogOpen(false);
       }
     }
@@ -194,6 +196,7 @@ const VehicleManager = () => {
   };
 
   const handleDelete = async (id: string) => {
+    const vehicleToDelete = vehicles.find(v => v.id === id);
     const { error } = await supabase
       .from('vehicles')
       .delete()
@@ -205,12 +208,16 @@ const VehicleManager = () => {
         description: error.message,
         variant: "destructive",
       });
+      notifyError("Erro ao remover veículo", error.message);
     } else {
       removeVehicle(id);
       toast({
         title: "Veículo removido",
         description: "O veículo foi removido da sua lista.",
       });
+      if (vehicleToDelete) {
+        notifyVehicleRemoved(`${vehicleToDelete.brand} ${vehicleToDelete.model}`);
+      }
     }
   };
 
