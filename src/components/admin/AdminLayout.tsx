@@ -15,6 +15,7 @@ import {
   FileText,
   MessageSquare,
   Bell,
+  Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +31,7 @@ const menuItems = [
   { icon: Users, label: "Usuários", path: "/admin/users" },
   { icon: Car, label: "Veículos", path: "/admin/vehicles" },
   { icon: Activity, label: "Diagnósticos", path: "/admin/diagnostics" },
+  { icon: Ticket, label: "Tickets", path: "/admin/tickets" },
   { icon: MessageSquare, label: "Mensagens", path: "/admin/messages" },
   { icon: BarChart3, label: "Relatórios", path: "/admin/reports" },
   { icon: FileText, label: "Logs", path: "/admin/logs" },
