@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.carcare-api]
 verify_jwt = false
+
+[functions.cache-admin]
+verify_jwt = false
