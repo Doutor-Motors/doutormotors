@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft,
   Loader2,
@@ -43,8 +43,10 @@ interface SolutionData {
 
 const SolutionGuide = () => {
   const { diagnosticItemId } = useParams<{ diagnosticItemId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { notifySuccess, notifyError } = useNotifications();
+  const invalidIdHandled = useRef(false);
   
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<DiagnosticItem | null>(null);
@@ -53,7 +55,19 @@ const SolutionGuide = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!diagnosticItemId || !user) return;
+      if (!user) return;
+
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!diagnosticItemId || !uuidRegex.test(diagnosticItemId)) {
+        if (invalidIdHandled.current) return;
+        invalidIdHandled.current = true;
+
+        notifyError('Link inválido', 'Selecione uma solução a partir do relatório de diagnóstico.');
+        setIsLoading(false);
+        navigate("/dashboard/history", { replace: true });
+        return;
+      }
 
       setIsLoading(true);
 
@@ -103,7 +117,7 @@ const SolutionGuide = () => {
     };
 
     fetchData();
-  }, [diagnosticItemId, user]);
+  }, [diagnosticItemId, user, navigate, notifyError]);
 
   const handleMarkResolved = async () => {
     if (!item) return;
