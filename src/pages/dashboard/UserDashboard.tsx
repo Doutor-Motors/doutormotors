@@ -17,7 +17,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppStore } from "@/store/useAppStore";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useLegalConsent } from "@/hooks/useLegalConsent";
 import OBDConnector from "@/components/obd/OBDConnector";
+import TermsAcceptanceModal from "@/components/legal/TermsAcceptanceModal";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Vehicle = Tables<"vehicles">;
@@ -34,6 +36,7 @@ const UserDashboard = () => {
   const { user } = useAuth();
   const { activeVehicleId, setActiveVehicleId } = useAppStore();
   const { notifyInfo, notifyWarning, notifyCriticalAlert } = useNotifications();
+  const { hasAcceptedTerms, isLoading: isLoadingConsent, refetch: refetchConsent } = useLegalConsent(user?.id);
   
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
@@ -41,8 +44,21 @@ const UserDashboard = () => {
   const [stats, setStats] = useState({ critical: 0, attention: 0, preventive: 0, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [hasNotifiedAlerts, setHasNotifiedAlerts] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const obd = OBDConnector({});
+
+  // Verificar se precisa mostrar modal de termos
+  useEffect(() => {
+    if (!isLoadingConsent && !hasAcceptedTerms && user) {
+      setShowTermsModal(true);
+    }
+  }, [hasAcceptedTerms, isLoadingConsent, user]);
+
+  const handleTermsAccepted = () => {
+    setShowTermsModal(false);
+    refetchConsent();
+  };
 
   useEffect(() => {
     if (user) {
@@ -161,6 +177,15 @@ const UserDashboard = () => {
 
   return (
     <DashboardLayout>
+      {/* Modal de Termos de Uso */}
+      {user && (
+        <TermsAcceptanceModal
+          isOpen={showTermsModal}
+          onAccepted={handleTermsAccepted}
+          userId={user.id}
+        />
+      )}
+
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

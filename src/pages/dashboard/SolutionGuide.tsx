@@ -15,7 +15,8 @@ import {
   Activity,
   RefreshCw,
   Play,
-  Sparkles
+  Sparkles,
+  ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +35,9 @@ import IntegratedContentViewer from "@/components/solutions/IntegratedContentVie
 import SourceSelector from "@/components/solutions/SourceSelector";
 import SolutionSteps from "@/components/solutions/SolutionSteps";
 import GlossaryPanel from "@/components/solutions/GlossaryPanel";
+import DiagnosticDisclaimer from "@/components/legal/DiagnosticDisclaimer";
+import SafetyBlocker from "@/components/legal/SafetyBlocker";
+import { shouldBlockDIY, LEGAL_PHRASES, isCriticalDTC, mentionsCriticalSystem } from "@/components/legal/LegalDisclaimers";
 
 interface SolutionData {
   title: string;
@@ -75,6 +79,20 @@ const SolutionGuide = () => {
   const [fromCache, setFromCache] = useState(false);
   const [activeSource, setActiveSource] = useState<ContentSource>('loveble');
   const [showIntegratedViewer, setShowIntegratedViewer] = useState(false);
+
+  // Verificar se é um sistema crítico que bloqueia DIY
+  const isCriticalSystem = item ? shouldBlockDIY(item.dtc_code, item.description_human) : false;
+  
+  // Determinar tipo de sistema para o bloqueador de segurança
+  const getCriticalSystemType = (): "freio" | "direcao" | "suspensao" | "airbag" | "geral" => {
+    if (!item) return "geral";
+    const text = (item.dtc_code + " " + item.description_human).toLowerCase();
+    if (text.includes('freio') || text.includes('brake') || text.includes('abs')) return "freio";
+    if (text.includes('direção') || text.includes('steering')) return "direcao";
+    if (text.includes('suspensão') || text.includes('suspension')) return "suspensao";
+    if (text.includes('airbag') || item.dtc_code.startsWith('B00')) return "airbag";
+    return "geral";
+  };
 
   const fetchAISolution = async (
     diagnosticItem: DiagnosticItem, 
@@ -429,22 +447,35 @@ const SolutionGuide = () => {
           </Card>
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-4 text-center">
-              {solution.professionalRecommended ? (
+              {solution.professionalRecommended || isCriticalSystem ? (
                 <>
-                  <AlertTriangle className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                  <ShieldAlert className="w-8 h-8 text-red-500 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">Recomendação</p>
-                  <p className="font-chakra font-bold text-orange-500">Mecânico</p>
+                  <p className="font-chakra font-bold text-red-600">Profissional</p>
                 </>
               ) : (
                 <>
                   <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">Recomendação</p>
-                  <p className="font-chakra font-bold text-green-600">Faça Você Mesmo</p>
+                  <p className="font-chakra font-bold text-green-600">Informativo</p>
                 </>
               )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Safety Blocker para sistemas críticos */}
+        {isCriticalSystem && item && (
+          <SafetyBlocker 
+            systemType={getCriticalSystemType()} 
+            dtcCode={item.dtc_code} 
+          />
+        )}
+
+        {/* Disclaimer padrão */}
+        {!isCriticalSystem && (
+          <DiagnosticDisclaimer variant="full" isCritical={item?.priority === 'critical'} />
+        )}
 
         {/* Warnings */}
         {solution.warnings.length > 0 && (
@@ -468,154 +499,167 @@ const SolutionGuide = () => {
           </Card>
         )}
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="steps" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="steps" className="font-chakra uppercase text-xs sm:text-sm">
-              Passo a Passo
-            </TabsTrigger>
-            <TabsTrigger value="tools" className="font-chakra uppercase text-xs sm:text-sm">
-              Ferramentas
-            </TabsTrigger>
-            <TabsTrigger value="resources" className="font-chakra uppercase text-xs sm:text-sm">
-              Recursos
-            </TabsTrigger>
-          </TabsList>
+        {/* Main Content Tabs - Só mostra se NÃO for sistema crítico */}
+        {!isCriticalSystem && (
+          <Tabs defaultValue="steps" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="steps" className="font-chakra uppercase text-xs sm:text-sm">
+                Informações
+              </TabsTrigger>
+              <TabsTrigger value="tools" className="font-chakra uppercase text-xs sm:text-sm">
+                Ferramentas
+              </TabsTrigger>
+              <TabsTrigger value="resources" className="font-chakra uppercase text-xs sm:text-sm">
+                Recursos
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="steps" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-chakra uppercase">{solution.title}</CardTitle>
-                <p className="text-muted-foreground leading-relaxed">{solution.description}</p>
-              </CardHeader>
-              <CardContent>
-                <SolutionSteps steps={solution.steps} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="tools" className="mt-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Tools Needed */}
+            <TabsContent value="steps" className="mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-chakra uppercase flex items-center gap-2">
-                    <Wrench className="w-5 h-5 text-primary" />
-                    Ferramentas Necessárias
-                  </CardTitle>
+                  <CardTitle className="font-chakra uppercase">{solution.title}</CardTitle>
+                  <p className="text-muted-foreground leading-relaxed">{solution.description}</p>
+                  <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground italic flex items-center gap-2">
+                      <AlertTriangle className="w-3 h-3" />
+                      {LEGAL_PHRASES.NOT_INSTRUCTIVE} - Os passos abaixo são apenas informativos.
+                    </p>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  {solution.tools.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {solution.tools.map((tool, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-sm py-1.5 px-3">
-                          {tool}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">Nenhuma ferramenta especial necessária</p>
-                  )}
+                  <SolutionSteps steps={solution.steps} />
                 </CardContent>
               </Card>
+            </TabsContent>
 
-              {/* Parts Needed */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-chakra uppercase flex items-center gap-2">
-                    <ShoppingCart className="w-5 h-5 text-primary" />
-                    Peças Necessárias
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {solution.parts.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {solution.parts.map((part, idx) => (
-                        <Badge key={idx} variant="outline" className="text-sm py-1.5 px-3">
-                          {part}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">A determinar após diagnóstico</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="resources" className="mt-6">
-            <div className="grid md:grid-cols-3 gap-4">
-              {solution.videoUrl && (
-                <a href={solution.videoUrl} target="_blank" rel="noopener noreferrer">
-                  <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] h-full">
-                    <CardContent className="p-6 flex items-center gap-4">
-                      <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
-                        <Youtube className="w-6 h-6 text-red-600" />
+            <TabsContent value="tools" className="mt-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Tools Needed */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-chakra uppercase flex items-center gap-2">
+                      <Wrench className="w-5 h-5 text-primary" />
+                      Ferramentas Necessárias
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {solution.tools.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {solution.tools.map((tool, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-sm py-1.5 px-3">
+                            {tool}
+                          </Badge>
+                        ))}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-chakra font-bold uppercase text-foreground">Vídeo Tutorial</h3>
-                        <p className="text-sm text-muted-foreground">Assista no YouTube</p>
-                      </div>
-                      <ExternalLink className="w-5 h-5 text-muted-foreground" />
-                    </CardContent>
-                  </Card>
-                </a>
-              )}
-
-              {solution.articleUrl && (
-                <Card 
-                  className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] h-full border-primary/20"
-                  onClick={() => setShowIntegratedViewer(true)}
-                >
-                  <CardContent className="p-6 flex items-center gap-4">
-                    <div className="bg-primary/10 p-3 rounded-full">
-                      <BookOpen className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-chakra font-bold uppercase text-foreground">Tutorial Integrado</h3>
-                      <p className="text-sm text-muted-foreground">CarCareKiosk</p>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      <Play className="w-3 h-3 mr-1" />
-                      Ver
-                    </Badge>
+                    ) : (
+                      <p className="text-muted-foreground">Nenhuma ferramenta especial necessária</p>
+                    )}
                   </CardContent>
                 </Card>
-              )}
 
-              {solution.shopUrl && (
-                <a href={solution.shopUrl} target="_blank" rel="noopener noreferrer">
-                  <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] h-full">
+                {/* Parts Needed */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-chakra uppercase flex items-center gap-2">
+                      <ShoppingCart className="w-5 h-5 text-primary" />
+                      Peças Necessárias
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {solution.parts.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {solution.parts.map((part, idx) => (
+                          <Badge key={idx} variant="outline" className="text-sm py-1.5 px-3">
+                            {part}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">A determinar após diagnóstico</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="resources" className="mt-6">
+              <div className="grid md:grid-cols-3 gap-4">
+                {solution.videoUrl && (
+                  <a href={solution.videoUrl} target="_blank" rel="noopener noreferrer">
+                    <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] h-full">
+                      <CardContent className="p-6 flex items-center gap-4">
+                        <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
+                          <Youtube className="w-6 h-6 text-red-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-chakra font-bold uppercase text-foreground">Vídeo Educativo</h3>
+                          <p className="text-sm text-muted-foreground">Assista no YouTube</p>
+                        </div>
+                        <ExternalLink className="w-5 h-5 text-muted-foreground" />
+                      </CardContent>
+                    </Card>
+                  </a>
+                )}
+
+                {solution.articleUrl && (
+                  <Card 
+                    className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] h-full border-primary/20"
+                    onClick={() => setShowIntegratedViewer(true)}
+                  >
                     <CardContent className="p-6 flex items-center gap-4">
-                      <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
-                        <ShoppingCart className="w-6 h-6 text-green-600" />
+                      <div className="bg-primary/10 p-3 rounded-full">
+                        <BookOpen className="w-6 h-6 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-chakra font-bold uppercase text-foreground">Comprar Peças</h3>
-                        <p className="text-sm text-muted-foreground">Ver opções</p>
+                        <h3 className="font-chakra font-bold uppercase text-foreground">Artigo Informativo</h3>
+                        <p className="text-sm text-muted-foreground">CarCareKiosk (Externo)</p>
                       </div>
-                      <ExternalLink className="w-5 h-5 text-muted-foreground" />
+                      <Badge variant="secondary" className="text-xs">
+                        <Play className="w-3 h-3 mr-1" />
+                        Ver
+                      </Badge>
                     </CardContent>
                   </Card>
-                </a>
-              )}
-            </div>
-            
-            {/* Glossário Automático */}
-            <div className="mt-6">
-              <GlossaryPanel
-                contextText={`${solution.title} ${solution.description} ${solution.steps.join(' ')} ${solution.tools.join(' ')} ${solution.parts.join(' ')} ${solution.warnings.join(' ')}`}
-                contextOnly={true}
-                defaultCollapsed={true}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
+                )}
+
+                {solution.shopUrl && (
+                  <a href={solution.shopUrl} target="_blank" rel="noopener noreferrer">
+                    <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] h-full">
+                      <CardContent className="p-6 flex items-center gap-4">
+                        <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
+                          <ShoppingCart className="w-6 h-6 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-chakra font-bold uppercase text-foreground">Pesquisar Peças</h3>
+                          <p className="text-sm text-muted-foreground">Ver opções (Externo)</p>
+                        </div>
+                        <ExternalLink className="w-5 h-5 text-muted-foreground" />
+                      </CardContent>
+                    </Card>
+                  </a>
+                )}
+              </div>
+              
+              {/* Aviso sobre links externos */}
+              <div className="mt-4 text-xs text-center text-muted-foreground">
+                <p>⚠️ {LEGAL_PHRASES.EXTERNAL_CONTENT}</p>
+              </div>
+              
+              {/* Glossário Automático */}
+              <div className="mt-6">
+                <GlossaryPanel
+                  contextText={`${solution.title} ${solution.description} ${solution.steps.join(' ')} ${solution.tools.join(' ')} ${solution.parts.join(' ')} ${solution.warnings.join(' ')}`}
+                  contextOnly={true}
+                  defaultCollapsed={true}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-          {vehicle && !isFetchingAI && (
+          {vehicle && !isFetchingAI && !isCriticalSystem && (
             <Button 
               size="lg" 
               variant="secondary"
@@ -623,7 +667,7 @@ const SolutionGuide = () => {
               onClick={() => fetchAISolution(item, vehicle)}
             >
               <RefreshCw className="w-5 h-5 mr-2" />
-              Atualizar Solução
+              Atualizar Informações
             </Button>
           )}
           {item.status !== 'resolved' && (
@@ -641,6 +685,13 @@ const SolutionGuide = () => {
               Voltar ao Relatório
             </Button>
           </Link>
+        </div>
+
+        {/* Aviso Legal Final */}
+        <div className="text-center pt-4 border-t">
+          <p className="text-xs text-muted-foreground">
+            {LEGAL_PHRASES.PLATFORM_POSITION}
+          </p>
         </div>
       </div>
     </DashboardLayout>

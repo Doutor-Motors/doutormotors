@@ -11,7 +11,8 @@ import {
   ArrowLeft,
   Loader2,
   FileText,
-  Wrench
+  Wrench,
+  ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,8 @@ import { useValidUUID } from "@/hooks/useValidUUID";
 import { Diagnostic, DiagnosticItem, Vehicle } from "@/store/useAppStore";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import DiagnosticDisclaimer from "@/components/legal/DiagnosticDisclaimer";
+import { shouldBlockDIY, getContextualWarning } from "@/components/legal/LegalDisclaimers";
 
 const DiagnosticReport = () => {
   const { id } = useParams<{ id: string }>();
@@ -219,6 +222,9 @@ const DiagnosticReport = () => {
           </div>
         </div>
 
+        {/* Disclaimer Legal */}
+        <DiagnosticDisclaimer variant="full" />
+
         {/* Vehicle & Date Info */}
         <Card>
           <CardContent className="p-6">
@@ -322,10 +328,16 @@ const DiagnosticReport = () => {
                         <Badge variant="outline">
                           Severidade: {item.severity}/10 ({getSeverityText(item.severity)})
                         </Badge>
-                        {item.can_diy && (
+                        {item.can_diy && !shouldBlockDIY(item.dtc_code, item.description_human) && (
                           <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                            ✓ DIY
+                            ✓ Informativo DIY
                             {item.diy_difficulty && ` (Nível ${item.diy_difficulty})`}
+                          </Badge>
+                        )}
+                        {shouldBlockDIY(item.dtc_code, item.description_human) && (
+                          <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                            <ShieldAlert className="w-3 h-3 mr-1" />
+                            Requer Profissional
                           </Badge>
                         )}
                         {item.status === 'resolved' && (
@@ -335,9 +347,17 @@ const DiagnosticReport = () => {
                         )}
                       </div>
 
-                      <p className="text-foreground mb-4">
+                      <p className="text-foreground mb-2">
                         {item.description_human}
                       </p>
+
+                      {/* Aviso contextual para itens críticos */}
+                      {getContextualWarning(item.dtc_code, item.description_human, item.priority) && (
+                        <div className="flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400 mb-4 bg-orange-50 dark:bg-orange-950/30 rounded px-2 py-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>{getContextualWarning(item.dtc_code, item.description_human, item.priority)}</span>
+                        </div>
+                      )}
 
                       {item.probable_causes && item.probable_causes.length > 0 && (
                         <div className="mb-4 p-4 bg-muted/50 rounded-lg">
@@ -353,7 +373,7 @@ const DiagnosticReport = () => {
                       <div className="flex items-center gap-3 flex-wrap">
                         <Link to={`/dashboard/solutions/${item.id}`}>
                           <Button variant="default" className="bg-primary text-primary-foreground hover:bg-primary/90 font-chakra uppercase text-sm flex items-center gap-2">
-                            Ver Solução
+                            Ver Informações
                             <ChevronRight className="w-4 h-4" />
                           </Button>
                         </Link>
