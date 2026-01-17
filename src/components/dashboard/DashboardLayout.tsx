@@ -203,7 +203,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <Button
               variant="ghost"
               onClick={handleBack}
-              className="mb-4 gap-2 font-chakra uppercase text-sm text-muted-foreground hover:text-foreground hidden lg:flex"
+              className="mb-4 gap-2 font-chakra uppercase text-sm text-foreground/80 hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all duration-200 hidden lg:flex"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Voltar</span>
