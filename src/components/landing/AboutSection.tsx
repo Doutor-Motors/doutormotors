@@ -32,13 +32,13 @@ const AboutSection = () => {
             Comprometidos com a Transparência
           </h2>
           
-          <p className="text-dm-cadet mb-4 leading-relaxed">
+          <p className="text-white/90 mb-4 leading-relaxed">
             O Doutor Motors nasceu da frustração de não entender o que está acontecendo 
             com o próprio carro. Transformamos dados técnicos complexos em informações 
             claras e acionáveis.
           </p>
           
-          <p className="text-dm-cadet mb-8 leading-relaxed">
+          <p className="text-white/90 mb-8 leading-relaxed">
             Nossa missão é democratizar o conhecimento automotivo, dando poder ao 
             proprietário do veículo para tomar decisões informadas sobre manutenção 
             e reparos.
@@ -54,7 +54,7 @@ const AboutSection = () => {
                 <span className="font-chakra text-2xl md:text-3xl font-bold block mb-1">
                   {stat.value}
                 </span>
-                <span className="text-sm text-dm-cadet">{stat.label}</span>
+                <span className="text-sm text-white/80">{stat.label}</span>
               </div>
             ))}
           </div>
