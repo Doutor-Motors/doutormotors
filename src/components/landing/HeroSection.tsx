@@ -47,7 +47,7 @@ const HeroSection = () => {
               <Button 
                 size="lg"
                 variant="outline"
-                className="border-white text-white hover:bg-white hover:text-secondary font-chakra uppercase rounded-pill px-8"
+                className="border-dm-blue-1 text-dm-blue-1 hover:bg-dm-blue-1 hover:text-white font-chakra uppercase rounded-pill px-8"
               >
                 Como Funciona
               </Button>
