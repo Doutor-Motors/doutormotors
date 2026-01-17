@@ -28,11 +28,15 @@ const TechnicalReport = () => {
       {/* Header */}
       <div className="no-print bg-dm-space text-primary-foreground border-b sticky top-0 z-50 p-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 hover:opacity-80">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(-1)} 
+            className="flex items-center gap-2 border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground hover:text-dm-space"
+          >
             <ArrowLeft className="w-4 h-4" />
             <span className="font-chakra uppercase">Voltar</span>
-          </button>
-          <Button onClick={handleDownloadPDF} className="flex items-center gap-2">
+          </Button>
+          <Button onClick={handleDownloadPDF} className="flex items-center gap-2 bg-primary hover:bg-dm-blue-3">
             <Download className="w-4 h-4" />
             Baixar PDF
           </Button>
