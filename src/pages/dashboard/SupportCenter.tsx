@@ -75,6 +75,9 @@ const SupportCenter = () => {
     mutationFn: async () => {
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Generate temporary ticket number (trigger will overwrite with proper sequence)
+      const tempTicketNumber = `TKT-${Date.now()}`;
+      
       const { data, error } = await supabase
         .from("support_tickets")
         .insert([{
@@ -83,6 +86,7 @@ const SupportCenter = () => {
           description: newTicket.description,
           category: newTicket.category as "general" | "technical" | "account" | "billing" | "diagnostic",
           priority: newTicket.priority as "low" | "medium" | "high" | "urgent",
+          ticket_number: tempTicketNumber,
         }])
         .select()
         .single();
