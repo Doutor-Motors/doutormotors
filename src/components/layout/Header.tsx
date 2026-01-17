@@ -28,30 +28,32 @@ const Header = () => {
   };
 
   return (
-    <header className={`absolute top-0 left-0 w-full z-50 px-4 md:px-10 -mt-[72px] ${isLandingPage ? "" : "bg-secondary"}`}>
-      <div className="container mx-auto flex flex-col lg:flex-row justify-between items-center gap-6 lg:gap-12">
-        <div className="flex flex-col lg:flex-row items-center gap-4">
+    <>
+      {/* Logo e nome fixos - fora do header */}
+      <div className="fixed top-0 left-4 md:left-10 flex flex-col items-start cursor-default z-50">
+        <img src={logo} alt="Doutor Motors" className="h-[350px] w-[350px] object-contain -ml-[60px]" />
+        <span className="font-chakra text-primary-foreground text-2xl md:text-3xl font-bold tracking-wider -mt-[140px] -ml-[60px]">DOUTOR MOTORS</span>
+      </div>
+
+      <header className={`absolute top-0 left-0 w-full z-40 px-4 md:px-10 ${isLandingPage ? "" : "bg-secondary"}`}>
+        <div className="container mx-auto flex justify-end items-center gap-6 lg:gap-12 py-6">
           {/* Botão Voltar - aparece em todas as páginas exceto landing */}
           {!isLandingPage && (
             <Button
               variant="ghost"
               onClick={handleBack}
-              className="text-primary-foreground hover:bg-primary-foreground/10 gap-2 font-chakra uppercase text-sm"
+              className="text-primary-foreground hover:bg-primary-foreground/10 gap-2 font-chakra uppercase text-sm mr-auto"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Voltar</span>
             </Button>
           )}
-          
-          {/* Logo e nome fixos */}
-          <div className="fixed top-0 left-4 md:left-10 flex flex-col items-start cursor-default z-50">
-            <img src={logo} alt="Doutor Motors" className="h-[350px] w-[350px] object-contain -ml-[60px]" />
-            <span className="font-chakra text-primary-foreground text-2xl md:text-3xl font-bold tracking-wider -mt-[140px] -ml-[60px]">DOUTOR MOTORS</span>
-          </div>
-        </div>
 
-        {/* Linha divisória sutil - apenas desktop */}
-        <div className="hidden lg:block h-16 w-px bg-primary-foreground/20" />
+          {/* Espaçador para a logo fixa */}
+          <div className="hidden lg:block w-[300px]" />
+
+          {/* Linha divisória sutil - apenas desktop */}
+          <div className="hidden lg:block h-16 w-px bg-primary-foreground/20" />
 
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-8 flex-1">
@@ -118,8 +120,9 @@ const Header = () => {
             </nav>
           </div>
         )}
-      </div>
-    </header>
+        </div>
+      </header>
+    </>
   );
 };
 
