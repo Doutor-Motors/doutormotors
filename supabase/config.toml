@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.fetch-solution]
 verify_jwt = false
+
+[functions.search-tutorials]
+verify_jwt = false
+
+[functions.fetch-tutorial]
+verify_jwt = false

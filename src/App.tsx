@@ -37,7 +37,7 @@ import AdminLogs from "./pages/admin/AdminLogs";
 import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
 import TechnicalReport from "./pages/TechnicalReport";
-
+import StudyCarPage from "./pages/StudyCarPage";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -63,6 +63,7 @@ const App = () => (
                 <Route path="/signup" element={<SignUpPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/estude-seu-carro" element={<StudyCarPage />} />
                 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
