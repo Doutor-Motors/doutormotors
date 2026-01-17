@@ -4,8 +4,8 @@ import { ArrowRight, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 import logo from "@/assets/images/logo.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -16,9 +16,9 @@ const SignUpPage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
   const { signUp, user, loading } = useAuth();
+  const { notifySuccess, notifyError, notifyWarning } = useNotifications();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -31,40 +31,24 @@ const SignUpPage = () => {
     e.preventDefault();
 
     if (!name || !email || !password || !confirmPassword) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos.",
-        variant: "destructive",
-      });
+      notifyWarning('Campos obrigatórios', 'Preencha todos os campos.');
       return;
     }
 
     if (password !== confirmPassword) {
-      toast({
-        title: "Erro",
-        description: "As senhas não coincidem.",
-        variant: "destructive",
-      });
+      notifyError('Senhas não coincidem', 'As senhas digitadas são diferentes.');
       return;
     }
 
     if (password.length < 6) {
-      toast({
-        title: "Erro",
-        description: "A senha deve ter pelo menos 6 caracteres.",
-        variant: "destructive",
-      });
+      notifyWarning('Senha muito curta', 'A senha deve ter pelo menos 6 caracteres.');
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      toast({
-        title: "Erro",
-        description: "Digite um email válido.",
-        variant: "destructive",
-      });
+      notifyError('Email inválido', 'Digite um email válido.');
       return;
     }
 
@@ -85,18 +69,11 @@ const SignUpPage = () => {
         errorMessage = "Digite um email válido.";
       }
 
-      toast({
-        title: "Erro ao criar conta",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      notifyError('Erro ao criar conta', errorMessage);
       return;
     }
 
-    toast({
-      title: "Conta criada com sucesso!",
-      description: "Verifique seu email para confirmar o cadastro, ou faça login se a confirmação estiver desativada.",
-    });
+    notifySuccess('Conta criada!', 'Verifique seu email para confirmar o cadastro.');
     navigate("/login");
   };
 

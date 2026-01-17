@@ -18,10 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 import { DiagnosticItem, Vehicle } from "@/store/useAppStore";
 import { getSolutionForDTC } from "@/services/solutions/recommender";
 
@@ -44,7 +44,7 @@ interface SolutionData {
 const SolutionGuide = () => {
   const { diagnosticItemId } = useParams<{ diagnosticItemId: string }>();
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { notifySuccess, notifyError } = useNotifications();
   
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<DiagnosticItem | null>(null);
@@ -65,22 +65,14 @@ const SolutionGuide = () => {
         .maybeSingle();
 
       if (itemError || !itemData) {
-        toast({
-          title: "Erro ao carregar",
-          description: "Item não encontrado",
-          variant: "destructive",
-        });
+        notifyError('Erro ao carregar', 'Item não encontrado');
         setIsLoading(false);
         return;
       }
 
       // Verify user owns this diagnostic
       if ((itemData as any).diagnostics.user_id !== user.id) {
-        toast({
-          title: "Acesso negado",
-          description: "Você não tem permissão para ver este item",
-          variant: "destructive",
-        });
+        notifyError('Acesso negado', 'Você não tem permissão para ver este item');
         setIsLoading(false);
         return;
       }
@@ -122,17 +114,10 @@ const SolutionGuide = () => {
       .eq('id', item.id);
 
     if (error) {
-      toast({
-        title: "Erro ao atualizar",
-        description: error.message,
-        variant: "destructive",
-      });
+      notifyError('Erro ao atualizar', error.message);
     } else {
       setItem({ ...item, status: 'resolved' });
-      toast({
-        title: "Marcado como resolvido!",
-        description: "O problema foi marcado como resolvido.",
-      });
+      notifySuccess('Problema Resolvido!', 'O problema foi marcado como resolvido.');
     }
   };
 

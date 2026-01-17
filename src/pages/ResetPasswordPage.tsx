@@ -4,8 +4,8 @@ import { ArrowRight, Eye, EyeOff, Lock, CheckCircle, ShieldCheck, AlertCircle } 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNotifications } from "@/hooks/useNotifications";
 import logo from "@/assets/images/logo.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -17,8 +17,8 @@ const ResetPasswordPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [hasValidSession, setHasValidSession] = useState<boolean | null>(null);
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const { notifySuccess, notifyError, notifyWarning } = useNotifications();
 
   useEffect(() => {
     // Check if user has a valid recovery session
@@ -59,29 +59,17 @@ const ResetPasswordPage = () => {
     e.preventDefault();
     
     if (!password || !confirmPassword) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos.",
-        variant: "destructive",
-      });
+      notifyWarning('Campos obrigatórios', 'Preencha todos os campos.');
       return;
     }
 
     if (password.length < 8) {
-      toast({
-        title: "Senha muito curta",
-        description: "A senha deve ter pelo menos 8 caracteres.",
-        variant: "destructive",
-      });
+      notifyWarning('Senha muito curta', 'A senha deve ter pelo menos 8 caracteres.');
       return;
     }
 
     if (password !== confirmPassword) {
-      toast({
-        title: "Senhas não coincidem",
-        description: "As senhas digitadas são diferentes.",
-        variant: "destructive",
-      });
+      notifyError('Senhas não coincidem', 'As senhas digitadas são diferentes.');
       return;
     }
 
@@ -97,10 +85,7 @@ const ResetPasswordPage = () => {
       }
 
       setIsSuccess(true);
-      toast({
-        title: "Senha alterada!",
-        description: "Sua senha foi redefinida com sucesso.",
-      });
+      notifySuccess('Senha alterada!', 'Sua senha foi redefinida com sucesso.');
 
       // Redirect to dashboard after 3 seconds
       setTimeout(() => {
@@ -117,11 +102,7 @@ const ResetPasswordPage = () => {
         errorMessage = "A senha é muito fraca. Use letras, números e símbolos.";
       }
       
-      toast({
-        title: "Erro",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      notifyError('Erro', errorMessage);
     } finally {
       setIsLoading(false);
     }

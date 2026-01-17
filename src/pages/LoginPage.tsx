@@ -4,8 +4,8 @@ import { ArrowRight, Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 import logo from "@/assets/images/logo.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -14,9 +14,9 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
   const { signIn, user, loading } = useAuth();
+  const { notifySuccess, notifyError, notifyWarning } = useNotifications();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -29,11 +29,7 @@ const LoginPage = () => {
     e.preventDefault();
     
     if (!email || !password) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos.",
-        variant: "destructive",
-      });
+      notifyWarning('Campos obrigatórios', 'Preencha todos os campos.');
       return;
     }
 
@@ -52,18 +48,11 @@ const LoginPage = () => {
         errorMessage = "Confirme seu email antes de fazer login.";
       }
 
-      toast({
-        title: "Erro ao entrar",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      notifyError('Erro ao entrar', errorMessage);
       return;
     }
 
-    toast({
-      title: "Login bem-sucedido!",
-      description: "Redirecionando para o dashboard...",
-    });
+    notifySuccess('Login bem-sucedido!', 'Redirecionando para o dashboard...');
     navigate("/dashboard");
   };
 

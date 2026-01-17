@@ -16,6 +16,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppStore } from "@/store/useAppStore";
+import { useNotifications } from "@/hooks/useNotifications";
 import OBDConnector from "@/components/obd/OBDConnector";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -32,12 +33,14 @@ interface DiagnosticWithItems {
 const UserDashboard = () => {
   const { user } = useAuth();
   const { activeVehicleId, setActiveVehicleId } = useAppStore();
+  const { notifyInfo, notifyWarning, notifyCriticalAlert } = useNotifications();
   
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
   const [recentAlerts, setRecentAlerts] = useState<DiagnosticItem[]>([]);
   const [stats, setStats] = useState({ critical: 0, attention: 0, preventive: 0, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [hasNotifiedAlerts, setHasNotifiedAlerts] = useState(false);
 
   const obd = OBDConnector({});
 
@@ -108,6 +111,18 @@ const UserDashboard = () => {
 
         setRecentAlerts(allItems.slice(0, 5));
         setStats({ critical, attention, preventive, total: allItems.length });
+        
+        // Show notification for alerts when user enters dashboard
+        if (!hasNotifiedAlerts && allItems.length > 0) {
+          setHasNotifiedAlerts(true);
+          if (critical > 0) {
+            notifyCriticalAlert('ALERTA', `Você tem ${critical} problema${critical > 1 ? 's' : ''} crítico${critical > 1 ? 's' : ''} que requer atenção imediata!`);
+          } else if (attention > 0) {
+            notifyWarning('Atenção', `Você tem ${attention} item${attention > 1 ? 'ns' : ''} que precisa${attention > 1 ? 'm' : ''} de atenção.`);
+          } else if (preventive > 0) {
+            notifyInfo('Manutenção Preventiva', `Você tem ${preventive} item${preventive > 1 ? 'ns' : ''} preventivo${preventive > 1 ? 's' : ''}.`);
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
