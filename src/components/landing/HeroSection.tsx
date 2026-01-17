@@ -16,8 +16,6 @@ const HeroSection = () => {
         backgroundPosition: 'center'
       }}
     >
-      {/* Espaçador entre logo e conteúdo */}
-      <div className="h-16" />
       
       <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-10 items-center">
         {/* Content */}
