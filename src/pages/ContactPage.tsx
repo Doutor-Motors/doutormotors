@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Phone, Mail, MapPin, Send, MessageCircle, Clock, CheckCircle } from "lucide-react";
+import { ArrowRight, Phone, Mail, MapPin, Send, MessageCircle, Clock, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import heroBg from "@/assets/images/hero-bg.jpg";
@@ -80,22 +81,37 @@ const ContactPage = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+        body: formData
+      });
 
-    toast({
-      title: "Mensagem enviada!",
-      description: "Recebemos sua mensagem e responderemos em breve.",
-    });
+      if (error) {
+        throw error;
+      }
 
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
-    });
-    setIsSubmitting(false);
+      toast({
+        title: "Mensagem enviada!",
+        description: "Recebemos sua mensagem e você receberá uma confirmação por email.",
+      });
+
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        subject: "",
+        message: "",
+      });
+    } catch (error: any) {
+      console.error("Error sending contact form:", error);
+      toast({
+        title: "Erro ao enviar",
+        description: error.message || "Não foi possível enviar sua mensagem. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
