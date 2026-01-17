@@ -30,6 +30,7 @@ import { Search, Mail, Eye, Trash2, CheckCircle, Clock, XCircle, MessageSquare }
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 
 interface ContactMessage {
   id: string;
@@ -51,6 +52,7 @@ const AdminMessages = () => {
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { notifyMessageReplied, notifySuccess, notifyError } = useAdminNotifications();
 
   useEffect(() => {
     fetchMessages();
@@ -89,9 +91,14 @@ const AdminMessages = () => {
       if (selectedMessage?.id === id) {
         setSelectedMessage({ ...selectedMessage, status: newStatus });
       }
+      
+      if (newStatus === 'replied') {
+        notifyMessageReplied(selectedMessage?.name || 'Usuário');
+      }
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Erro ao atualizar status");
+      notifyError("Erro", "Não foi possível atualizar o status da mensagem");
     }
   };
 
@@ -107,12 +114,14 @@ const AdminMessages = () => {
       if (error) throw error;
 
       toast.success("Mensagem removida!");
+      notifySuccess("Mensagem Removida", `Mensagem de ${selectedMessage.name} foi excluída`);
       setShowDeleteDialog(false);
       setShowViewDialog(false);
       fetchMessages();
     } catch (error) {
       console.error("Error deleting message:", error);
       toast.error("Erro ao remover mensagem");
+      notifyError("Erro", "Não foi possível remover a mensagem");
     }
   };
 
