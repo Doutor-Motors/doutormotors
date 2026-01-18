@@ -1,10 +1,7 @@
-// Placeholder - Sistema será reconstruído
+import EstudeSeuCarro from '@/components/tutorials/EstudeSeuCarro';
+
 const StudyCarPage = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <p className="text-muted-foreground">Em construção...</p>
-    </div>
-  );
+  return <EstudeSeuCarro />;
 };
 
 export default StudyCarPage;

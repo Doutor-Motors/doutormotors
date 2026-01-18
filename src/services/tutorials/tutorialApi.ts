@@ -1,54 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { 
+  Tutorial, 
+  TutorialCategory, 
+  TutorialStep,
+  TutorialDifficulty 
+} from '@/types/tutorials';
 
-// Types
-export interface Tutorial {
-  id: string;
-  slug: string;
-  source_url: string;
-  title_original: string | null;
-  title_pt: string | null;
-  description_original: string | null;
-  description_pt: string | null;
-  category_original: string | null;
-  category_pt: string | null;
-  difficulty: string;
-  duration_minutes: number | null;
-  thumbnail_url: string | null;
-  video_url: string | null;
-  youtube_video_id: string | null;
-  steps: TutorialStep[];
-  tools: string[];
-  safety_tips: string[];
-  vehicle_makes: string[];
-  vehicle_models: string[];
-  vehicle_years: string[];
-  views_count: number;
-  rating: number;
-  is_processed: boolean;
-  last_synced_at: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TutorialStep {
-  step: number;
-  title: string;
-  description: string;
-  tools?: string[];
-  tips?: string;
-  timestamp?: string;
-}
-
-export interface TutorialCategory {
-  id: string;
-  slug: string;
-  name_original: string;
-  name_pt: string;
-  icon: string | null;
-  color: string | null;
-  tutorials_count: number;
-  created_at: string;
-}
+// Re-export types
+export type { Tutorial, TutorialCategory, TutorialStep };
 
 export interface SearchParams {
   query?: string;
@@ -69,6 +28,7 @@ export interface SearchResult {
 function parseTutorialFromDb(data: any): Tutorial {
   return {
     ...data,
+    difficulty: (data.difficulty || 'medium') as TutorialDifficulty,
     steps: Array.isArray(data.steps) ? data.steps : [],
     tools: Array.isArray(data.tools) ? data.tools : [],
     safety_tips: Array.isArray(data.safety_tips) ? data.safety_tips : [],
