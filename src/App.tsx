@@ -48,6 +48,7 @@ import AdminTickets from "./pages/admin/AdminTickets";
 import NativeAppGuide from "./pages/NativeAppGuide";
 import UpgradePage from "./pages/dashboard/UpgradePage";
 import DataRecordingPage from "./pages/dashboard/DataRecordingPage";
+import OBDSettingsPage from "./pages/dashboard/OBDSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
                 <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                 <Route path="/dashboard/upgrade" element={<ProtectedRoute><UpgradePage /></ProtectedRoute>} />
                 <Route path="/dashboard/data-recording" element={<ProtectedRoute><DataRecordingPage /></ProtectedRoute>} />
+                <Route path="/dashboard/obd-settings" element={<ProtectedRoute><OBDSettingsPage /></ProtectedRoute>} />
                 <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
                 

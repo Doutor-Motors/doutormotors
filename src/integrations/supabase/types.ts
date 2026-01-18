@@ -236,6 +236,60 @@ export type Database = {
         }
         Relationships: []
       }
+      obd_settings: {
+        Row: {
+          atst_mode: string
+          atst_value: number
+          auto_reconnect: boolean
+          connection_timeout_seconds: number
+          created_at: string
+          custom_init_commands: string[] | null
+          id: string
+          last_connection_at: string | null
+          last_successful_protocol: string | null
+          max_simultaneous_parameters: number
+          optimize_requests: boolean
+          polling_interval_ms: number
+          preferred_protocol: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          atst_mode?: string
+          atst_value?: number
+          auto_reconnect?: boolean
+          connection_timeout_seconds?: number
+          created_at?: string
+          custom_init_commands?: string[] | null
+          id?: string
+          last_connection_at?: string | null
+          last_successful_protocol?: string | null
+          max_simultaneous_parameters?: number
+          optimize_requests?: boolean
+          polling_interval_ms?: number
+          preferred_protocol?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          atst_mode?: string
+          atst_value?: number
+          auto_reconnect?: boolean
+          connection_timeout_seconds?: number
+          created_at?: string
+          custom_init_commands?: string[] | null
+          id?: string
+          last_connection_at?: string | null
+          last_successful_protocol?: string | null
+          max_simultaneous_parameters?: number
+          optimize_requests?: boolean
+          polling_interval_ms?: number
+          preferred_protocol?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
