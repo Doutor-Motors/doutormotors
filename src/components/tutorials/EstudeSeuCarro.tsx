@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -22,6 +22,11 @@ import VehicleSelector from '@/components/tutorials/VehicleSelector';
 import CategoryGrid from '@/components/tutorials/CategoryGrid';
 import TutorialGrid from '@/components/tutorials/TutorialGrid';
 import MiniPlayer from '@/components/tutorials/MiniPlayer';
+import TutorialFiltersPanel, { 
+  TutorialFilters, 
+  DEFAULT_FILTERS, 
+  applyFilters 
+} from '@/components/tutorials/TutorialFiltersPanel';
 import { tutorialApi } from '@/services/tutorials/tutorialApi';
 import type { Tutorial, TutorialCategory, SelectedVehicle, SearchResult } from '@/types/tutorials';
 import { DEFAULT_CATEGORIES } from '@/constants/tutorials';
@@ -45,9 +50,17 @@ const EstudeSeuCarro = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'categories' | 'tutorials' | 'search'>('categories');
   
+  // Filtros avançados
+  const [filters, setFilters] = useState<TutorialFilters>(DEFAULT_FILTERS);
+  
   // Mini Player State
   const [miniPlayerTutorial, setMiniPlayerTutorial] = useState<Partial<Tutorial> | null>(null);
   const [isMiniPlayerVisible, setIsMiniPlayerVisible] = useState(false);
+
+  // Tutoriais filtrados
+  const filteredTutorials = useMemo(() => {
+    return applyFilters(tutorials, filters);
+  }, [tutorials, filters]);
 
   // Handler para seleção de veículo
   const handleVehicleSelect = useCallback(async (vehicle: SelectedVehicle) => {
@@ -388,10 +401,10 @@ const EstudeSeuCarro = () => {
                   <BookOpen className="w-5 h-5 text-primary" />
                   Categorias de Tutoriais
                 </h2>
-                <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
-                  <Filter className="w-4 h-4 mr-1" />
-                  Filtros
-                </Button>
+                <TutorialFiltersPanel 
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                />
               </div>
               
               <CategoryGrid 
@@ -403,7 +416,7 @@ const EstudeSeuCarro = () => {
           )}
 
           {/* Tutorials View */}
-          {viewMode === 'tutorials' && tutorials.length > 0 && !isSearching && (
+          {viewMode === 'tutorials' && filteredTutorials.length > 0 && !isSearching && (
             <motion.div
               key="tutorials"
               initial={{ opacity: 0, y: 20 }}
@@ -414,13 +427,47 @@ const EstudeSeuCarro = () => {
                 <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
                   <Play className="w-5 h-5 text-primary" />
                   Tutoriais para {selectedVehicle?.displayName}
+                  {filteredTutorials.length !== tutorials.length && (
+                    <Badge variant="secondary" className="ml-2">
+                      {filteredTutorials.length} de {tutorials.length}
+                    </Badge>
+                  )}
                 </h2>
+                <TutorialFiltersPanel 
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  resultsCount={filteredTutorials.length}
+                />
               </div>
               
               <TutorialGrid 
-                tutorials={tutorials}
+                tutorials={filteredTutorials}
                 onPreview={handlePreview}
               />
+            </motion.div>
+          )}
+
+          {/* No results after filtering */}
+          {viewMode === 'tutorials' && tutorials.length > 0 && filteredTutorials.length === 0 && !isSearching && (
+            <motion.div
+              key="no-filter-results"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-16"
+            >
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                <Filter className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                Nenhum tutorial com esses filtros
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Tente ajustar os filtros para ver mais resultados
+              </p>
+              <Button variant="outline" onClick={() => setFilters(DEFAULT_FILTERS)}>
+                Limpar filtros
+              </Button>
             </motion.div>
           )}
 
