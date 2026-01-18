@@ -1418,53 +1418,273 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
 
     const { html, markdown, metadata } = validData;
     
+    console.log(`Processing page content: ${html.length} chars HTML, ${markdown.length} chars Markdown`);
+    
     // ========== EXTRAIR VÍDEO ==========
     // O CarCareKiosk usa vídeos MP4 hospedados no CloudFront (não YouTube!)
-    // Formato: <video><source src="https://d2n97g4vasjwsk.cloudfront.net/...mp4" type="video/mp4"></source></video>
+    // Múltiplos padrões são tentados para maior robustez
     
     let videoEmbedUrl: string | null = null;
     let videoSource: "cloudfront" | "youtube" | null = null;
     let youtubeVideoId: string | null = null;
     
-    // Prioridade 1: Vídeo MP4 do CloudFront
-    const mp4Match = html.match(/<source[^>]*src="(https:\/\/d2n97g4vasjwsk\.cloudfront\.net\/[^"]+\.mp4)"[^>]*type="video\/mp4"/i);
-    if (mp4Match) {
-      videoEmbedUrl = mp4Match[1];
-      videoSource = "cloudfront";
-      console.log("Found CloudFront video:", videoEmbedUrl);
-    }
+    // Log para debug - verificar se há padrões de vídeo no HTML
+    const hasVideoTag = html.includes('<video');
+    const hasSourceTag = html.includes('<source');
+    const hasCloudfront = html.includes('cloudfront.net');
+    const hasYoutube = html.includes('youtube.com') || html.includes('youtu.be');
+    console.log(`Video detection hints: video=${hasVideoTag}, source=${hasSourceTag}, cloudfront=${hasCloudfront}, youtube=${hasYoutube}`);
     
-    // Alternativa: Procurar no atributo src do <video> diretamente
-    if (!videoEmbedUrl) {
-      const videoSrcMatch = html.match(/<source[^>]*src="([^"]+\.mp4)"[^>]*/i);
-      if (videoSrcMatch && videoSrcMatch[1].includes('cloudfront')) {
-        videoEmbedUrl = videoSrcMatch[1];
+    // Prioridade 1: Vídeo MP4 do CloudFront - MÚLTIPLOS PADRÕES
+    // Padrão principal: <source src="https://d2n97g4vasjwsk.cloudfront.net/...mp4" type="video/mp4">
+    const cloudfrontPatterns = [
+      // Padrão completo com tipo
+      /<source[^>]*src="(https:\/\/[^"]*cloudfront\.net[^"]*\.mp4)"[^>]*type="video\/mp4"/gi,
+      // Padrão sem tipo mas com cloudfront
+      /<source[^>]*src="(https:\/\/[^"]*cloudfront\.net[^"]*\.mp4)"/gi,
+      // Tag video com src direto
+      /<video[^>]*src="(https:\/\/[^"]*cloudfront\.net[^"]*\.mp4)"/gi,
+      // Qualquer URL cloudfront .mp4 no HTML
+      /src="(https:\/\/d2n97g4vasjwsk\.cloudfront\.net\/[^"]+\.mp4)"/gi,
+      // Padrão mais genérico - qualquer cloudfront mp4
+      /(https:\/\/[a-z0-9]+\.cloudfront\.net\/[^\s"'<>]+\.mp4)/gi,
+    ];
+    
+    for (const pattern of cloudfrontPatterns) {
+      const match = pattern.exec(html);
+      if (match && match[1]) {
+        videoEmbedUrl = match[1];
         videoSource = "cloudfront";
-        console.log("Found CloudFront video (alt):", videoEmbedUrl);
+        console.log(`Found CloudFront video (pattern ${cloudfrontPatterns.indexOf(pattern)}):`, videoEmbedUrl);
+        break;
       }
     }
     
-    // Fallback para YouTube (caso o CarCareKiosk mude de estratégia)
+    // Prioridade 2: Qualquer vídeo MP4 (outros CDNs)
     if (!videoEmbedUrl) {
-      const iframeMatch = html.match(/src="(https:\/\/www\.youtube\.com\/embed\/([^"?]+))"/);
-      if (iframeMatch) {
-        videoEmbedUrl = iframeMatch[1];
-        youtubeVideoId = iframeMatch[2];
-        videoSource = "youtube";
-        console.log("Found YouTube video:", videoEmbedUrl);
+      const anyMp4Patterns = [
+        /<source[^>]*src="(https?:\/\/[^"]+\.mp4)"[^>]*type="video\/mp4"/gi,
+        /<source[^>]*src="(https?:\/\/[^"]+\.mp4)"/gi,
+        /<video[^>]*src="(https?:\/\/[^"]+\.mp4)"/gi,
+      ];
+      
+      for (const pattern of anyMp4Patterns) {
+        const match = pattern.exec(html);
+        if (match && match[1]) {
+          videoEmbedUrl = match[1];
+          videoSource = "cloudfront"; // Tratamos como cloudfront para simplificar
+          console.log(`Found MP4 video (generic pattern):`, videoEmbedUrl);
+          break;
+        }
       }
     }
     
+    // Prioridade 3: Fallback para YouTube (caso o CarCareKiosk mude de estratégia)
+    if (!videoEmbedUrl) {
+      const youtubePatterns = [
+        /src="(https:\/\/www\.youtube\.com\/embed\/([^"?]+))"/i,
+        /src="(https:\/\/youtube\.com\/embed\/([^"?]+))"/i,
+        /<iframe[^>]*src="[^"]*youtube\.com\/embed\/([^"?]+)"/i,
+      ];
+      
+      for (const pattern of youtubePatterns) {
+        const match = pattern.exec(html);
+        if (match) {
+          if (match[2]) {
+            youtubeVideoId = match[2];
+            videoEmbedUrl = match[1];
+          } else if (match[1] && match[1].length === 11) {
+            youtubeVideoId = match[1];
+            videoEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}`;
+          }
+          if (youtubeVideoId) {
+            videoSource = "youtube";
+            console.log("Found YouTube video:", videoEmbedUrl);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Prioridade 4: YouTube no markdown
     if (!videoEmbedUrl) {
       const youtubeMatch = markdown.match(/youtube\.com\/(?:watch\?v=|embed\/)([a-zA-Z0-9_-]{11})/);
       if (youtubeMatch) {
         youtubeVideoId = youtubeMatch[1];
         videoEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}`;
         videoSource = "youtube";
+        console.log("Found YouTube in markdown:", videoEmbedUrl);
       }
     }
     
-    console.log(`Video extraction result: ${videoSource || 'none'}, URL: ${videoEmbedUrl?.slice(0, 80)}...`);
+    // Prioridade 5: Extrair da estrutura específica do CarCareKiosk
+    // O site pode ter um player customizado ou estrutura diferente
+    if (!videoEmbedUrl) {
+      // Procurar por data-video-src ou atributos data-* com URLs de vídeo
+      const dataVideoMatch = html.match(/data-(?:video-)?src="(https?:\/\/[^"]+\.(?:mp4|webm))"/i);
+      if (dataVideoMatch) {
+        videoEmbedUrl = dataVideoMatch[1];
+        videoSource = "cloudfront";
+        console.log("Found video in data attribute:", videoEmbedUrl);
+      }
+    }
+    
+    // Prioridade 6: Procurar por URLs em scripts (player dinâmico)
+    if (!videoEmbedUrl) {
+      const scriptVideoMatch = html.match(/['"]?(https:\/\/[^'"]*cloudfront\.net[^'"]*\.mp4)['"]?/i);
+      if (scriptVideoMatch) {
+        videoEmbedUrl = scriptVideoMatch[1];
+        videoSource = "cloudfront";
+        console.log("Found video URL in script:", videoEmbedUrl);
+      }
+    }
+    
+    // Prioridade 7: Construir URL do vídeo a partir das thumbnails do CloudFront
+    // As thumbnails do CarCareKiosk seguem o padrão:
+    // https://d2n97g4vasjwsk.cloudfront.net/VEHICLE/PROCEDURE - 480p.webp
+    // Os vídeos seguem: https://d2n97g4vasjwsk.cloudfront.net/VEHICLE/PROCEDURE.mp4
+    if (!videoEmbedUrl) {
+      // Procurar thumbnails no markdown que indicam vídeos disponíveis
+      const thumbnailMatches = markdown.match(/https:\/\/d2n97g4vasjwsk\.cloudfront\.net\/[^\s\)]+\.webp/gi);
+      if (thumbnailMatches && thumbnailMatches.length > 0) {
+        // Extrair o procedimento solicitado para priorizar a thumbnail correta
+        const procedureSlug = videoUrl.split('/').pop()?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
+        const categorySlug = videoUrl.split('/').slice(-2, -1)[0]?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
+        
+        console.log(`Looking for video matching procedure: "${procedureSlug}", category: "${categorySlug}"`);
+        
+        // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
+        const rankedThumbnails = thumbnailMatches
+          .map(thumb => {
+            const thumbLower = decodeURIComponent(thumb.replace(/\+/g, ' ')).toLowerCase();
+            let score = 0;
+            
+            // Pontuação baseada em correspondência com procedimento
+            if (procedureSlug && thumbLower.includes(procedureSlug)) score += 10;
+            if (categorySlug && thumbLower.includes(categorySlug)) score += 5;
+            
+            // Mapear termos comuns para palavras-chave nas thumbnails
+            const keywordMap: Record<string, string[]> = {
+              'change_oil': ['oil', 'oil change', 'motor oil'],
+              'oil': ['oil', 'oil change', 'motor oil'],
+              'battery': ['battery', 'bateria'],
+              'replace_battery': ['battery', 'bateria'],
+              'air_filter': ['air filter', 'filtro de ar'],
+              'cabin_air_filter': ['cabin', 'air filter cabin'],
+              'brakes': ['brake', 'freio'],
+              'headlight': ['headlight', 'farol'],
+              'wipers': ['wiper', 'windshield'],
+              'coolant': ['coolant', 'antifreeze'],
+            };
+            
+            const keywords = keywordMap[procedureSlug] || [procedureSlug.replace(/_/g, ' ')];
+            for (const keyword of keywords) {
+              if (thumbLower.includes(keyword)) score += 8;
+            }
+            
+            // Ignorar thumbnails de "Review" se buscando procedimento específico
+            if (procedureSlug && thumbLower.includes('review') && !procedureSlug.includes('review')) {
+              score -= 5;
+            }
+            
+            return { url: thumb, score };
+          })
+          .sort((a, b) => b.score - a.score);
+        
+        console.log(`Found ${rankedThumbnails.length} thumbnails, best match score: ${rankedThumbnails[0]?.score}`);
+        
+        // Tentar as thumbnails em ordem de relevância
+        for (const { url: thumbUrl, score } of rankedThumbnails) {
+          // Converter URL de thumbnail para URL de vídeo
+          // Remover " - 480p.webp" ou similares e adicionar ".mp4"
+          let videoUrlFromThumb = thumbUrl
+            .replace(/%20/g, '+')
+            .replace(/\s*-\s*\d+p\.webp$/i, '.mp4')
+            .replace(/\.webp$/i, '.mp4');
+          
+          // Verificar se parece uma URL de vídeo válida
+          if (videoUrlFromThumb.includes('.mp4')) {
+            console.log(`Trying video URL (score=${score}):`, videoUrlFromThumb.slice(0, 80) + '...');
+            
+            // Verificar se o vídeo existe (fazer HEAD request rápido)
+            try {
+              const headResponse = await fetch(videoUrlFromThumb, { method: 'HEAD' });
+              if (headResponse.ok) {
+                videoEmbedUrl = videoUrlFromThumb;
+                videoSource = "cloudfront";
+                console.log("Verified video URL exists:", videoEmbedUrl);
+                break;
+              } else {
+                console.log("Video URL returned", headResponse.status, "- trying next...");
+              }
+            } catch (e) {
+              console.log("Failed to verify video URL:", e);
+            }
+          }
+        }
+      }
+    }
+    
+    // Prioridade 8: Extrair link para página de vídeo específica do CarCareKiosk
+    // O markdown pode conter links para vídeos específicos como:
+    // [Procedure Name](https://www.carcarekiosk.com/video/YEAR_BRAND_MODEL/category/procedure)
+    if (!videoEmbedUrl) {
+      const videoPageMatches = markdown.match(/\(https:\/\/www\.carcarekiosk\.com\/video\/[^\)]+\)/gi);
+      if (videoPageMatches && videoPageMatches.length > 0) {
+        // Extrair a URL do procedimento específico que foi solicitado
+        const procedureSlug = videoUrl.split('/').pop() || "";
+        const categorySlug = videoUrl.split('/').slice(-2, -1)[0] || "";
+        
+        for (const match of videoPageMatches) {
+          const pageUrl = match.slice(1, -1); // Remove parênteses
+          // Verificar se a URL corresponde ao procedimento solicitado
+          if (pageUrl.includes(procedureSlug) || pageUrl.includes(categorySlug)) {
+            console.log("Found specific video page URL:", pageUrl);
+            
+            // Tentar buscar a página específica do vídeo
+            try {
+              const videoPageResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  url: pageUrl,
+                  formats: ["html"],
+                  waitFor: 2000,
+                }),
+              });
+              
+              if (videoPageResponse.ok) {
+                const videoPageData = await videoPageResponse.json();
+                const videoPageHtml = videoPageData.data?.html || "";
+                
+                // Procurar o vídeo MP4 nesta página específica
+                for (const pattern of cloudfrontPatterns) {
+                  // Reset lastIndex for global regex
+                  pattern.lastIndex = 0;
+                  const videoMatch = pattern.exec(videoPageHtml);
+                  if (videoMatch && videoMatch[1]) {
+                    videoEmbedUrl = videoMatch[1];
+                    videoSource = "cloudfront";
+                    console.log("Found video in specific procedure page:", videoEmbedUrl);
+                    break;
+                  }
+                }
+                
+                if (videoEmbedUrl) break;
+              }
+            } catch (e) {
+              console.log("Failed to fetch video page:", e);
+            }
+          }
+        }
+      }
+    }
+    
+    console.log(`Video extraction result: ${videoSource || 'none'}, URL: ${videoEmbedUrl ? videoEmbedUrl.slice(0, 80) + '...' : 'null'}`);
+    
     
     // ========== EXTRAIR TÍTULO ==========
     const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
