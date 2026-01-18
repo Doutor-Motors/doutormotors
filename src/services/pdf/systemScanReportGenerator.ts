@@ -1,7 +1,10 @@
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PDFBaseGenerator, PDF_COLORS } from "./pdfBaseGenerator";
+
+// ============================================
+// GERADOR DE RELATÓRIO DE VARREDURA DO SISTEMA
+// ============================================
 
 export interface SystemScanReport {
   generatedAt: string;
@@ -48,225 +51,8 @@ interface Correction {
 }
 
 export function generateSystemScanReport(data: SystemScanReport): void {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  let yPosition = 20;
-
-  // ===== HEADER =====
-  doc.setFillColor(20, 30, 48);
-  doc.rect(0, 0, pageWidth, 45, "F");
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont("helvetica", "bold");
-  doc.text("RELATÓRIO DE VARREDURA DO SISTEMA", pageWidth / 2, 22, { align: "center" });
-
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.text("Doutor Motors - Análise Completa de Arquitetura", pageWidth / 2, 32, { align: "center" });
-
-  doc.setFontSize(10);
-  doc.text(`Gerado em: ${format(new Date(data.generatedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, 40, { align: "center" });
-
-  yPosition = 55;
-
-  // ===== RESUMO EXECUTIVO =====
-  doc.setTextColor(20, 30, 48);
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("1. RESUMO EXECUTIVO", 14, yPosition);
-  yPosition += 10;
-
-  const summaryData = [
-    ["Total de Tabelas no Banco", data.summary.totalTables.toString()],
-    ["Edge Functions Ativas", data.summary.totalEdgeFunctions.toString()],
-    ["Páginas no Frontend", data.summary.totalPages.toString()],
-    ["Hooks Customizados", data.summary.totalHooks.toString()],
-    ["Avisos de Segurança", data.summary.securityWarnings.toString()],
-    ["Problemas Críticos Corrigidos", data.summary.criticalIssuesFixed.toString()],
-  ];
-
-  autoTable(doc, {
-    startY: yPosition,
-    head: [["Métrica", "Valor"]],
-    body: summaryData,
-    theme: "striped",
-    headStyles: { fillColor: [20, 30, 48], textColor: 255 },
-    styles: { fontSize: 10 },
-    margin: { left: 14, right: 14 },
-  });
-
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
-
-  // ===== ESTRUTURA DO BANCO DE DADOS =====
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("2. ESTRUTURA DO BANCO DE DADOS", 14, yPosition);
-  yPosition += 10;
-
-  const tableData = data.tables.map((t) => [
-    t.name,
-    t.columns.toString(),
-    t.hasRLS ? "✓ Sim" : "✗ Não",
-    t.hasIndexes ? "✓ Sim" : "✗ Não",
-    t.purpose,
-  ]);
-
-  autoTable(doc, {
-    startY: yPosition,
-    head: [["Tabela", "Colunas", "RLS", "Índices", "Finalidade"]],
-    body: tableData,
-    theme: "striped",
-    headStyles: { fillColor: [20, 30, 48], textColor: 255 },
-    styles: { fontSize: 8, cellPadding: 2 },
-    columnStyles: {
-      0: { cellWidth: 35 },
-      1: { cellWidth: 15, halign: "center" },
-      2: { cellWidth: 15, halign: "center" },
-      3: { cellWidth: 15, halign: "center" },
-      4: { cellWidth: "auto" },
-    },
-    margin: { left: 14, right: 14 },
-  });
-
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
-
-  // Check if we need a new page
-  if (yPosition > 240) {
-    doc.addPage();
-    yPosition = 20;
-  }
-
-  // ===== EDGE FUNCTIONS =====
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("3. EDGE FUNCTIONS (BACKEND)", 14, yPosition);
-  yPosition += 10;
-
-  const edgeFunctionData = data.edgeFunctions.map((ef) => [
-    ef.name,
-    ef.purpose,
-    ef.endpoints.join(", "),
-  ]);
-
-  autoTable(doc, {
-    startY: yPosition,
-    head: [["Função", "Finalidade", "Endpoints"]],
-    body: edgeFunctionData,
-    theme: "striped",
-    headStyles: { fillColor: [20, 30, 48], textColor: 255 },
-    styles: { fontSize: 9 },
-    margin: { left: 14, right: 14 },
-  });
-
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
-
-  // Check if we need a new page
-  if (yPosition > 220) {
-    doc.addPage();
-    yPosition = 20;
-  }
-
-  // ===== PROBLEMAS DE SEGURANÇA =====
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("4. ANÁLISE DE SEGURANÇA", 14, yPosition);
-  yPosition += 10;
-
-  const securityData = data.securityIssues.map((issue) => {
-    const levelText = issue.level === "critical" ? "🔴 CRÍTICO" : issue.level === "warning" ? "🟡 AVISO" : "🔵 INFO";
-    const statusText = issue.status === "fixed" ? "✓ Corrigido" : issue.status === "pending" ? "⏳ Pendente" : "👤 Manual";
-    return [levelText, issue.description, statusText];
-  });
-
-  autoTable(doc, {
-    startY: yPosition,
-    head: [["Nível", "Descrição", "Status"]],
-    body: securityData,
-    theme: "striped",
-    headStyles: { fillColor: [20, 30, 48], textColor: 255 },
-    styles: { fontSize: 9 },
-    columnStyles: {
-      0: { cellWidth: 30 },
-      1: { cellWidth: "auto" },
-      2: { cellWidth: 30 },
-    },
-    margin: { left: 14, right: 14 },
-  });
-
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
-
-  // Check if we need a new page
-  if (yPosition > 220) {
-    doc.addPage();
-    yPosition = 20;
-  }
-
-  // ===== CORREÇÕES APLICADAS =====
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("5. CORREÇÕES APLICADAS", 14, yPosition);
-  yPosition += 10;
-
-  const correctionData = data.corrections.map((c) => [
-    c.type,
-    c.description,
-    c.status === "applied" ? "✓ Aplicado" : "⏳ Pendente",
-  ]);
-
-  autoTable(doc, {
-    startY: yPosition,
-    head: [["Tipo", "Descrição", "Status"]],
-    body: correctionData,
-    theme: "striped",
-    headStyles: { fillColor: [20, 30, 48], textColor: 255 },
-    styles: { fontSize: 9 },
-    margin: { left: 14, right: 14 },
-  });
-
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
-
-  // Check if we need a new page
-  if (yPosition > 220) {
-    doc.addPage();
-    yPosition = 20;
-  }
-
-  // ===== RECOMENDAÇÕES =====
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("6. RECOMENDAÇÕES FUTURAS", 14, yPosition);
-  yPosition += 10;
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  data.recommendations.forEach((rec, index) => {
-    const lines = doc.splitTextToSize(`${index + 1}. ${rec}`, pageWidth - 28);
-    if (yPosition + lines.length * 5 > 280) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    doc.text(lines, 14, yPosition);
-    yPosition += lines.length * 5 + 3;
-  });
-
-  // ===== FOOTER =====
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text(
-      `Doutor Motors - Relatório de Varredura | Página ${i} de ${pageCount}`,
-      pageWidth / 2,
-      doc.internal.pageSize.getHeight() - 10,
-      { align: "center" }
-    );
-  }
-
-  // ===== DOWNLOAD =====
-  const filename = `relatorio-varredura-sistema-${format(new Date(), "yyyy-MM-dd-HHmm")}.pdf`;
-  doc.save(filename);
+  const generator = new SystemScanReportGenerator(data);
+  generator.generate();
 }
 
 // Função para gerar relatório com dados do sistema atual
@@ -280,7 +66,7 @@ export function generateCurrentSystemReport(): void {
       totalPages: 35,
       totalHooks: 17,
       securityWarnings: 3,
-      criticalIssuesFixed: 2,
+      criticalIssuesFixed: 5,
     },
     tables: [
       { name: "profiles", columns: 8, hasRLS: true, hasIndexes: true, purpose: "Dados do perfil do usuário" },
@@ -327,6 +113,7 @@ export function generateCurrentSystemReport(): void {
     corrections: [
       { type: "Tabela Criada", description: "usage_tracking - Controle de uso mensal por usuário", status: "applied" },
       { type: "Tabela Criada", description: "coding_executions - Histórico de funções de codificação", status: "applied" },
+      { type: "Tabela Criada", description: "audit_logs - Sistema de auditoria", status: "applied" },
       { type: "RLS Corrigido", description: "Substituída política USING(true) por verificação de usuário/admin", status: "applied" },
       { type: "Índices Criados", description: "Índices para diagnostic_items, diagnostics, vehicles, tickets", status: "applied" },
       { type: "Trigger Criado", description: "update_usage_tracking_updated_at para timestamp automático", status: "applied" },
@@ -337,13 +124,223 @@ export function generateCurrentSystemReport(): void {
       "Habilitar 'Leaked Password Protection' nas configurações de autenticação do Supabase para maior segurança de senhas.",
       "Mover extensões do schema 'public' para um schema dedicado como 'extensions' para melhor organização.",
       "Implementar Stripe Webhooks para atualização automática de assinaturas após pagamentos.",
-      "Adicionar tabela de auditoria (audit_logs) para registrar ações críticas dos usuários.",
       "Implementar soft delete em tabelas críticas para evitar perda de dados históricos.",
       "Configurar backups automáticos diários do banco de dados.",
       "Adicionar monitoramento de performance com métricas de tempo de resposta das queries.",
       "Implementar rate limiting nas edge functions para evitar abuso.",
+      "Adicionar testes automatizados para validar integridade do banco após migrations.",
     ],
   };
 
   generateSystemScanReport(reportData);
+}
+
+class SystemScanReportGenerator extends PDFBaseGenerator {
+  private data: SystemScanReport;
+
+  constructor(data: SystemScanReport) {
+    super();
+    this.data = data;
+  }
+
+  generate(): void {
+    // CAPA
+    this.addCoverPage({
+      title: "VARREDURA DO SISTEMA",
+      subtitle: "Doutor Motors",
+      description: "Análise Completa de Arquitetura",
+      version: "1.0.0",
+      generatedBy: this.data.generatedBy,
+    });
+
+    // CONTEÚDO
+    this.addNewPage();
+    this.addPageHeader("Varredura do Sistema - Doutor Motors");
+    this.addSummarySection();
+
+    this.addNewPage();
+    this.addPageHeader("Varredura do Sistema - Doutor Motors");
+    this.addDatabaseSection();
+
+    this.addNewPage();
+    this.addPageHeader("Varredura do Sistema - Doutor Motors");
+    this.addEdgeFunctionsSection();
+
+    this.addNewPage();
+    this.addPageHeader("Varredura do Sistema - Doutor Motors");
+    this.addSecuritySection();
+
+    this.addNewPage();
+    this.addPageHeader("Varredura do Sistema - Doutor Motors");
+    this.addCorrectionsSection();
+
+    this.addNewPage();
+    this.addPageHeader("Varredura do Sistema - Doutor Motors");
+    this.addRecommendationsSection();
+
+    // RODAPÉS
+    this.addFooters("Relatório de Varredura");
+
+    // SALVAR
+    this.save("relatorio-varredura-sistema");
+  }
+
+  private addSummarySection(): void {
+    this.addSectionTitle("RESUMO EXECUTIVO", "1");
+
+    this.addTable({
+      headers: ["Métrica", "Valor"],
+      data: [
+        ["Total de Tabelas no Banco", this.data.summary.totalTables.toString()],
+        ["Edge Functions Ativas", this.data.summary.totalEdgeFunctions.toString()],
+        ["Páginas no Frontend", this.data.summary.totalPages.toString()],
+        ["Hooks Customizados", this.data.summary.totalHooks.toString()],
+        ["Avisos de Segurança", this.data.summary.securityWarnings.toString()],
+        ["Problemas Críticos Corrigidos", this.data.summary.criticalIssuesFixed.toString()],
+      ],
+      fontSize: 10,
+    });
+
+    this.addSpace(10);
+
+    // Status boxes
+    this.addColorBox({
+      title: "STATUS GERAL DO SISTEMA",
+      items: [
+        "✓ Banco de dados estruturado e funcional",
+        "✓ Todas as tabelas com RLS habilitado",
+        "✓ Edge functions implementadas",
+        "✓ Sistema de auditoria ativo",
+        "✓ Autenticação funcionando",
+      ],
+      bgColor: [220, 252, 231],
+      borderColor: PDF_COLORS.success,
+      textColor: [22, 101, 52],
+    });
+  }
+
+  private addDatabaseSection(): void {
+    this.addSectionTitle("ESTRUTURA DO BANCO DE DADOS", "2");
+
+    const tableData = this.data.tables.map(t => [
+      t.name,
+      t.columns.toString(),
+      t.hasRLS ? "✓ Sim" : "✗ Não",
+      t.hasIndexes ? "✓ Sim" : "-",
+      t.purpose,
+    ]);
+
+    this.addTable({
+      headers: ["Tabela", "Cols", "RLS", "Índices", "Finalidade"],
+      data: tableData,
+      columnWidths: [40, 12, 15, 15, "auto"],
+      fontSize: 7,
+    });
+  }
+
+  private addEdgeFunctionsSection(): void {
+    this.addSectionTitle("EDGE FUNCTIONS (BACKEND)", "3");
+
+    const edgeFunctionData = this.data.edgeFunctions.map(ef => [
+      ef.name,
+      ef.purpose,
+      ef.endpoints.join(", "),
+    ]);
+
+    this.addTable({
+      headers: ["Função", "Finalidade", "Endpoints"],
+      data: edgeFunctionData,
+    });
+  }
+
+  private addSecuritySection(): void {
+    this.addSectionTitle("ANÁLISE DE SEGURANÇA", "4");
+
+    const getLevelText = (level: string): string => {
+      switch (level) {
+        case "critical": return "🔴 CRÍTICO";
+        case "warning": return "🟡 AVISO";
+        case "info": return "🔵 INFO";
+        default: return level;
+      }
+    };
+
+    const getStatusText = (status: string): string => {
+      switch (status) {
+        case "fixed": return "✓ Corrigido";
+        case "pending": return "⏳ Pendente";
+        case "manual": return "👤 Manual";
+        default: return status;
+      }
+    };
+
+    const securityData = this.data.securityIssues.map(issue => [
+      getLevelText(issue.level),
+      issue.description,
+      getStatusText(issue.status),
+    ]);
+
+    this.addTable({
+      headers: ["Nível", "Descrição", "Status"],
+      data: securityData,
+      columnWidths: [25, "auto", 25],
+    });
+
+    this.addSpace(10);
+
+    // Contagem por status
+    const fixed = this.data.securityIssues.filter(i => i.status === "fixed").length;
+    const pending = this.data.securityIssues.filter(i => i.status === "pending").length;
+    const manual = this.data.securityIssues.filter(i => i.status === "manual").length;
+
+    this.addColorBox({
+      title: "RESUMO DE SEGURANÇA",
+      items: [
+        `✓ ${fixed} problemas corrigidos automaticamente`,
+        `⏳ ${pending} pendentes de análise`,
+        `👤 ${manual} requerem ação manual`,
+      ],
+      bgColor: [240, 249, 255],
+      borderColor: PDF_COLORS.info,
+      textColor: [30, 64, 175],
+    });
+  }
+
+  private addCorrectionsSection(): void {
+    this.addSectionTitle("CORREÇÕES APLICADAS", "5");
+
+    const correctionData = this.data.corrections.map(c => [
+      c.type,
+      c.description,
+      c.status === "applied" ? "✓ Aplicado" : "⏳ Pendente",
+    ]);
+
+    this.addTable({
+      headers: ["Tipo", "Descrição", "Status"],
+      data: correctionData,
+      headerColor: PDF_COLORS.success,
+      columnWidths: [35, "auto", 25],
+    });
+  }
+
+  private addRecommendationsSection(): void {
+    this.addSectionTitle("RECOMENDAÇÕES FUTURAS", "6");
+
+    this.addBulletList(this.data.recommendations.map((rec, i) => `${i + 1}. ${rec}`));
+
+    this.addSpace(15);
+
+    this.addColorBox({
+      title: "PRÓXIMOS PASSOS RECOMENDADOS",
+      items: [
+        "1. Habilitar proteção de senhas vazadas no Supabase",
+        "2. Integrar Stripe para pagamentos reais",
+        "3. Implementar rate limiting nas edge functions",
+        "4. Configurar monitoramento de erros (Sentry)",
+      ],
+      bgColor: [254, 249, 195],
+      borderColor: PDF_COLORS.warning,
+      textColor: [133, 77, 14],
+    });
+  }
 }
