@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, UserCog, Shield, User, Trash2, Eye } from "lucide-react";
+import { Search, UserCog, Shield, User, Trash2, Eye, RefreshCw } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -54,12 +54,9 @@ const AdminUsers = () => {
   const [newRole, setNewRole] = useState<AppRole>("user");
   const { notifySuccess, notifyError } = useAdminNotifications();
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
+      setLoading(true);
       // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
@@ -91,7 +88,41 @@ const AdminUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Initial fetch + Realtime subscription
+  useEffect(() => {
+    fetchUsers();
+
+    // Subscribe to realtime changes on profiles
+    const profilesChannel = supabase
+      .channel("admin-profiles-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => {
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to realtime changes on user_roles
+    const rolesChannel = supabase
+      .channel("admin-roles-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_roles" },
+        () => {
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(rolesChannel);
+    };
+  }, [fetchUsers]);
 
   const handleUpdateRole = async () => {
     if (!selectedUser) return;
@@ -195,14 +226,25 @@ const AdminUsers = () => {
             </p>
           </div>
 
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Buscar usuários..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Buscar usuários..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={fetchUsers}
+              disabled={loading}
+              title="Atualizar lista"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </div>
 
