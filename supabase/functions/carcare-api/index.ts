@@ -1288,21 +1288,23 @@ async function fetchAllVideosFromModelPage(
 
 // ============================================================================
 // NOVA FUNÇÃO: Escanear e salvar procedimentos no cache do banco de dados
+// COM FALLBACK: Usa dados estáticos quando Firecrawl não conseguir acessar o site
 // ============================================================================
 async function scanAndCacheProcedures(
   apiKey: string,
   brand: string,
   model: string,
   year: string
-): Promise<{ proceduresFound: number; categoriesFound: number; cached: number }> {
+): Promise<{ proceduresFound: number; categoriesFound: number; cached: number; usedFallback: boolean }> {
   console.log(`[ScanAndCache] Starting scan for ${year} ${brand} ${model}...`);
   
   // Buscar todos os vídeos da página do modelo
   const modelVideosIndex = await fetchAllVideosFromModelPage(apiKey, brand, model, year);
   
+  // Se não encontrou procedimentos via Firecrawl, usar dados estáticos como fallback
   if (!modelVideosIndex || modelVideosIndex.totalCount === 0) {
-    console.log("[ScanAndCache] No procedures found from model page");
-    return { proceduresFound: 0, categoriesFound: 0, cached: 0 };
+    console.log("[ScanAndCache] Firecrawl failed, using static data fallback...");
+    return await cacheStaticProcedures(brand, model, year);
   }
   
   const supabase = getSupabaseClient();
@@ -1353,6 +1355,94 @@ async function scanAndCacheProcedures(
     proceduresFound: modelVideosIndex.totalCount,
     categoriesFound: categories.size,
     cached,
+    usedFallback: false,
+  };
+}
+
+// Fallback: Cache procedimentos baseados em dados estáticos
+async function cacheStaticProcedures(
+  brand: string,
+  model: string,
+  year: string
+): Promise<{ proceduresFound: number; categoriesFound: number; cached: number; usedFallback: boolean }> {
+  const supabase = getSupabaseClient();
+  
+  // Obter categorias estáticas
+  const staticCategories = getStaticCategories(brand, model, year);
+  
+  const procedureMap = new Map<string, {
+    brand: string;
+    model: string;
+    year: string;
+    procedure_id: string;
+    procedure_name: string;
+    procedure_name_pt: string;
+    category: string;
+    video_url: string;
+    thumbnail_url: string | null;
+    source_url: string;
+    expires_at: string;
+  }>();
+  
+  const categoriesSet = new Set<string>();
+  const brandSlug = brand.replace(/\s+/g, "_");
+  const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
+  const vehicleSlug = `${year}_${brandSlug}_${modelSlug}`;
+  
+  for (const cat of staticCategories) {
+    categoriesSet.add(cat.id);
+    
+    for (const proc of cat.procedures) {
+      // Use unique key to avoid duplicates
+      const uniqueKey = `${proc.id}_${cat.id}`;
+      
+      if (!procedureMap.has(uniqueKey)) {
+        procedureMap.set(uniqueKey, {
+          brand,
+          model,
+          year,
+          procedure_id: `${cat.id}_${proc.id}`, // Make procedure_id unique per category
+          procedure_name: proc.nameEn,
+          procedure_name_pt: proc.name,
+          category: cat.id,
+          video_url: `https://www.carcarekiosk.com/video/${vehicleSlug}/${cat.id}/${proc.id}`,
+          thumbnail_url: null,
+          source_url: `https://www.carcarekiosk.com/video/${vehicleSlug}`,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+      }
+    }
+  }
+  
+  const allProcedures = Array.from(procedureMap.values());
+  
+  let cached = 0;
+  const batchSize = 50;
+  
+  for (let i = 0; i < allProcedures.length; i += batchSize) {
+    const batch = allProcedures.slice(i, i + batchSize);
+    
+    const { error } = await supabase
+      .from("carcare_procedure_cache")
+      .upsert(batch, { 
+        onConflict: "brand,model,year,procedure_id",
+        ignoreDuplicates: false 
+      });
+    
+    if (error) {
+      console.error("[StaticFallback] Error caching batch:", error);
+    } else {
+      cached += batch.length;
+    }
+  }
+  
+  console.log(`[StaticFallback] Cached ${cached} static procedures for ${brand} ${model} ${year}`);
+  
+  return {
+    proceduresFound: allProcedures.length,
+    categoriesFound: categoriesSet.size,
+    cached,
+    usedFallback: true,
   };
 }
 

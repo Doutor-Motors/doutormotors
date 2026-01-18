@@ -62,6 +62,7 @@ interface ScanResult {
   categoriesFound: number;
   success: boolean;
   error?: string;
+  usedFallback?: boolean;
 }
 
 export default function AdminCarCareData() {
@@ -126,9 +127,11 @@ export default function AdminCarCareData() {
         proceduresFound: data?.proceduresFound || 0,
         categoriesFound: data?.categoriesFound || 0,
         success: true,
+        usedFallback: data?.usedFallback || false,
       });
       queryClient.invalidateQueries({ queryKey: ["carcare-cached-procedures"] });
-      toast.success(`Escaneados ${data?.proceduresFound || 0} procedimentos para ${scanBrand} ${scanModel}`);
+      const fallbackMsg = data?.usedFallback ? " (usando dados estáticos)" : "";
+      toast.success(`Escaneados ${data?.proceduresFound || 0} procedimentos para ${scanBrand} ${scanModel}${fallbackMsg}`);
     },
     onError: (error) => {
       setScanResult({
@@ -141,6 +144,25 @@ export default function AdminCarCareData() {
         error: error.message,
       });
       toast.error("Erro ao escanear veículo: " + error.message);
+    },
+  });
+
+  // Scheduled scan mutation
+  const scheduledScanMutation = useMutation({
+    mutationFn: async ({ maxScans, forceRescan }: { maxScans?: number; forceRescan?: boolean }) => {
+      const { data, error } = await supabase.functions.invoke("carcare-scheduled-scan", {
+        body: { maxScans, forceRescan },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["carcare-cached-procedures"] });
+      toast.success(`Scan agendado: ${data?.successful || 0}/${data?.vehiclesScanned || 0} veículos, ${data?.totalProcedures || 0} procedimentos`);
+    },
+    onError: (error) => {
+      toast.error("Erro no scan agendado: " + error.message);
     },
   });
 
@@ -407,7 +429,7 @@ export default function AdminCarCareData() {
                 </div>
 
                 {scanResult && (
-                  <div className={`p-4 rounded-lg border ${scanResult.success ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+                  <div className={`p-4 rounded-lg border ${scanResult.success ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800" : "bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800"}`}>
                     <div className="flex items-center gap-2 mb-2">
                       {scanResult.success ? (
                         <CheckCircle className="h-5 w-5 text-green-600" />
@@ -417,6 +439,9 @@ export default function AdminCarCareData() {
                       <span className="font-medium">
                         {scanResult.success ? "Scan Concluído" : "Erro no Scan"}
                       </span>
+                      {scanResult.usedFallback && (
+                        <Badge variant="secondary" className="text-xs">Fallback</Badge>
+                      )}
                     </div>
                     <p className="text-sm">
                       {scanResult.success ? (
@@ -424,6 +449,9 @@ export default function AdminCarCareData() {
                           Encontrados <strong>{scanResult.proceduresFound}</strong> procedimentos em{" "}
                           <strong>{scanResult.categoriesFound}</strong> categorias para{" "}
                           <strong>{scanResult.brand} {scanResult.model} {scanResult.year}</strong>
+                          {scanResult.usedFallback && (
+                            <span className="text-muted-foreground"> (dados estáticos - Firecrawl indisponível)</span>
+                          )}
                         </>
                       ) : (
                         scanResult.error
@@ -432,14 +460,52 @@ export default function AdminCarCareData() {
                   </div>
                 )}
 
-                <div className="bg-muted p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Como funciona:</h4>
-                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                    <li>O scanner acessa a página do modelo no CarCareKiosk via Firecrawl</li>
-                    <li>Extrai todos os procedimentos disponíveis usando múltiplos padrões de regex</li>
-                    <li>Categoriza automaticamente cada procedimento</li>
-                    <li>Salva no cache local para acesso rápido (válido por 30 dias)</li>
-                  </ol>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-medium mb-2">Como funciona:</h4>
+                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                      <li>O scanner acessa a página do modelo no CarCareKiosk via Firecrawl</li>
+                      <li>Extrai todos os procedimentos disponíveis usando múltiplos padrões de regex</li>
+                      <li>Categoriza automaticamente cada procedimento</li>
+                      <li>Salva no cache local para acesso rápido (válido por 30 dias)</li>
+                      <li className="text-primary font-medium">Se Firecrawl falhar, usa dados estáticos como fallback</li>
+                    </ol>
+                  </div>
+                  
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Scan Automático em Lote
+                      </CardTitle>
+                      <CardDescription>
+                        Escanear veículos populares automaticamente
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Escaneia até 5 veículos populares (Honda Civic, Toyota Corolla, Ford F-150, etc) que ainda não estão no cache.
+                      </p>
+                      <Button
+                        onClick={() => scheduledScanMutation.mutate({ maxScans: 5 })}
+                        disabled={scheduledScanMutation.isPending}
+                        variant="secondary"
+                        className="w-full"
+                      >
+                        {scheduledScanMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Escaneando veículos...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            Executar Scan em Lote
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>
