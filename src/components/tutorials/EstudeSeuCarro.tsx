@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import VehicleSelector from '@/components/tutorials/VehicleSelector';
 import CategoryGrid from '@/components/tutorials/CategoryGrid';
 import TutorialGrid from '@/components/tutorials/TutorialGrid';
+import MiniPlayer from '@/components/tutorials/MiniPlayer';
 import { tutorialApi } from '@/services/tutorials/tutorialApi';
 import type { Tutorial, TutorialCategory, SelectedVehicle, SearchResult } from '@/types/tutorials';
 import { DEFAULT_CATEGORIES } from '@/constants/tutorials';
@@ -43,6 +44,10 @@ const EstudeSeuCarro = () => {
   // Estados de UI
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'categories' | 'tutorials' | 'search'>('categories');
+  
+  // Mini Player State
+  const [miniPlayerTutorial, setMiniPlayerTutorial] = useState<Partial<Tutorial> | null>(null);
+  const [isMiniPlayerVisible, setIsMiniPlayerVisible] = useState(false);
 
   // Handler para seleção de veículo
   const handleVehicleSelect = useCallback(async (vehicle: SelectedVehicle) => {
@@ -163,6 +168,44 @@ const EstudeSeuCarro = () => {
     setTutorials([]);
     setSearchResults([]);
     setViewMode('categories');
+  }, []);
+
+  // Handler para preview no Mini Player
+  const handlePreview = useCallback(async (tutorial: Partial<Tutorial>) => {
+    // Se já temos os dados completos, usar direto
+    if (tutorial.steps && tutorial.steps.length > 0) {
+      setMiniPlayerTutorial(tutorial);
+      setIsMiniPlayerVisible(true);
+      return;
+    }
+
+    // Caso contrário, buscar dados completos
+    if (tutorial.source_url) {
+      try {
+        toast({
+          title: 'Carregando tutorial...',
+          description: 'Buscando informações detalhadas',
+        });
+        
+        const fullTutorial = await tutorialApi.fetch(tutorial.source_url);
+        setMiniPlayerTutorial(fullTutorial);
+        setIsMiniPlayerVisible(true);
+      } catch (error) {
+        console.error('Error loading tutorial for preview:', error);
+        // Usar dados parciais mesmo assim
+        setMiniPlayerTutorial(tutorial);
+        setIsMiniPlayerVisible(true);
+      }
+    } else {
+      // Usar dados parciais
+      setMiniPlayerTutorial(tutorial);
+      setIsMiniPlayerVisible(true);
+    }
+  }, [toast]);
+
+  // Fechar Mini Player
+  const handleCloseMiniPlayer = useCallback(() => {
+    setIsMiniPlayerVisible(false);
   }, []);
 
   return (
@@ -374,7 +417,10 @@ const EstudeSeuCarro = () => {
                 </h2>
               </div>
               
-              <TutorialGrid tutorials={tutorials} />
+              <TutorialGrid 
+                tutorials={tutorials}
+                onPreview={handlePreview}
+              />
             </motion.div>
           )}
 
@@ -388,11 +434,11 @@ const EstudeSeuCarro = () => {
             >
               <TutorialGrid 
                 searchResults={searchResults}
+                onPreview={handlePreview}
                 onTutorialClick={async (url) => {
                   try {
                     const tutorial = await tutorialApi.fetch(url);
-                    // Navegar para tutorial ou abrir modal
-                    console.log('Tutorial loaded:', tutorial);
+                    handlePreview(tutorial);
                   } catch (error) {
                     toast({
                       variant: 'destructive',
@@ -430,6 +476,13 @@ const EstudeSeuCarro = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Mini Player */}
+      <MiniPlayer
+        tutorial={miniPlayerTutorial}
+        isVisible={isMiniPlayerVisible}
+        onClose={handleCloseMiniPlayer}
+      />
     </div>
   );
 };
