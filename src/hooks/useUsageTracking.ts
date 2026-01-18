@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useSubscription } from './useSubscription';
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 
 export type UsageType = 'diagnostics' | 'coding_executions' | 'data_recordings' | 'ai_queries';
 
@@ -14,7 +14,6 @@ interface UsageTracking {
   coding_executions_count: number;
   data_recordings_count: number;
   ai_queries_count: number;
-  alerts_sent: string[];
   last_reset_at: string;
   created_at: string;
   updated_at: string;
@@ -57,12 +56,41 @@ function getLimitForPlan(type: UsageType, plan: string): number {
   return planLimits[limitMap[type]];
 }
 
+// Use localStorage to track sent alerts (fallback since we don't have the column in DB yet)
+function getAlertsSentFromStorage(userId: string, monthYear: string): Set<string> {
+  try {
+    const key = `usage_alerts_${userId}_${monthYear}`;
+    const stored = localStorage.getItem(key);
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveAlertToStorage(userId: string, monthYear: string, alertKey: string): void {
+  try {
+    const key = `usage_alerts_${userId}_${monthYear}`;
+    const current = getAlertsSentFromStorage(userId, monthYear);
+    current.add(alertKey);
+    localStorage.setItem(key, JSON.stringify(Array.from(current)));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function useUsageTracking() {
   const { user } = useAuth();
   const { currentPlan } = useSubscription();
   const queryClient = useQueryClient();
   const currentMonthYear = getCurrentMonthYear();
   const alertsSentRef = useRef<Set<string>>(new Set());
+
+  // Initialize alerts from storage
+  useEffect(() => {
+    if (user?.id) {
+      alertsSentRef.current = getAlertsSentFromStorage(user.id, currentMonthYear);
+    }
+  }, [user?.id, currentMonthYear]);
 
   // Get limit for a type based on current plan
   const getLimit = useCallback((type: UsageType): number => {
@@ -85,11 +113,6 @@ export function useUsageTracking() {
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching usage:', error);
         throw error;
-      }
-
-      // Update local tracking of sent alerts
-      if (data && (data as any).alerts_sent) {
-        alertsSentRef.current = new Set((data as any).alerts_sent);
       }
 
       return data as unknown as UsageTracking | null;
@@ -125,16 +148,9 @@ export function useUsageTracking() {
       });
 
       if (!error) {
-        // Mark alert as sent locally
+        // Mark alert as sent
         alertsSentRef.current.add(alertKey);
-        
-        // Update database to track sent alerts
-        const alertsSent = Array.from(alertsSentRef.current);
-        await supabase
-          .from('usage_tracking' as any)
-          .update({ alerts_sent: alertsSent })
-          .eq('user_id', user.id)
-          .eq('month_year', currentMonthYear);
+        saveAlertToStorage(user.id, currentMonthYear, alertKey);
       }
     } catch (err) {
       console.error('Failed to send usage alert:', err);
@@ -184,7 +200,6 @@ export function useUsageTracking() {
             user_id: user.id,
             month_year: currentMonthYear,
             [column]: 1,
-            alerts_sent: [],
           });
 
         if (error) throw error;
