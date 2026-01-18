@@ -1618,8 +1618,6 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'fog light': ['fog light', 'fog lamp'],
           // Fluids - expanded
           'coolant': ['coolant', 'antifreeze', 'radiator', 'reservoir', 'overflow'],
-          'transmission fluid': ['transmission', 'trans fluid', 'transmission check'],
-          'power steering': ['power steering', 'steering fluid'],
           'windshield washer': ['washer', 'washer fluid', 'windshield washer'],
           // Wipers
           'wipers': ['wiper', 'windshield', 'wiper blade'],
@@ -1636,8 +1634,21 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'spare tire': ['spare', 'tire', 'spare tire'],
           // Fuses
           'fuse': ['fuse', 'fuse box', 'fusible'],
-          // Spark plugs
-          'spark plug': ['spark plug', 'spark', 'ignition'],
+          // Spark plugs - expanded
+          'spark plug': ['spark plug', 'spark', 'ignition', 'plug', 'spark plugs', 'spark gap'],
+          'spark plugs': ['spark plug', 'spark', 'ignition', 'plug', 'spark plugs', 'spark gap'],
+          'ignition': ['spark plug', 'spark', 'ignition', 'coil', 'ignition coil'],
+          // Transmission fluid - expanded
+          'transmission fluid': ['transmission', 'trans fluid', 'transmission check', 'transmission level', 'atf', 'auto transmission'],
+          'transmission': ['transmission', 'trans fluid', 'transmission check', 'atf', 'gearbox'],
+          'trans fluid': ['transmission', 'trans fluid', 'transmission check', 'atf'],
+          'check transmission': ['transmission', 'trans fluid', 'transmission check', 'atf level'],
+          'automatic transmission': ['transmission', 'automatic transmission', 'atf', 'trans fluid'],
+          // Power steering - expanded
+          'power steering': ['power steering', 'steering fluid', 'steering pump', 'ps fluid', 'steering'],
+          'power steering fluid': ['power steering', 'steering fluid', 'steering pump', 'ps fluid'],
+          'steering fluid': ['power steering', 'steering fluid', 'steering'],
+          'steering': ['power steering', 'steering fluid', 'steering pump', 'steering wheel'],
         };
         
         // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
@@ -2183,29 +2194,69 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
       "6️⃣ **Testar**: Ligue a ignição e verifique se o sistema voltou a funcionar.",
       "⚠️ **Atenção**: Se o fusível queimar novamente, há um problema elétrico que precisa de diagnóstico.",
     ],
+    "spark_plug": [
+      "1️⃣ **Preparação**: Desligue o motor e aguarde esfriar completamente. Reúna as velas novas (verificar especificação), chave de vela e calibrador de gap.",
+      "2️⃣ **Acesso**: Remova a tampa do motor se houver. Localize os cabos de vela ou bobinas sobre cada cilindro.",
+      "3️⃣ **Desconectar**: Desconecte o cabo ou bobina da primeira vela, puxando pelo conector (nunca pelo cabo!).",
+      "4️⃣ **Limpar**: Limpe a área ao redor da vela com ar comprimido para evitar que sujeira caia no cilindro.",
+      "5️⃣ **Remover**: Use a chave de vela para remover a vela antiga, girando no sentido anti-horário.",
+      "6️⃣ **Verificar gap**: Confirme que o gap da vela nova está correto (consulte o manual).",
+      "7️⃣ **Instalar**: Rosqueie a vela nova à mão primeiro, depois aperte com a chave (não force demais!).",
+      "8️⃣ **Reconectar**: Conecte o cabo ou bobina de volta. Repita para cada cilindro.",
+      "⚠️ **Importante**: Troque todas as velas ao mesmo tempo. Velas erradas podem danificar o motor.",
+    ],
+    "transmission_fluid": [
+      "1️⃣ **Preparação**: Estacione em superfície plana e aqueça o veículo até a temperatura de operação normal.",
+      "2️⃣ **Localizar**: Encontre a vareta de transmissão (geralmente com tampa vermelha ou amarela próxima ao motor).",
+      "3️⃣ **Verificar nível**: Com o motor funcionando em ponto morto, retire a vareta, limpe, reinsira e retire novamente.",
+      "4️⃣ **Leitura**: O fluido deve estar entre as marcas de quente (HOT). Observe a cor - deve ser vermelho translúcido.",
+      "5️⃣ **Adicionar**: Se baixo, adicione fluido ATF do tipo especificado no manual através do tubo da vareta.",
+      "6️⃣ **Verificar novamente**: Adicione em pequenas quantidades, verificando o nível a cada adição.",
+      "7️⃣ **Teste**: Mova a alavanca por todas as posições (P, R, N, D) e verifique novamente o nível.",
+      "⚠️ **Crítico**: Fluido escuro ou com cheiro de queimado indica necessidade de troca completa por um profissional.",
+    ],
+    "power_steering": [
+      "1️⃣ **Segurança**: Desligue o motor e deixe esfriar. Estacione em superfície plana.",
+      "2️⃣ **Localizar**: Encontre o reservatório de direção hidráulica (geralmente com tampa marcada 'Power Steering').",
+      "3️⃣ **Verificar nível**: Remova a tampa e verifique o nível usando a vareta integrada ou marcações no reservatório.",
+      "4️⃣ **Leitura**: Com motor frio, deve estar na marca 'COLD'. Com motor quente, na marca 'HOT'.",
+      "5️⃣ **Inspecionar fluido**: O fluido deve ser claro ou levemente âmbar. Se estiver escuro ou com espuma, há problema.",
+      "6️⃣ **Adicionar**: Se baixo, complete com o fluido especificado no manual (ATF ou fluido específico).",
+      "7️⃣ **Verificar vazamentos**: Inspecione as mangueiras e conexões da bomba de direção.",
+      "⚠️ **Atenção**: Nível muito baixo pode danificar a bomba. Procure vazamentos se precisar completar frequentemente.",
+    ],
   };
   
-  // Determinar qual conjunto de passos usar
+  // Determinar qual conjunto de passos usar - verificar tanto category quanto procedure
   const categoryLower = category.toLowerCase();
+  const procedureLower = procedure.toLowerCase();
+  const searchTerm = categoryLower + " " + procedureLower; // Combinar para busca mais flexível
   let steps: string[] = [];
   
-  if (categoryLower.includes("oil")) {
+  // Verificar primeiro procedimentos específicos, depois categorias
+  if (searchTerm.includes("spark") || searchTerm.includes("plug") || procedureLower.includes("ignition")) {
+    steps = categorySteps["spark_plug"];
+  } else if (searchTerm.includes("transmission") || searchTerm.includes("trans")) {
+    steps = categorySteps["transmission_fluid"];
+  } else if (searchTerm.includes("power") && searchTerm.includes("steering") || procedureLower.includes("steering")) {
+    steps = categorySteps["power_steering"];
+  } else if (searchTerm.includes("oil") || procedureLower.includes("oil")) {
     steps = categorySteps["oil"];
-  } else if (categoryLower.includes("batter")) {
+  } else if (searchTerm.includes("batter")) {
     steps = categorySteps["battery"];
-  } else if (categoryLower.includes("brake")) {
+  } else if (searchTerm.includes("brake")) {
     steps = categorySteps["brakes"];
-  } else if (categoryLower.includes("cabin") || categoryLower.includes("air_filter_cabin")) {
+  } else if (searchTerm.includes("cabin") || categoryLower.includes("air_filter_cabin")) {
     steps = categorySteps["cabin_air_filter"];
-  } else if (categoryLower.includes("air") || categoryLower.includes("filter")) {
+  } else if (searchTerm.includes("air") && searchTerm.includes("filter")) {
     steps = categorySteps["air_filter"];
-  } else if (categoryLower.includes("coolant") || categoryLower.includes("antifreeze")) {
+  } else if (searchTerm.includes("coolant") || searchTerm.includes("antifreeze")) {
     steps = categorySteps["coolant"];
-  } else if (categoryLower.includes("headlight") || categoryLower.includes("light") || categoryLower.includes("bulb")) {
+  } else if (searchTerm.includes("headlight") || categoryLower.includes("bulb")) {
     steps = categorySteps["headlight"];
-  } else if (categoryLower.includes("wiper")) {
+  } else if (searchTerm.includes("wiper")) {
     steps = categorySteps["wipers"];
-  } else if (categoryLower.includes("fuse")) {
+  } else if (searchTerm.includes("fuse")) {
     steps = categorySteps["fuse"];
   } else {
     // Passos genéricos
