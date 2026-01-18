@@ -14,22 +14,37 @@ import {
   Headphones,
   ArrowLeft,
   Shield,
+  Database,
+  Settings2,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAdminNotification } from "@/contexts/AdminNotificationContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import logo from "@/assets/images/logo-new-car.png";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-const baseMenuItems = [
+interface MenuItem {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  path: string;
+  isPro?: boolean;
+  showBadge?: boolean;
+}
+
+const baseMenuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Car, label: "Veículos", path: "/dashboard/vehicles" },
   { icon: Activity, label: "Diagnósticos", path: "/dashboard/diagnostics" },
   { icon: History, label: "Histórico", path: "/dashboard/history" },
+  { icon: Database, label: "Gravação de Dados", path: "/dashboard/data-recording", isPro: true },
+  { icon: Settings2, label: "Config. OBD", path: "/dashboard/obd-settings", isPro: true },
   { icon: GraduationCap, label: "Estude seu Carro", path: "/estude-seu-carro" },
   { icon: User, label: "Perfil", path: "/profile" },
   { icon: Headphones, label: "Suporte", path: "/dashboard/support" },
@@ -42,9 +57,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const { unreadCount } = useAdminNotification();
+  const { isPro } = useSubscription();
 
   // Build menu items dynamically based on admin status
-  const menuItems = isAdmin 
+  const menuItems: MenuItem[] = isAdmin 
     ? [...baseMenuItems, { icon: Shield, label: "Admin", path: "/admin", showBadge: true }]
     : baseMenuItems;
 
@@ -79,7 +95,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
-              const showNotificationBadge = 'showBadge' in item && item.showBadge && unreadCount > 0;
+              const showNotificationBadge = item.showBadge && unreadCount > 0;
+              const showProBadge = item.isPro && !isPro;
               return (
                 <li key={item.path}>
                   <Link
@@ -91,7 +108,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     }`}
                   >
                     <item.icon className="w-5 h-5" />
-                    <span>{item.label}</span>
+                    <span className="flex-1">{item.label}</span>
+                    {showProBadge && (
+                      <Badge variant="secondary" className="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0">
+                        <Crown className="w-3 h-3 mr-0.5" />
+                        PRO
+                      </Badge>
+                    )}
                     {showNotificationBadge && (
                       <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -153,7 +176,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <ul className="space-y-2">
                 {menuItems.map((item) => {
                   const isActive = location.pathname === item.path;
-                  const showNotificationBadge = 'showBadge' in item && item.showBadge && unreadCount > 0;
+                  const showNotificationBadge = item.showBadge && unreadCount > 0;
+                  const showProBadge = item.isPro && !isPro;
                   return (
                     <li key={item.path}>
                       <Link
@@ -166,13 +190,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         }`}
                       >
                         <item.icon className="w-5 h-5" />
-                        <span>{item.label}</span>
+                        <span className="flex-1">{item.label}</span>
+                        {showProBadge && (
+                          <Badge variant="secondary" className="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0">
+                            <Crown className="w-3 h-3 mr-0.5" />
+                            PRO
+                          </Badge>
+                        )}
                         {showNotificationBadge ? (
-                          <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse">
+                          <span className="bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse">
                             {unreadCount > 9 ? '9+' : unreadCount}
                           </span>
                         ) : (
-                          <ChevronRight className="w-4 h-4 ml-auto" />
+                          <ChevronRight className="w-4 h-4" />
                         )}
                       </Link>
                     </li>
