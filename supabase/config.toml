@@ -12,16 +12,7 @@ verify_jwt = false
 [functions.fetch-solution]
 verify_jwt = false
 
-[functions.search-tutorials]
-verify_jwt = false
-
-[functions.fetch-tutorial]
-verify_jwt = false
-
 [functions.send-system-alert]
-verify_jwt = false
-
-[functions.carcare-api]
 verify_jwt = false
 
 [functions.cache-admin]
@@ -31,4 +22,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.check-kpi-alerts]
+verify_jwt = false
+
+[functions.tutorial-proxy]
 verify_jwt = false
