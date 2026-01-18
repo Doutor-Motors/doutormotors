@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database, Bell, History } from "lucide-react";
+import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database, Bell, History, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import DataDeletionSection from "@/components/profile/DataDeletionSection";
 import NotificationSettings from "@/components/profile/NotificationSettings";
 import AlertsHistorySection from "@/components/profile/AlertsHistorySection";
 import PushNotificationManager from "@/components/notifications/PushNotificationManager";
+import ChartPreferencesSection from "@/components/profile/ChartPreferencesSection";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Tables } from "@/integrations/supabase/types";
@@ -194,7 +195,7 @@ const UserProfile = () => {
 
         {/* Tabs for Profile and Settings */}
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="profile" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
               <User className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Perfil</span>
@@ -206,6 +207,10 @@ const UserProfile = () => {
             <TabsTrigger value="notifications" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
               <Bell className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Notif.</span>
+            </TabsTrigger>
+            <TabsTrigger value="charts" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
+              <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Gráficos</span>
             </TabsTrigger>
             <TabsTrigger value="privacy" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
               <Database className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -348,6 +353,10 @@ const UserProfile = () => {
             {user && (
               <NotificationSettings userId={user.id} />
             )}
+          </TabsContent>
+
+          <TabsContent value="charts" className="mt-6">
+            <ChartPreferencesSection />
           </TabsContent>
 
           <TabsContent value="privacy" className="mt-6">

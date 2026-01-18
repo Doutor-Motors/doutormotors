@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useUsageTracking, UsageType, USAGE_LIMITS } from '@/hooks/useUsageTracking';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useChartPreferences, ChartType } from '@/hooks/useChartPreferences';
 import {
   BarChart,
   Bar,
@@ -39,12 +41,13 @@ const USAGE_CONFIG: Record<UsageType, { label: string; color: string; icon: type
 const COLORS = ['hsl(var(--primary))', 'hsl(217, 91%, 60%)', 'hsl(142, 76%, 36%)', 'hsl(280, 87%, 55%)'];
 
 interface UsageChartProps {
-  variant?: 'bar' | 'radial' | 'pie';
+  variant?: ChartType;
   showLegend?: boolean;
   height?: number;
+  showTypeSelector?: boolean;
 }
 
-export function UsageChart({ variant = 'radial', showLegend = true, height = 300 }: UsageChartProps) {
+export function UsageChart({ variant, showLegend = true, height = 300, showTypeSelector = false }: UsageChartProps) {
   const { 
     getUsageCount, 
     getLimit, 
@@ -52,6 +55,10 @@ export function UsageChart({ variant = 'radial', showLegend = true, height = 300
     currentMonthYear,
   } = useUsageTracking();
   const { currentPlan, isPro } = useSubscription();
+  const { chartType, setChartType } = useChartPreferences();
+  
+  // Use prop variant if provided, otherwise use user preference
+  const activeVariant = variant ?? chartType;
 
   const usageTypes: UsageType[] = ['diagnostics', 'coding_executions', 'data_recordings', 'ai_queries'];
 
@@ -144,7 +151,7 @@ export function UsageChart({ variant = 'radial', showLegend = true, height = 300
   };
 
   const renderChart = () => {
-    switch (variant) {
+    switch (activeVariant) {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -231,7 +238,7 @@ export function UsageChart({ variant = 'radial', showLegend = true, height = 300
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
@@ -241,19 +248,52 @@ export function UsageChart({ variant = 'radial', showLegend = true, height = 300
               {currentMonthYear.split('-').reverse().join('/')} • Plano {isPro ? 'Pro' : 'Basic'}
             </CardDescription>
           </div>
-          {alerts.length > 0 && !isPro && (
-            <Badge variant="destructive" className="gap-1">
-              <AlertTriangle className="h-3 w-3" />
-              {alerts.length} alerta{alerts.length > 1 ? 's' : ''}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {showTypeSelector && (
+              <div className="flex gap-1">
+                <Button
+                  variant={activeVariant === 'radial' ? 'default' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setChartType('radial')}
+                  title="Gráfico Radial"
+                >
+                  <Activity className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={activeVariant === 'bar' ? 'default' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setChartType('bar')}
+                  title="Gráfico de Barras"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={activeVariant === 'pie' ? 'default' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setChartType('pie')}
+                  title="Gráfico de Pizza"
+                >
+                  <PieChartIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            {alerts.length > 0 && !isPro && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                {alerts.length} alerta{alerts.length > 1 ? 's' : ''}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
         {renderChart()}
         
         {/* Legend with icons for radial chart */}
-        {variant === 'radial' && (
+        {activeVariant === 'radial' && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-4 border-t">
             {usageTypes.map((type, index) => {
               const config = USAGE_CONFIG[type];
