@@ -105,6 +105,9 @@ class AdminReportGenerator extends PDFBaseGenerator {
     // USO DIÁRIO
     this.addDailyUsageSection();
 
+    // MARCA D'ÁGUA
+    this.addWatermark();
+
     // RODAPÉS
     this.addFooters("Relatório Administrativo");
 

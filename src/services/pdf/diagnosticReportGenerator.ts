@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
+import logoWatermark from '@/assets/images/logo-watermark.png';
 export interface DiagnosticItemData {
   dtc_code: string;
   description_human: string;
@@ -129,7 +129,7 @@ function drawHeader(doc: jsPDF, yPos: number, pageWidth: number, margin: number)
   // Subtitle
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('CarCare Diagnóstico Veicular', margin, 28);
+  doc.text('Doutor Motors - Diagnóstico Automotivo Inteligente', margin, 28);
   
   // Date on right side
   doc.setFontSize(9);
@@ -515,7 +515,7 @@ function drawDisclaimer(
 As informações são fornecidas apenas para fins informativos e não substituem uma avaliação profissional.
 
 Para problemas críticos de segurança (freios, direção, airbags), SEMPRE consulte um mecânico qualificado.
-O CarCare Diagnóstico não se responsabiliza por danos decorrentes de reparos feitos sem supervisão profissional.
+O Doutor Motors não se responsabiliza por danos decorrentes de reparos feitos sem supervisão profissional.
 
 Este documento foi gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} e reflete os dados disponíveis no momento da análise.`;
   
@@ -523,6 +523,49 @@ Este documento foi gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} e r
   doc.text(lines, margin + 5, yPos + 14);
   
   return yPos + 50;
+}
+
+/**
+ * Draws watermark on all pages
+ */
+function drawWatermark(doc: jsPDF, pageWidth: number, pageHeight: number): void {
+  const pageCount = doc.getNumberOfPages();
+  const centerX = pageWidth / 2;
+  const centerY = pageHeight / 2;
+  
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    
+    // Adiciona o logo como marca d'água
+    const logoWidth = 80;
+    const logoHeight = 40;
+    
+    try {
+      doc.addImage(
+        logoWatermark,
+        'PNG',
+        centerX - logoWidth / 2,
+        centerY - logoHeight / 2 - 10,
+        logoWidth,
+        logoHeight,
+        undefined,
+        'FAST'
+      );
+    } catch (e) {
+      console.log('Watermark image could not be loaded');
+    }
+    
+    // Texto "Doutor Motors"
+    doc.setTextColor(200, 200, 200);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Doutor Motors', centerX, centerY + 30, { align: 'center' });
+    
+    // Subtexto
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Diagnóstico Automotivo Inteligente', centerX, centerY + 40, { align: 'center' });
+  }
 }
 
 /**
@@ -536,6 +579,9 @@ function drawFooter(
 ): void {
   const pageCount = doc.getNumberOfPages();
   
+  // Primeiro adiciona a marca d'água em todas as páginas
+  drawWatermark(doc, pageWidth, pageHeight);
+  
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     
@@ -543,14 +589,14 @@ function drawFooter(
     doc.setTextColor(...COLORS.gray);
     doc.setFont('helvetica', 'normal');
     
-    // Left: CarCare branding
-    doc.text('CarCare Diagnóstico Veicular', margin, pageHeight - 10);
+    // Left: Doutor Motors branding
+    doc.text('Doutor Motors - Diagnóstico Automotivo', margin, pageHeight - 10);
     
     // Center: Page number
     doc.text(`Página ${i} de ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
     
     // Right: Website
-    doc.text('www.carcare.app', pageWidth - margin, pageHeight - 10, { align: 'right' });
+    doc.text('www.doutormotors.com.br', pageWidth - margin, pageHeight - 10, { align: 'right' });
     
     // Line separator
     doc.setDrawColor(...COLORS.lightGray);

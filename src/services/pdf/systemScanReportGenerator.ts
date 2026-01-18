@@ -178,6 +178,9 @@ class SystemScanReportGenerator extends PDFBaseGenerator {
     this.addPageHeader("Varredura do Sistema - Doutor Motors");
     this.addRecommendationsSection();
 
+    // MARCA D'ÁGUA
+    this.addWatermark();
+
     // RODAPÉS
     this.addFooters("Relatório de Varredura");
 

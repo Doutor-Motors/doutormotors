@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import logoWatermark from "@/assets/images/logo-watermark.png";
 
 // ============================================
 // MODELO PADRÃO DE PDF - DOUTOR MOTORS
@@ -380,6 +381,58 @@ export class PDFBaseGenerator {
     this.currentY += height;
     if (this.needsNewPage(0)) {
       this.addNewPage();
+    }
+  }
+
+  // Adiciona marca d'água em todas as páginas
+  protected addWatermark(): void {
+    const pageCount = this.doc.getNumberOfPages();
+    const pageWidth = PDF_LAYOUT.pageWidth;
+    const pageHeight = PDF_LAYOUT.pageHeight;
+    
+    for (let i = 1; i <= pageCount; i++) {
+      this.doc.setPage(i);
+      
+      // Configuração da marca d'água central
+      const centerX = pageWidth / 2;
+      const centerY = pageHeight / 2;
+      
+      // Adiciona a imagem do logo como marca d'água (semi-transparente via opacity)
+      // jsPDF não suporta opacity diretamente, então usamos uma abordagem visual
+      this.doc.saveGraphicsState();
+      
+      // Adiciona o logo (usando addImage com dimensões proporcionais)
+      const logoWidth = 80;
+      const logoHeight = 40;
+      
+      try {
+        this.doc.addImage(
+          logoWatermark, 
+          "PNG", 
+          centerX - logoWidth / 2, 
+          centerY - logoHeight / 2 - 10, 
+          logoWidth, 
+          logoHeight,
+          undefined,
+          "FAST"
+        );
+      } catch (e) {
+        // Se a imagem falhar, continua sem ela
+        console.log("Watermark image could not be loaded");
+      }
+      
+      // Adiciona texto "Doutor Motors" abaixo do logo
+      this.doc.setTextColor(200, 200, 200); // Cinza claro para marca d'água
+      this.doc.setFontSize(24);
+      this.doc.setFont("helvetica", "bold");
+      this.doc.text("Doutor Motors", centerX, centerY + 30, { align: "center" });
+      
+      // Adiciona texto secundário
+      this.doc.setFontSize(10);
+      this.doc.setFont("helvetica", "normal");
+      this.doc.text("Diagnóstico Automotivo Inteligente", centerX, centerY + 40, { align: "center" });
+      
+      this.doc.restoreGraphicsState();
     }
   }
 
