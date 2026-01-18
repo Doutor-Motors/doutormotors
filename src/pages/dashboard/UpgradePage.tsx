@@ -16,10 +16,13 @@ import {
   Activity,
   TrendingUp,
   Star,
+  CheckCircle,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { PlanCard } from "@/components/subscription/PlanCard";
+import { UserBadge } from "@/components/subscription/UserBadge";
 import { useSubscription, PlanType } from "@/hooks/useSubscription";
+import { useUserTier } from "@/hooks/useUserTier";
 import { USAGE_LIMITS } from "@/hooks/useUsageTracking";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -107,7 +110,8 @@ const TESTIMONIALS = [
 ];
 
 export default function UpgradePage() {
-  const { currentPlan, isLoading } = useSubscription();
+  const { currentPlan, isLoading, isPro, isAdmin } = useSubscription();
+  const { tier, tierConfig } = useUserTier();
   const [activeTab, setActiveTab] = useState("benefits");
 
   const handleSelectPlan = async (plan: PlanType) => {
@@ -140,6 +144,10 @@ export default function UpgradePage() {
       <div className="space-y-8 max-w-6xl mx-auto">
         {/* Hero Section */}
         <div className="text-center space-y-4 py-8">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <span className="text-muted-foreground">Seu plano atual:</span>
+            <UserBadge size="lg" />
+          </div>
           <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">
             <Crown className="h-3 w-3 mr-1" />
             Upgrade para Pro
@@ -153,14 +161,28 @@ export default function UpgradePage() {
           </p>
         </div>
 
-        {/* Alerta de Desenvolvimento */}
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Sistema de Pagamento em Desenvolvimento</AlertTitle>
-          <AlertDescription>
-            A integração com Stripe está sendo implementada. Em breve você poderá assinar o plano Pro.
-          </AlertDescription>
-        </Alert>
+        {/* Alerta de Status Atual */}
+        {isPro || isAdmin ? (
+          <Alert className="border-emerald-500/30 bg-emerald-500/10">
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
+            <AlertTitle className="text-emerald-500">
+              {isAdmin ? "Acesso Administrador" : "Plano Pro Ativo"}
+            </AlertTitle>
+            <AlertDescription>
+              {isAdmin 
+                ? "Como administrador, você tem acesso completo a todos os recursos da plataforma."
+                : "Você já possui acesso a todos os recursos Pro. Aproveite!"}
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Sistema de Pagamento em Desenvolvimento</AlertTitle>
+            <AlertDescription>
+              A integração com Stripe está sendo implementada. Em breve você poderá assinar o plano Pro.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Plan Cards */}
         <div className="grid md:grid-cols-2 gap-6">

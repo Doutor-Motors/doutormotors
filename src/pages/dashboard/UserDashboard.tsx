@@ -24,8 +24,10 @@ import { useAppStore } from "@/store/useAppStore";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useLegalConsent } from "@/hooks/useLegalConsent";
 import { useOBDConnection } from "@/components/obd/useOBDConnection";
+import { useUserTier } from "@/hooks/useUserTier";
 import TermsAcceptanceModal from "@/components/legal/TermsAcceptanceModal";
 import SystemAlertsBanner from "@/components/notifications/SystemAlertsBanner";
+import { UserBadge } from "@/components/subscription/UserBadge";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Vehicle = Tables<"vehicles">;
@@ -43,6 +45,7 @@ const UserDashboard = () => {
   const { activeVehicleId, setActiveVehicleId } = useAppStore();
   const { notifyInfo, notifyWarning, notifyCriticalAlert } = useNotifications();
   const { hasAcceptedTerms, isLoading: isLoadingConsent, refetch: refetchConsent } = useLegalConsent(user?.id);
+  const { tier, isLoading: tierLoading, tierConfig } = useUserTier();
   
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
@@ -199,9 +202,12 @@ const UserDashboard = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase text-foreground">
-              Dashboard
-            </h1>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase text-foreground">
+                Dashboard
+              </h1>
+              <UserBadge size="md" />
+            </div>
             <p className="text-muted-foreground">
               Bem-vindo de volta! Aqui está o resumo do seu veículo.
             </p>
