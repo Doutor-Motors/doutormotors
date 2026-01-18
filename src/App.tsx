@@ -39,7 +39,6 @@ import AdminAlerts from "./pages/admin/AdminAlerts";
 import NotFound from "./pages/NotFound";
 import TechnicalReport from "./pages/TechnicalReport";
 import StudyCarPage from "./pages/StudyCarPage";
-import TutorialDetailPage from "./pages/TutorialDetailPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import FAQPage from "./pages/FAQPage";
@@ -106,7 +105,6 @@ const App = () => (
                 <Route path="/dashboard/coding/history" element={<ProtectedRoute><CodingHistoryPage /></ProtectedRoute>} />
                 <Route path="/dashboard/permissions" element={<ProtectedRoute><PermissionsDiagnostic /></ProtectedRoute>} />
                 <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
-                <Route path="/estude-seu-carro/:slug" element={<ProtectedRoute><TutorialDetailPage /></ProtectedRoute>} />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
                 
                 {/* Admin Routes */}
