@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface CarCareRequest {
-  action: "brands" | "models" | "videos" | "video-details" | "search";
+  action: "brands" | "models" | "videos" | "video-details" | "search" | "scan-and-cache" | "get-cached" | "list-categories";
   brand?: string;
   model?: string;
   year?: string;
@@ -689,6 +689,75 @@ Deno.serve(async (req) => {
         );
       }
 
+      case "scan-and-cache": {
+        if (!brand || !model) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Brand and model are required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        if (useStaticOnly) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Firecrawl API key required for scanning" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        const result = await scanAndCacheProcedures(FIRECRAWL_API_KEY, brand, model, year || new Date().getFullYear().toString());
+        return new Response(
+          JSON.stringify({ success: true, ...result }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "get-cached": {
+        // Get procedures from cache for a specific vehicle
+        const supabase = getSupabaseClient();
+        let query = supabase
+          .from("carcare_procedure_cache")
+          .select("*")
+          .gt("expires_at", new Date().toISOString());
+        
+        if (brand) query = query.eq("brand", brand);
+        if (model) query = query.eq("model", model);
+        if (year) query = query.eq("year", year);
+        
+        const { data, error } = await query.order("category").order("procedure_name");
+        
+        if (error) {
+          return new Response(
+            JSON.stringify({ success: false, error: error.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "list-categories": {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from("carcare_categories")
+          .select("*")
+          .order("name_en");
+        
+        if (error) {
+          return new Response(
+            JSON.stringify({ success: false, error: error.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ success: false, error: "Invalid action" }),
@@ -1215,6 +1284,76 @@ async function fetchAllVideosFromModelPage(
     console.error("[ModelVideosIndex] Error:", error);
     return null;
   }
+}
+
+// ============================================================================
+// NOVA FUNÇÃO: Escanear e salvar procedimentos no cache do banco de dados
+// ============================================================================
+async function scanAndCacheProcedures(
+  apiKey: string,
+  brand: string,
+  model: string,
+  year: string
+): Promise<{ proceduresFound: number; categoriesFound: number; cached: number }> {
+  console.log(`[ScanAndCache] Starting scan for ${year} ${brand} ${model}...`);
+  
+  // Buscar todos os vídeos da página do modelo
+  const modelVideosIndex = await fetchAllVideosFromModelPage(apiKey, brand, model, year);
+  
+  if (!modelVideosIndex || modelVideosIndex.totalCount === 0) {
+    console.log("[ScanAndCache] No procedures found from model page");
+    return { proceduresFound: 0, categoriesFound: 0, cached: 0 };
+  }
+  
+  const supabase = getSupabaseClient();
+  const categories = new Set<string>();
+  let cached = 0;
+  
+  // Preparar dados para upsert
+  const proceduresToCache = modelVideosIndex.procedures.map(proc => {
+    categories.add(proc.categorySlug);
+    
+    return {
+      brand: brand,
+      model: model,
+      year: year,
+      procedure_id: proc.procedureSlug,
+      procedure_name: proc.procedure,
+      procedure_name_pt: translateCategoryName(proc.procedure),
+      category: proc.categorySlug,
+      video_url: proc.url,
+      thumbnail_url: proc.thumbnail || null,
+      source_url: modelVideosIndex.vehicleUrl,
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 dias
+    };
+  });
+  
+  // Upsert em lotes de 50
+  const batchSize = 50;
+  for (let i = 0; i < proceduresToCache.length; i += batchSize) {
+    const batch = proceduresToCache.slice(i, i + batchSize);
+    
+    const { error } = await supabase
+      .from("carcare_procedure_cache")
+      .upsert(batch, { 
+        onConflict: "brand,model,year,procedure_id",
+        ignoreDuplicates: false 
+      });
+    
+    if (error) {
+      console.error("[ScanAndCache] Error caching batch:", error);
+    } else {
+      cached += batch.length;
+    }
+  }
+  
+  console.log(`[ScanAndCache] Cached ${cached} procedures in ${categories.size} categories`);
+  
+  return {
+    proceduresFound: modelVideosIndex.totalCount,
+    categoriesFound: categories.size,
+    cached,
+  };
 }
 
 // Converter o índice de vídeos do modelo para o formato de categorias

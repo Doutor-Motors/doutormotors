@@ -56,6 +56,87 @@ export type Database = {
         }
         Relationships: []
       }
+      carcare_categories: {
+        Row: {
+          category_id: string
+          created_at: string
+          icon: string | null
+          id: string
+          keywords: string[] | null
+          name_en: string
+          name_pt: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          keywords?: string[] | null
+          name_en: string
+          name_pt: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          keywords?: string[] | null
+          name_en?: string
+          name_pt?: string
+        }
+        Relationships: []
+      }
+      carcare_procedure_cache: {
+        Row: {
+          brand: string
+          category: string
+          discovered_at: string
+          expires_at: string
+          id: string
+          model: string
+          procedure_id: string
+          procedure_name: string
+          procedure_name_pt: string | null
+          source_url: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          video_url: string | null
+          year: string | null
+        }
+        Insert: {
+          brand: string
+          category: string
+          discovered_at?: string
+          expires_at?: string
+          id?: string
+          model: string
+          procedure_id: string
+          procedure_name: string
+          procedure_name_pt?: string | null
+          source_url?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_url?: string | null
+          year?: string | null
+        }
+        Update: {
+          brand?: string
+          category?: string
+          discovered_at?: string
+          expires_at?: string
+          id?: string
+          model?: string
+          procedure_id?: string
+          procedure_name?: string
+          procedure_name_pt?: string | null
+          source_url?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_url?: string | null
+          year?: string | null
+        }
+        Relationships: []
+      }
       coding_executions: {
         Row: {
           category: string
