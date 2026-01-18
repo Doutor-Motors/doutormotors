@@ -72,9 +72,18 @@ const VideoView = ({
   onModelClick,
   onProceduresClick,
 }: VideoViewProps) => {
+  // Verificar se é uma URL de vídeo MP4 (CloudFront ou outro CDN)
+  const isMP4Video = (url: string | undefined): boolean => {
+    if (!url) return false;
+    return url.includes('.mp4') || url.includes('cloudfront.net');
+  };
+
   // Extrair YouTube video ID
   const getYouTubeEmbedUrl = (url: string | undefined): string | null => {
     if (!url) return null;
+    
+    // Se for MP4, não é YouTube
+    if (isMP4Video(url)) return null;
 
     // Se já é uma URL de embed
     if (url.includes("/embed/")) {
@@ -203,16 +212,31 @@ const VideoView = ({
                 ) : videoDetails?.videoUrl ? (
                   <>
                     <AspectRatio ratio={16 / 9}>
-                      <iframe
-                        src={
-                          getYouTubeEmbedUrl(videoDetails.videoUrl) ||
-                          videoDetails.videoUrl
-                        }
-                        title={videoDetails.title || selectedCategory.name}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
+                      {isMP4Video(videoDetails.videoUrl) ? (
+                        // Player nativo para vídeos MP4 (CloudFront)
+                        <video
+                          src={videoDetails.videoUrl}
+                          title={videoDetails.title || selectedCategory.name}
+                          className="w-full h-full bg-black"
+                          controls
+                          preload="metadata"
+                          playsInline
+                        >
+                          Seu navegador não suporta vídeos HTML5.
+                        </video>
+                      ) : (
+                        // Iframe para YouTube
+                        <iframe
+                          src={
+                            getYouTubeEmbedUrl(videoDetails.videoUrl) ||
+                            videoDetails.videoUrl
+                          }
+                          title={videoDetails.title || selectedCategory.name}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      )}
                     </AspectRatio>
                     <div className="p-4 bg-gradient-to-r from-primary/5 to-transparent">
                       <h2 className="font-chakra font-bold text-lg">
