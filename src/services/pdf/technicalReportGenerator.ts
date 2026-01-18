@@ -391,7 +391,7 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
     this.addTable({
       headers: ["Serviço", "Propósito", "Secret"],
       data: [
-        ["Lovable AI", "IA para diagnósticos e soluções", "LOVABLE_API_KEY"],
+        ["Motor IA Automotiva", "IA para diagnósticos e soluções", "AI_ENGINE_KEY"],
         ["Resend", "Envio de e-mails transacionais", "RESEND_API_KEY"],
         ["ElevenLabs", "Síntese de voz (acessibilidade)", "ELEVENLABS_API_KEY"],
         ["Firecrawl", "Web scraping para tutoriais", "FIRECRAWL_API_KEY"],
@@ -500,7 +500,7 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
         ["SUPABASE_URL", "URL do projeto Supabase"],
         ["SUPABASE_ANON_KEY", "Chave pública para cliente"],
         ["SUPABASE_SERVICE_ROLE_KEY", "Chave de serviço para edge functions"],
-        ["LOVABLE_API_KEY", "API Lovable AI para diagnósticos"],
+        ["AI_ENGINE_KEY", "API de IA para diagnósticos"],
         ["RESEND_API_KEY", "API Resend para envio de e-mails"],
         ["ELEVENLABS_API_KEY", "API ElevenLabs para síntese de voz"],
         ["FIRECRAWL_API_KEY", "API Firecrawl para web scraping"],
@@ -533,7 +533,7 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
     this.addBulletList([
       "1. Usuário conecta adaptador OBD-II via Bluetooth ou WiFi",
       "2. Sistema envia comandos ELM327 e lê códigos DTC do veículo",
-      "3. Edge function 'diagnose' processa os códigos com IA Lovable",
+      "3. Edge function 'diagnose' processa os códigos com motor de IA",
       "4. Dados são salvos nas tabelas diagnostics e diagnostic_items",
       "5. Relatório é gerado e exibido ao usuário",
       "6. usage_tracking é incrementado para controle de limites",
@@ -633,16 +633,16 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
     this.addTable({
       headers: ["Função", "Método", "Propósito", "Secrets"],
       data: [
-        ["diagnose", "POST", "Análise de códigos DTC com IA", "LOVABLE_API_KEY"],
-        ["fetch-solution", "POST", "Busca soluções para DTCs", "LOVABLE_API_KEY, FIRECRAWL_API_KEY"],
-        ["fetch-tutorial", "POST", "Busca tutoriais detalhados", "LOVABLE_API_KEY"],
-        ["search-tutorials", "POST", "Pesquisa de tutoriais", "LOVABLE_API_KEY"],
+        ["diagnose", "POST", "Análise de códigos DTC com IA", "AI_ENGINE_KEY"],
+        ["fetch-solution", "POST", "Busca soluções para DTCs", "AI_ENGINE_KEY, FIRECRAWL_API_KEY"],
+        ["fetch-tutorial", "POST", "Busca tutoriais detalhados", "AI_ENGINE_KEY"],
+        ["search-tutorials", "POST", "Pesquisa de tutoriais", "AI_ENGINE_KEY"],
         ["send-contact-email", "POST", "Envio de emails de contato", "RESEND_API_KEY"],
         ["send-notification", "POST", "Envio de notificações", "RESEND_API_KEY"],
         ["send-system-alert", "POST", "Envio de alertas do sistema", "RESEND_API_KEY"],
         ["send-usage-alert", "POST", "Alertas de limite de uso", "RESEND_API_KEY"],
         ["cache-admin", "POST", "Administração do cache", "-"],
-        ["carcare-api", "POST", "API de cuidados com veículos", "LOVABLE_API_KEY"],
+        ["carcare-api", "POST", "API de cuidados com veículos", "AI_ENGINE_KEY"],
         ["check-kpi-alerts", "POST", "Verificação de KPIs", "-"],
       ],
       fontSize: 7,

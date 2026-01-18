@@ -1158,7 +1158,7 @@ const StudyCarPage = () => {
                                         <ul className="list-disc list-inside mt-2 space-y-1">
                                           <li>Baixar e transcrever o áudio do vídeo novamente</li>
                                           <li>Gerar novos passos detalhados com IA</li>
-                                          <li>Consumir créditos de API (ElevenLabs + Lovable AI)</li>
+                                          <li>Consumir créditos de API (ElevenLabs + Motor IA)</li>
                                         </ul>
                                         <p className="mt-3 text-sm">
                                           Use apenas se os passos atuais parecem incorretos ou incompletos.

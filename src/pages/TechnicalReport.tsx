@@ -538,7 +538,7 @@ const TechnicalReport = () => {
           <h3 className="font-bold mt-4 mb-2">5.1 Supabase</h3>
           <table className="w-full border-collapse border border-gray-300 text-sm mb-4">
             <tbody>
-              <tr><td className="border border-gray-300 p-2 bg-gray-50 w-1/4 font-semibold">Serviço</td><td className="border border-gray-300 p-2">Supabase (Lovable Cloud)</td></tr>
+              <tr><td className="border border-gray-300 p-2 bg-gray-50 w-1/4 font-semibold">Serviço</td><td className="border border-gray-300 p-2">Supabase Cloud</td></tr>
               <tr><td className="border border-gray-300 p-2 bg-gray-50 font-semibold">Propósito</td><td className="border border-gray-300 p-2">Banco de dados, autenticação, edge functions</td></tr>
               <tr><td className="border border-gray-300 p-2 bg-gray-50 font-semibold">Autenticação</td><td className="border border-gray-300 p-2">JWT Bearer Token</td></tr>
               <tr><td className="border border-gray-300 p-2 bg-gray-50 font-semibold">Cliente</td><td className="border border-gray-300 p-2">@supabase/supabase-js v2.90.1</td></tr>
@@ -555,12 +555,12 @@ const TechnicalReport = () => {
             </tbody>
           </table>
 
-          <h3 className="font-bold mt-4 mb-2">5.3 Lovable AI API</h3>
+          <h3 className="font-bold mt-4 mb-2">5.3 Motor de IA Automotiva</h3>
           <table className="w-full border-collapse border border-gray-300 text-sm mb-4">
             <tbody>
               <tr><td className="border border-gray-300 p-2 bg-gray-50 w-1/4 font-semibold">Propósito</td><td className="border border-gray-300 p-2">Análise de códigos DTC com IA</td></tr>
               <tr><td className="border border-gray-300 p-2 bg-gray-50 font-semibold">Endpoint</td><td className="border border-gray-300 p-2">Via Edge Function 'diagnose'</td></tr>
-              <tr><td className="border border-gray-300 p-2 bg-gray-50 font-semibold">Secret</td><td className="border border-gray-300 p-2">LOVABLE_API_KEY</td></tr>
+              <tr><td className="border border-gray-300 p-2 bg-gray-50 font-semibold">Secret</td><td className="border border-gray-300 p-2">AI_ENGINE_KEY</td></tr>
             </tbody>
           </table>
 
@@ -677,7 +677,7 @@ const TechnicalReport = () => {
               <tr><td className="border border-gray-300 p-2">SUPABASE_URL</td><td className="border border-gray-300 p-2">URL do projeto Supabase</td></tr>
               <tr><td className="border border-gray-300 p-2">SUPABASE_ANON_KEY</td><td className="border border-gray-300 p-2">Chave pública anônima</td></tr>
               <tr><td className="border border-gray-300 p-2">SUPABASE_SERVICE_ROLE_KEY</td><td className="border border-gray-300 p-2">Chave admin (apenas edge functions)</td></tr>
-              <tr><td className="border border-gray-300 p-2">LOVABLE_API_KEY</td><td className="border border-gray-300 p-2">API de IA para diagnósticos</td></tr>
+              <tr><td className="border border-gray-300 p-2">AI_ENGINE_KEY</td><td className="border border-gray-300 p-2">API de IA para diagnósticos</td></tr>
             </tbody>
           </table>
 
@@ -1058,7 +1058,7 @@ supabase/
               <tr><td className="p-1 font-semibold">Estado Global:</td><td className="p-1">Zustand + React Context + React Query</td></tr>
               <tr><td className="p-1 font-semibold">Framework:</td><td className="p-1">React 18 + Vite + TypeScript</td></tr>
               <tr><td className="p-1 font-semibold">Estilização:</td><td className="p-1">Tailwind CSS + shadcn/ui</td></tr>
-              <tr><td className="p-1 font-semibold">Backend:</td><td className="p-1">Supabase (Lovable Cloud)</td></tr>
+              <tr><td className="p-1 font-semibold">Backend:</td><td className="p-1">Supabase Cloud</td></tr>
               <tr><td className="p-1 font-semibold">Status:</td><td className="p-1 text-green-600 font-bold">✅ MVP Funcional e Estável</td></tr>
             </tbody>
           </table>
