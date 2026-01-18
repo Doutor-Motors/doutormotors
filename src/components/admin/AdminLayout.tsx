@@ -17,6 +17,7 @@ import {
   Bell,
   Ticket,
   ArrowLeft,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +31,7 @@ interface AdminLayoutProps {
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: Users, label: "Usuários", path: "/admin/users" },
+  { icon: CreditCard, label: "Assinaturas", path: "/admin/subscriptions" },
   { icon: Car, label: "Veículos", path: "/admin/vehicles" },
   { icon: Activity, label: "Diagnósticos", path: "/admin/diagnostics" },
   { icon: Ticket, label: "Tickets", path: "/admin/tickets" },

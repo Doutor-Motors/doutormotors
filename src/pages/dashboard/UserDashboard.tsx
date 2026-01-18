@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { UsageDisplay } from "@/components/dashboard/UsageDisplay";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppStore } from "@/store/useAppStore";
@@ -409,6 +410,9 @@ const UserDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Usage Display */}
+        <UsageDisplay />
 
         {/* Quick Actions */}
         <div className="grid md:grid-cols-3 gap-4">
