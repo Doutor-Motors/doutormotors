@@ -86,21 +86,41 @@ export function useSubscription() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const normalizePlanType = (value: unknown): PlanType => {
+    const v = String(value ?? "").trim().toLowerCase();
+    if (v === "pro" || v === "premium") return "pro";
+    return "basic";
+  };
+
+  const normalizeStatus = (value: unknown): Subscription["status"] => {
+    const v = String(value ?? "").trim().toLowerCase();
+    if (v === "active" || v === "ativo" || v === "trialing") return "active";
+    if (v === "cancelled" || v === "canceled" || v === "cancelado") return "cancelled";
+    if (v === "expired" || v === "expirado") return "expired";
+    // fallback para não quebrar gating em casos não mapeados
+    return "active";
+  };
+
   const { data: subscription, isLoading, error } = useQuery({
     queryKey: ["subscription", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
 
-      const { data, error } = await supabase
+      // Busca algumas entradas mais recentes e escolhe a primeira ativa.
+      // Isso evita bugs quando existem múltiplas linhas (historico de upgrades).
+      const { data: rows, error } = await supabase
         .from("user_subscriptions")
         .select("*")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .order("created_at", { ascending: false })
+        .limit(5);
 
       if (error) throw error;
-      
-      // Se não tem assinatura, retorna plano básico
-      if (!data) {
+
+      const activeRow = (rows || []).find((r) => normalizeStatus((r as any).status) === "active");
+
+      // Se não tem assinatura ativa, retorna plano básico
+      if (!activeRow) {
         return {
           id: "",
           user_id: user.id,
@@ -115,7 +135,11 @@ export function useSubscription() {
         };
       }
 
-      return data as Subscription;
+      return {
+        ...(activeRow as any),
+        plan_type: normalizePlanType((activeRow as any).plan_type),
+        status: normalizeStatus((activeRow as any).status),
+      } as Subscription;
     },
     enabled: !!user?.id,
   });
@@ -124,13 +148,40 @@ export function useSubscription() {
     mutationFn: async (planType: PlanType) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
+      // Evita criar múltiplas assinaturas (isso quebra o .maybeSingle e o gating)
+      const { data: lastRow, error: lastError } = await supabase
+        .from("user_subscriptions")
+        .select("id")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastError) throw lastError;
+
+      const payload = {
+        user_id: user.id,
+        plan_type: planType,
+        status: "active" as const,
+        started_at: new Date().toISOString(),
+        expires_at: null,
+      };
+
+      if (lastRow?.id) {
+        const { data, error } = await supabase
+          .from("user_subscriptions")
+          .update(payload)
+          .eq("id", lastRow.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+
       const { data, error } = await supabase
         .from("user_subscriptions")
-        .insert({
-          user_id: user.id,
-          plan_type: planType,
-          status: "active",
-        })
+        .insert(payload)
         .select()
         .single();
 

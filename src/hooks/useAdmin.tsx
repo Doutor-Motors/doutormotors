@@ -15,7 +15,12 @@ export const useAdmin = (): AdminData => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const checkAdminRole = async () => {
+      // Wait auth hydration
+      if (authLoading) return;
+
       if (!user) {
         setIsAdmin(false);
         setUserRole(null);
@@ -23,34 +28,41 @@ export const useAdmin = (): AdminData => {
         return;
       }
 
-      try {
-        const { data, error } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .single();
+      setLoading(true);
 
-        if (error) {
-          console.error("Error checking admin role:", error);
-          setIsAdmin(false);
-          setUserRole(null);
-        } else {
-          setIsAdmin(data?.role === "admin");
-          setUserRole(data?.role || null);
+      try {
+        // Prefer RPC to avoid RLS/multi-row issues on user_roles
+        const { data, error } = await supabase.rpc("has_role", {
+          _role: "admin",
+          _user_id: user.id,
+        });
+
+        if (error) throw error;
+
+        const admin = Boolean(data);
+
+        if (!cancelled) {
+          setIsAdmin(admin);
+          setUserRole(admin ? "admin" : "user");
         }
-      } catch (err) {
-        console.error("Error checking admin role:", err);
-        setIsAdmin(false);
-        setUserRole(null);
+      } catch {
+        if (!cancelled) {
+          setIsAdmin(false);
+          setUserRole("user");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    if (!authLoading) {
-      checkAdminRole();
-    }
-  }, [user, authLoading]);
+    checkAdminRole();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, authLoading]);
 
   return { isAdmin, loading: loading || authLoading, userRole };
 };
