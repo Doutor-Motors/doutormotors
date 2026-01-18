@@ -1707,6 +1707,27 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'inner tie rod': ['inner tie rod', 'tie rod', 'inner tie', 'rack end'],
           'outer tie rod': ['outer tie rod', 'tie rod', 'outer tie', 'tie rod end'],
           'steering linkage': ['tie rod', 'steering linkage', 'steering', 'linkage'],
+          // Sway bar link - NEW
+          'sway bar': ['sway bar', 'stabilizer', 'anti-roll bar', 'sway bar link', 'stabilizer link', 'end link'],
+          'sway bar link': ['sway bar link', 'stabilizer link', 'end link', 'sway bar', 'link'],
+          'stabilizer link': ['stabilizer link', 'sway bar link', 'stabilizer', 'end link'],
+          'stabilizer bar': ['stabilizer bar', 'sway bar', 'stabilizer', 'anti-roll bar'],
+          // Strut - NEW
+          'strut': ['strut', 'shock', 'strut assembly', 'suspension strut', 'front strut', 'rear strut', 'macpherson strut'],
+          'strut assembly': ['strut assembly', 'strut', 'shock absorber', 'suspension'],
+          'front strut': ['front strut', 'strut', 'front suspension', 'front shock'],
+          'rear strut': ['rear strut', 'strut', 'rear suspension', 'rear shock'],
+          // Shock absorber - NEW
+          'shock absorber': ['shock absorber', 'shock', 'absorber', 'damper', 'suspension shock'],
+          'shock': ['shock', 'shock absorber', 'damper', 'absorber', 'suspension'],
+          'rear shock': ['rear shock', 'shock absorber', 'rear shock absorber', 'shock'],
+          'front shock': ['front shock', 'shock absorber', 'front shock absorber', 'shock'],
+          // Coil spring - NEW
+          'coil spring': ['coil spring', 'spring', 'suspension spring', 'front spring', 'rear spring'],
+          'spring': ['spring', 'coil spring', 'suspension spring', 'coil'],
+          'suspension spring': ['suspension spring', 'coil spring', 'spring', 'coil'],
+          'front spring': ['front spring', 'coil spring', 'front coil spring', 'spring'],
+          'rear spring': ['rear spring', 'coil spring', 'rear coil spring', 'spring'],
         };
         
         // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
@@ -2431,6 +2452,59 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
       "🔟 **Contrapino**: Instale contrapino novo se o tipo de porca exigir.",
       "⚠️ **Importante**: Mesmo mantendo as medidas, faça alinhamento para garantir desgaste uniforme dos pneus.",
     ],
+    // NOVAS CATEGORIAS: Suspensão e Amortecimento
+    "sway_bar_link": [
+      "1️⃣ **Preparação**: Levante o veículo e apoie em cavaletes. Remova a roda do lado a ser trabalhado.",
+      "2️⃣ **Localização**: Identifique o link da barra estabilizadora - conecta a barra à torre do amortecedor ou bandeja.",
+      "3️⃣ **Acesso**: Em alguns veículos pode ser necessário remover proteções ou partes do para-lama interno.",
+      "4️⃣ **Contra-giro**: Use uma chave Allen no centro do pino enquanto solta a porca (evita girar junto).",
+      "5️⃣ **Porca superior**: Remova a porca que prende o link à torre do amortecedor ou carroceria.",
+      "6️⃣ **Porca inferior**: Remova a porca que prende o link à barra estabilizadora.",
+      "7️⃣ **Remoção**: Retire o link antigo. Verifique as buchas por desgaste ou rachaduras.",
+      "8️⃣ **Comparação**: O novo link deve ter o mesmo comprimento. Links ajustáveis devem ser configurados.",
+      "9️⃣ **Instalação**: Posicione o link novo e instale as porcas sem apertar totalmente.",
+      "🔟 **Aperto final**: Aperte as porcas com torque especificado (geralmente 40-60 Nm).",
+      "⚠️ **Dica**: Links desgastados causam barulho nas curvas e instabilidade. Troque sempre aos pares.",
+    ],
+    "strut": [
+      "1️⃣ **Segurança**: O conjunto do amortecedor dianteiro está sob tensão da mola. Cuidado extremo!",
+      "2️⃣ **Preparação**: Afrouxe as porcas da torre do amortecedor (3 porcas no cofre do motor) SEM REMOVER.",
+      "3️⃣ **Levantar**: Levante o veículo e remova a roda. Apoie a manga de eixo.",
+      "4️⃣ **Desconectar**: Remova o sensor ABS e linha de freio do suporte do amortecedor (se houver).",
+      "5️⃣ **Parafuso inferior**: Remova o(s) parafuso(s) que prendem o amortecedor à manga de eixo.",
+      "6️⃣ **Separar**: Use alavanca para separar a manga do amortecedor. Cuidado para não danificar componentes.",
+      "7️⃣ **Porcas superiores**: Agora remova completamente as 3 porcas da torre no cofre do motor.",
+      "8️⃣ **Remoção**: Retire o conjunto completo (amortecedor + mola). É pesado!",
+      "9️⃣ **Compressor de mola**: Se reutilizar a mola, use compressor de molas para desmontar com segurança.",
+      "🔟 **Montagem**: Monte o novo conjunto e instale na ordem inversa. Aperte tudo com torque correto.",
+      "⚠️ **PERIGO**: Nunca tente desmontar a mola sem compressor adequado - risco de acidente grave!",
+    ],
+    "shock_absorber": [
+      "1️⃣ **Verificação**: Amortecedores traseiros geralmente não têm mola integrada - mais simples que os dianteiros.",
+      "2️⃣ **Acesso superior**: Localize a fixação superior (geralmente no porta-malas ou sob bancos traseiros).",
+      "3️⃣ **Levantar**: Levante o veículo e apoie em cavaletes. A suspensão deve ficar livre (pendurada).",
+      "4️⃣ **Parafuso inferior**: Remova o parafuso que prende o amortecedor ao eixo ou braço da suspensão.",
+      "5️⃣ **Fixação superior**: Remova a porca superior. Use chave Allen se o pino girar junto.",
+      "6️⃣ **Remoção**: Comprima o amortecedor e retire-o por baixo do veículo.",
+      "7️⃣ **Comparação**: Verifique se o novo tem o mesmo comprimento (comprimido e estendido) e fixações.",
+      "8️⃣ **Preparação**: Comprima o novo amortecedor várias vezes para remover ar interno.",
+      "9️⃣ **Instalação**: Posicione o amortecedor novo. Instale a fixação superior primeiro.",
+      "🔟 **Aperto**: Conecte a fixação inferior com a suspensão em posição de trabalho. Aperte com torque correto.",
+      "⚠️ **Dica**: Sempre troque amortecedores aos pares (esquerdo e direito) para manter equilíbrio.",
+    ],
+    "coil_spring": [
+      "1️⃣ **PERIGO**: Molas de suspensão estão sob altíssima tensão. Serviço requer ferramentas especiais!",
+      "2️⃣ **Compressor**: Você PRECISA de um compressor de molas profissional. Não improvise!",
+      "3️⃣ **Levantar**: Levante o veículo e remova a roda. A suspensão deve ficar pendurada.",
+      "4️⃣ **Remover amortecedor**: Na maioria dos casos, é necessário remover o conjunto do amortecedor.",
+      "5️⃣ **Comprimir mola**: Instale o compressor de molas seguindo as instruções do fabricante.",
+      "6️⃣ **Tensão**: Comprima a mola até que haja folga suficiente para remover a tampa superior.",
+      "7️⃣ **Tampa superior**: Remova a porca central e a tampa/batente superior do amortecedor.",
+      "8️⃣ **Troca**: Retire a mola comprimida com cuidado. Instale a mola nova no compressor.",
+      "9️⃣ **Montagem**: Remonte o conjunto: mola, batente, coxim, rolamento e tampa superior.",
+      "🔟 **Liberar**: Solte lentamente o compressor. Verifique se a mola está corretamente assentada.",
+      "⚠️ **CRÍTICO**: Se não tiver experiência e ferramentas adequadas, deixe para um profissional!",
+    ],
   };
   
   // Determinar qual conjunto de passos usar - verificar tanto category quanto procedure
@@ -2441,7 +2515,10 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
   
   // Verificar primeiro procedimentos específicos, depois categorias
   // IMPORTANTE: Verificar categorias mais específicas ANTES das genéricas
-  if (searchTerm.includes("spark") || searchTerm.includes("plug") || procedureLower.includes("ignition")) {
+  // CRÍTICO: coil_spring contém "oil" como substring, então DEVE ser verificado ANTES de "oil"!
+  if (searchTerm.includes("coil_spring") || searchTerm.includes("coil spring") || searchTerm.includes("suspension spring") || procedureLower.includes("coil_spring") || procedureLower === "spring") {
+    steps = categorySteps["coil_spring"];
+  } else if (searchTerm.includes("spark") || searchTerm.includes("plug") || procedureLower.includes("ignition")) {
     steps = categorySteps["spark_plug"];
   } else if (searchTerm.includes("transmission") || searchTerm.includes("trans")) {
     steps = categorySteps["transmission_fluid"];
@@ -2490,6 +2567,12 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
     steps = categorySteps["ball_joint"];
   } else if (searchTerm.includes("tie rod") || searchTerm.includes("tie_rod") || searchTerm.includes("tierod") || searchTerm.includes("steering linkage") || procedureLower.includes("tie")) {
     steps = categorySteps["tie_rod"];
+  } else if (searchTerm.includes("sway bar") || searchTerm.includes("sway_bar") || searchTerm.includes("stabilizer link") || searchTerm.includes("end link") || searchTerm.includes("anti-roll") || procedureLower.includes("sway_bar") || procedureLower.includes("stabilizer")) {
+    steps = categorySteps["sway_bar_link"];
+  } else if (searchTerm.includes("strut") || searchTerm.includes("strut_assembly") || searchTerm.includes("macpherson") || procedureLower.includes("strut")) {
+    steps = categorySteps["strut"];
+  } else if (searchTerm.includes("shock_absorber") || searchTerm.includes("shock absorber") || searchTerm.includes("damper") || (procedureLower.includes("shock") && !searchTerm.includes("strut"))) {
+    steps = categorySteps["shock_absorber"];
   } else {
     // Passos genéricos
     steps = [
@@ -2574,6 +2657,18 @@ function formatProcedureTitle(procedure: string, vehicleContext?: string): strin
     "outer": "Externo",
     "linkage": "Articulação",
     "suspension": "Suspensão",
+    // Novas traduções - amortecedores e molas
+    "sway": "Barra Estabilizadora",
+    "stabilizer": "Estabilizador",
+    "link": "Bieleta",
+    "strut": "Amortecedor Dianteiro",
+    "assembly": "Conjunto",
+    "macpherson": "McPherson",
+    "shock": "Amortecedor",
+    "absorber": "Amortecedor",
+    "damper": "Amortecedor",
+    "coil": "Mola",
+    "spring": "Mola",
   };
   
   const words = procedure
