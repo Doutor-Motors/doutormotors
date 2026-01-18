@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ import {
   FileText,
   Loader2,
   Target,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import SystemUsageChart from "@/components/admin/SystemUsageChart";
@@ -30,8 +32,10 @@ import { KPIPanel } from "@/components/admin/KPIPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { generateAdminReport } from "@/services/pdf/adminReportGenerator";
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { toast as sonnerToast } from "sonner";
 
 interface Stats {
   totalUsers: number;
@@ -107,6 +111,64 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [usageLoading, setUsageLoading] = useState(true);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+
+  // Realtime subscription para atualização automática
+  const handleRealtimeChange = useCallback(({ table, eventType }: { table: string; eventType: string; new: any; old: any }) => {
+    console.log(`[Realtime] ${eventType} on ${table}`);
+    
+    // Atualizar dados conforme a tabela modificada
+    switch (table) {
+      case 'profiles':
+        fetchStats();
+        fetchTopUsers();
+        sonnerToast.info("📊 Dados de usuários atualizados", { duration: 2000 });
+        break;
+      case 'vehicles':
+        fetchStats();
+        sonnerToast.info("🚗 Dados de veículos atualizados", { duration: 2000 });
+        break;
+      case 'diagnostics':
+        fetchStats();
+        fetchRecentActivity();
+        fetchPeriodComparison();
+        sonnerToast.info("🔧 Diagnósticos atualizados", { duration: 2000 });
+        break;
+      case 'diagnostic_items':
+        fetchStats();
+        sonnerToast.info("⚠️ Itens de diagnóstico atualizados", { duration: 2000 });
+        break;
+      case 'user_subscriptions':
+        fetchSubscriptionStats();
+        fetchTopUsers();
+        sonnerToast.info("💳 Assinaturas atualizadas", { duration: 2000 });
+        break;
+      case 'data_recordings':
+        fetchPeriodComparison();
+        break;
+    }
+    
+    setIsRealtimeConnected(true);
+  }, []);
+
+  useRealtimeSubscription({
+    tables: [
+      { table: 'profiles', event: '*' },
+      { table: 'vehicles', event: '*' },
+      { table: 'diagnostics', event: '*' },
+      { table: 'diagnostic_items', event: '*' },
+      { table: 'user_subscriptions', event: '*' },
+      { table: 'data_recordings', event: '*' },
+    ],
+    onDataChange: handleRealtimeChange,
+    enabled: true,
+  });
+
+  // Marcar como conectado após mount
+  useEffect(() => {
+    const timer = setTimeout(() => setIsRealtimeConnected(true), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     fetchStats();
@@ -492,9 +554,22 @@ const AdminDashboard = () => {
             <h1 className="text-3xl font-bold font-chakra text-foreground">
               Painel Administrativo
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Visão geral do sistema Doutor Motors
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-muted-foreground">
+                Visão geral do sistema Doutor Motors
+              </p>
+              {isRealtimeConnected ? (
+                <Badge variant="outline" className="text-green-500 border-green-500/50 gap-1">
+                  <Wifi className="w-3 h-3" />
+                  Tempo Real
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 gap-1">
+                  <WifiOff className="w-3 h-3" />
+                  Conectando...
+                </Badge>
+              )}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
