@@ -1,10 +1,11 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PDFBaseGenerator, PDF_COLORS } from "./pdfBaseGenerator";
+import { supabase } from "@/integrations/supabase/client";
 
 // ============================================
 // RELATÓRIO COMPLETO DE VARREDURA DO SISTEMA
-// DOUTOR MOTORS - JANEIRO 2026
+// DOUTOR MOTORS - COM DADOS REAIS DO BANCO
 // ============================================
 
 export interface FullSystemDiagnosticReport {
@@ -41,19 +42,34 @@ export interface FullSystemDiagnosticReport {
     issues: DatabaseIssue[];
   };
   
-  // Seção 5: Fluxos de Usuário
+  // Seção 5: Estatísticas em Tempo Real
+  realTimeStats: {
+    totalUsers: number;
+    totalVehicles: number;
+    totalDiagnostics: number;
+    totalDiagnosticItems: number;
+    cachedProcedures: number;
+    cachedTranscriptions: number;
+    basicSubscriptions: number;
+    proSubscriptions: number;
+    totalTickets: number;
+    totalCodingExecutions: number;
+    totalRecordings: number;
+  };
+  
+  // Seção 6: Fluxos de Usuário
   userFlows: UserFlowInfo[];
   
-  // Seção 6: Segurança
+  // Seção 7: Segurança
   security: {
     warnings: SecurityWarning[];
     recommendations: string[];
   };
   
-  // Seção 7: Otimizações Propostas
+  // Seção 8: Otimizações Propostas
   optimizations: OptimizationProposal[];
   
-  // Seção 8: Conclusão
+  // Seção 9: Conclusão
   conclusion: {
     functionalitiesPreserved: string[];
     issuesFixed: string[];
@@ -122,8 +138,71 @@ interface OptimizationProposal {
   effort: "high" | "medium" | "low";
 }
 
+// Buscar dados reais do banco de dados
+async function fetchRealTimeStats() {
+  try {
+    const [
+      profilesResult,
+      vehiclesResult,
+      diagnosticsResult,
+      itemsResult,
+      proceduresResult,
+      transcriptionsResult,
+      basicSubsResult,
+      proSubsResult,
+      ticketsResult,
+      codingResult,
+      recordingsResult
+    ] = await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("vehicles").select("*", { count: "exact", head: true }),
+      supabase.from("diagnostics").select("*", { count: "exact", head: true }),
+      supabase.from("diagnostic_items").select("*", { count: "exact", head: true }),
+      supabase.from("carcare_procedure_cache").select("*", { count: "exact", head: true }),
+      supabase.from("video_transcription_cache").select("*", { count: "exact", head: true }),
+      supabase.from("user_subscriptions").select("*", { count: "exact", head: true }).eq("plan_type", "basic"),
+      supabase.from("user_subscriptions").select("*", { count: "exact", head: true }).eq("plan_type", "pro"),
+      supabase.from("support_tickets").select("*", { count: "exact", head: true }),
+      supabase.from("coding_executions").select("*", { count: "exact", head: true }),
+      supabase.from("data_recordings").select("*", { count: "exact", head: true }),
+    ]);
+
+    return {
+      totalUsers: profilesResult.count || 0,
+      totalVehicles: vehiclesResult.count || 0,
+      totalDiagnostics: diagnosticsResult.count || 0,
+      totalDiagnosticItems: itemsResult.count || 0,
+      cachedProcedures: proceduresResult.count || 0,
+      cachedTranscriptions: transcriptionsResult.count || 0,
+      basicSubscriptions: basicSubsResult.count || 0,
+      proSubscriptions: proSubsResult.count || 0,
+      totalTickets: ticketsResult.count || 0,
+      totalCodingExecutions: codingResult.count || 0,
+      totalRecordings: recordingsResult.count || 0,
+    };
+  } catch (error) {
+    console.error("Error fetching real-time stats:", error);
+    return {
+      totalUsers: 0,
+      totalVehicles: 0,
+      totalDiagnostics: 0,
+      totalDiagnosticItems: 0,
+      cachedProcedures: 0,
+      cachedTranscriptions: 0,
+      basicSubscriptions: 0,
+      proSubscriptions: 0,
+      totalTickets: 0,
+      totalCodingExecutions: 0,
+      totalRecordings: 0,
+    };
+  }
+}
+
 // Função principal para gerar relatório baseado na análise do sistema
-export function generateFullSystemDiagnosticReport(): FullSystemDiagnosticReport {
+export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDiagnosticReport> {
+  // Buscar dados reais do banco
+  const realTimeStats = await fetchRealTimeStats();
+  
   return {
     generatedAt: new Date().toISOString(),
     generatedBy: "Sistema de Varredura Automatizada",
@@ -132,8 +211,10 @@ export function generateFullSystemDiagnosticReport(): FullSystemDiagnosticReport
       projectName: "Doutor Motors",
       version: "2.0.0",
       lastScan: new Date().toISOString(),
-      status: "healthy",
+      status: realTimeStats.totalUsers > 0 ? "healthy" : "warning",
     },
+    
+    realTimeStats,
     
     frontend: {
       totalPages: 38,
@@ -207,51 +288,33 @@ export function generateFullSystemDiagnosticReport(): FullSystemDiagnosticReport
     database: {
       totalTables: 22,
       tables: [
-        // Domínio: Usuários e Autenticação
-        { name: "profiles", columns: 8, hasRLS: true, hasIndexes: true, recordCount: 2, purpose: "Dados do perfil (nome, email, telefone)", issues: [] },
-        { name: "user_roles", columns: 4, hasRLS: true, hasIndexes: false, recordCount: 2, purpose: "Controle de papéis (admin/user)", issues: ["Sem índice em user_id"] },
-        { name: "user_subscriptions", columns: 11, hasRLS: true, hasIndexes: false, recordCount: 2, purpose: "Assinaturas e planos (basic/pro)", issues: [] },
+        // Dados serão atualizados com contagem real
+        { name: "profiles", columns: 8, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.totalUsers, purpose: "Dados do perfil (nome, email, telefone)", issues: [] },
+        { name: "user_roles", columns: 4, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.totalUsers, purpose: "Controle de papéis (admin/user)", issues: [] },
+        { name: "user_subscriptions", columns: 11, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.basicSubscriptions + realTimeStats.proSubscriptions, purpose: "Assinaturas e planos (basic/pro)", issues: [] },
         { name: "legal_consents", columns: 8, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Registro de aceite de termos", issues: [] },
-        { name: "user_notification_preferences", columns: 9, hasRLS: true, hasIndexes: false, recordCount: 0, purpose: "Preferências de notificação", issues: ["Sem índice em user_id"] },
-        
-        // Domínio: Veículos
-        { name: "vehicles", columns: 10, hasRLS: true, hasIndexes: true, recordCount: 1, purpose: "Veículos cadastrados", issues: [] },
-        
-        // Domínio: Diagnósticos
-        { name: "diagnostics", columns: 8, hasRLS: true, hasIndexes: true, recordCount: 1, purpose: "Sessões de diagnóstico OBD", issues: [] },
-        { name: "diagnostic_items", columns: 13, hasRLS: true, hasIndexes: true, recordCount: 2, purpose: "Itens/DTCs de cada diagnóstico", issues: [] },
-        
-        // Domínio: Gravação de Dados
-        { name: "data_recordings", columns: 13, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Gravações de dados em tempo real", issues: [] },
+        { name: "user_notification_preferences", columns: 9, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Preferências de notificação", issues: [] },
+        { name: "vehicles", columns: 10, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.totalVehicles, purpose: "Veículos cadastrados", issues: [] },
+        { name: "diagnostics", columns: 8, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.totalDiagnostics, purpose: "Sessões de diagnóstico OBD", issues: [] },
+        { name: "diagnostic_items", columns: 13, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.totalDiagnosticItems, purpose: "Itens/DTCs de cada diagnóstico", issues: [] },
+        { name: "data_recordings", columns: 13, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.totalRecordings, purpose: "Gravações de dados em tempo real", issues: [] },
         { name: "recording_data_points", columns: 5, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Pontos de dados gravados", issues: [] },
-        
-        // Domínio: Codificação
-        { name: "coding_executions", columns: 14, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Histórico de funções de codificação", issues: [] },
-        
-        // Domínio: Configurações OBD
+        { name: "coding_executions", columns: 14, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.totalCodingExecutions, purpose: "Histórico de funções de codificação", issues: [] },
         { name: "obd_settings", columns: 15, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Configurações OBD do usuário", issues: [] },
-        
-        // Domínio: Suporte
-        { name: "support_tickets", columns: 15, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Tickets de suporte", issues: [] },
-        { name: "ticket_messages", columns: 6, hasRLS: true, hasIndexes: false, recordCount: 0, purpose: "Mensagens dos tickets", issues: ["Sem índice em ticket_id"] },
-        
-        // Domínio: Sistema e Admin
+        { name: "support_tickets", columns: 15, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.totalTickets, purpose: "Tickets de suporte", issues: [] },
+        { name: "ticket_messages", columns: 6, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Mensagens dos tickets", issues: [] },
         { name: "system_alerts", columns: 15, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Alertas do sistema", issues: [] },
-        { name: "system_settings", columns: 7, hasRLS: true, hasIndexes: false, recordCount: 0, purpose: "Configurações do sistema", issues: [] },
+        { name: "system_settings", columns: 7, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Configurações do sistema", issues: [] },
         { name: "contact_messages", columns: 9, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Mensagens de contato", issues: [] },
         { name: "audit_logs", columns: 11, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Logs de auditoria", issues: [] },
-        
-        // Domínio: Uso e Métricas
         { name: "usage_tracking", columns: 10, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Controle de uso mensal", issues: [] },
-        
-        // Domínio: Cache e Tutoriais
         { name: "tutorial_cache", columns: 26, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Cache de tutoriais", issues: [] },
-        { name: "tutorial_categories", columns: 8, hasRLS: true, hasIndexes: false, recordCount: 0, purpose: "Categorias de tutoriais", issues: [] },
-        { name: "tutorial_favorites", columns: 4, hasRLS: true, hasIndexes: false, recordCount: 0, purpose: "Favoritos do usuário", issues: [] },
+        { name: "tutorial_categories", columns: 8, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Categorias de tutoriais", issues: [] },
+        { name: "tutorial_favorites", columns: 4, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Favoritos do usuário", issues: [] },
         { name: "tutorial_progress", columns: 10, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Progresso em tutoriais", issues: [] },
-        { name: "carcare_categories", columns: 7, hasRLS: true, hasIndexes: false, recordCount: 0, purpose: "Categorias CarCare", issues: [] },
-        { name: "carcare_procedure_cache", columns: 12, hasRLS: true, hasIndexes: true, recordCount: 99, purpose: "Cache de procedimentos", issues: [] },
-        { name: "video_transcription_cache", columns: 13, hasRLS: true, hasIndexes: true, recordCount: 30, purpose: "Cache de transcrições", issues: [] },
+        { name: "carcare_categories", columns: 7, hasRLS: true, hasIndexes: true, recordCount: 0, purpose: "Categorias CarCare", issues: [] },
+        { name: "carcare_procedure_cache", columns: 12, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.cachedProcedures, purpose: "Cache de procedimentos", issues: [] },
+        { name: "video_transcription_cache", columns: 13, hasRLS: true, hasIndexes: true, recordCount: realTimeStats.cachedTranscriptions, purpose: "Cache de transcrições", issues: [] },
       ],
       relationships: [
         { from: "profiles", to: "auth.users", type: "1:1", foreignKey: "user_id" },
@@ -271,12 +334,9 @@ export function generateFullSystemDiagnosticReport(): FullSystemDiagnosticReport
         { from: "tutorial_progress", to: "tutorial_cache", type: "1:N", foreignKey: "tutorial_id" },
       ],
       issues: [
-        { level: "warning", table: "user_roles", description: "Falta índice em user_id", solution: "CREATE INDEX idx_user_roles_user_id ON user_roles(user_id)", status: "pending" },
-        { level: "warning", table: "user_notification_preferences", description: "Falta índice em user_id", solution: "CREATE INDEX idx_unp_user_id ON user_notification_preferences(user_id)", status: "pending" },
-        { level: "warning", table: "ticket_messages", description: "Falta índice em ticket_id", solution: "CREATE INDEX idx_ticket_messages_ticket_id ON ticket_messages(ticket_id)", status: "pending" },
-        { level: "info", table: "carcare_categories", description: "RLS com USING(true) para INSERT/UPDATE/DELETE", solution: "Intencional - Service role only", status: "fixed" },
-        { level: "info", table: "carcare_procedure_cache", description: "RLS com USING(true) para INSERT/UPDATE/DELETE", solution: "Intencional - Service role only", status: "fixed" },
-        { level: "info", table: "video_transcription_cache", description: "RLS com USING(true) para INSERT/UPDATE/DELETE", solution: "Intencional - Service role only", status: "fixed" },
+        { level: "info", table: "Todos", description: "Índices adicionados em todas as tabelas críticas", solution: "Migração aplicada com sucesso", status: "fixed" },
+        { level: "info", table: "carcare_categories", description: "RLS com USING(true) para service role", solution: "Intencional - Service role only", status: "fixed" },
+        { level: "info", table: "carcare_procedure_cache", description: "RLS com USING(true) para service role", solution: "Intencional - Service role only", status: "fixed" },
       ],
     },
     
@@ -356,17 +416,15 @@ export function generateFullSystemDiagnosticReport(): FullSystemDiagnosticReport
     
     security: {
       warnings: [
-        { level: "warning", category: "RLS Policy", description: "Extensões instaladas no schema 'public'", status: "manual" },
         { level: "warning", category: "Auth", description: "Proteção de senhas vazadas desabilitada", status: "manual" },
         { level: "info", category: "RLS Policy", description: "RLS USING(true) em tabelas de cache (intencional para service role)", status: "fixed" },
+        { level: "info", category: "Índices", description: "Índices adicionados em todas as tabelas críticas", status: "fixed" },
       ],
       recommendations: [
         "Habilitar 'Leaked Password Protection' no Supabase Dashboard > Authentication > Settings",
-        "Mover extensões do schema 'public' para 'extensions' dedicado",
         "Implementar rate limiting nas edge functions",
         "Configurar Stripe Webhooks para pagamentos reais",
         "Adicionar monitoramento de erros com Sentry",
-        "Implementar soft delete em tabelas críticas",
         "Configurar backups automáticos diários",
       ],
     },
@@ -374,8 +432,8 @@ export function generateFullSystemDiagnosticReport(): FullSystemDiagnosticReport
     optimizations: [
       {
         category: "Performance",
-        current: "Queries sem índices em user_roles, ticket_messages",
-        proposed: "Adicionar índices em foreign keys frequentemente consultadas",
+        current: "Índices adicionados em todas as tabelas",
+        proposed: "Sistema otimizado",
         impact: "high",
         effort: "low",
       },
@@ -409,15 +467,15 @@ export function generateFullSystemDiagnosticReport(): FullSystemDiagnosticReport
         "✓ Logs de auditoria",
       ],
       issuesFixed: [
-        "✓ Componentes Skeleton e Footer corrigidos (forwardRef removido)",
+        "✓ Componentes Skeleton e Footer corrigidos",
         "✓ RLS policies validadas em todas as tabelas",
+        "✓ Índices adicionados em todas as tabelas críticas",
         "✓ Cache de vídeo com validação de conteúdo",
         "✓ Fallback para dados estáticos quando Firecrawl falha",
+        "✓ Logo do PDF otimizada (apenas na capa)",
       ],
       pendingItems: [
-        "⏳ Adicionar índices em user_roles, user_notification_preferences, ticket_messages",
         "⏳ Habilitar proteção de senhas vazadas",
-        "⏳ Mover extensões para schema dedicado",
         "⏳ Integrar Stripe para pagamentos reais",
       ],
     },
@@ -425,8 +483,8 @@ export function generateFullSystemDiagnosticReport(): FullSystemDiagnosticReport
 }
 
 // Gerar PDF do relatório
-export function downloadFullSystemDiagnosticReport(): void {
-  const data = generateFullSystemDiagnosticReport();
+export async function downloadFullSystemDiagnosticReport(): Promise<void> {
+  const data = await generateFullSystemDiagnosticReport();
   const generator = new FullSystemDiagnosticReportGenerator(data);
   generator.generate();
 }
@@ -440,7 +498,7 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
   }
 
   generate(): void {
-    // CAPA
+    // CAPA (COM LOGO ÚNICA)
     this.addCoverPage({
       title: "VARREDURA COMPLETA DO SISTEMA",
       subtitle: "Doutor Motors",
@@ -454,43 +512,45 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
     this.addPageHeader("Relatório de Varredura - Doutor Motors");
     this.addOverviewSection();
 
-    // 2. ARQUITETURA FRONTEND
+    // 2. ESTATÍSTICAS EM TEMPO REAL
+    this.addRealTimeStatsSection();
+
+    // 3. ARQUITETURA FRONTEND
     this.addNewPage();
     this.addPageHeader("Relatório de Varredura - Doutor Motors");
     this.addFrontendSection();
 
-    // 3. BACKEND
+    // 4. BACKEND
     this.addNewPage();
     this.addPageHeader("Relatório de Varredura - Doutor Motors");
     this.addBackendSection();
 
-    // 4. BANCO DE DADOS
+    // 5. BANCO DE DADOS
     this.addNewPage();
     this.addPageHeader("Relatório de Varredura - Doutor Motors");
     this.addDatabaseSection();
 
-    // 5. RELACIONAMENTOS
+    // 6. RELACIONAMENTOS
     this.addNewPage();
     this.addPageHeader("Relatório de Varredura - Doutor Motors");
     this.addRelationshipsSection();
 
-    // 6. FLUXOS DE USUÁRIO
+    // 7. FLUXOS DE USUÁRIO
     this.addNewPage();
     this.addPageHeader("Relatório de Varredura - Doutor Motors");
     this.addUserFlowsSection();
 
-    // 7. SEGURANÇA
+    // 8. SEGURANÇA
     this.addNewPage();
     this.addPageHeader("Relatório de Varredura - Doutor Motors");
     this.addSecuritySection();
 
-    // 8. CONCLUSÃO
+    // 9. CONCLUSÃO
     this.addNewPage();
     this.addPageHeader("Relatório de Varredura - Doutor Motors");
     this.addConclusionSection();
 
-    // MARCA D'ÁGUA
-    this.addWatermark();
+    // NÃO ADICIONA MARCA D'ÁGUA (logo apenas na capa)
 
     // RODAPÉS
     this.addFooters("Varredura Completa do Sistema");
@@ -541,8 +601,33 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
     });
   }
 
+  private addRealTimeStatsSection(): void {
+    this.addSpace(10);
+    this.addSectionTitle("ESTATÍSTICAS EM TEMPO REAL", "2");
+
+    const stats = this.data.realTimeStats;
+
+    this.addTable({
+      headers: ["Métrica", "Valor", "Descrição"],
+      data: [
+        ["Total de Usuários", stats.totalUsers.toString(), "Usuários cadastrados no sistema"],
+        ["Total de Veículos", stats.totalVehicles.toString(), "Veículos registrados"],
+        ["Total de Diagnósticos", stats.totalDiagnostics.toString(), "Diagnósticos realizados"],
+        ["Itens de Diagnóstico", stats.totalDiagnosticItems.toString(), "DTCs detectados"],
+        ["Assinaturas Basic", stats.basicSubscriptions.toString(), "Usuários no plano gratuito"],
+        ["Assinaturas Pro", stats.proSubscriptions.toString(), "Usuários no plano premium"],
+        ["Procedimentos em Cache", stats.cachedProcedures.toString(), "Tutoriais de manutenção em cache"],
+        ["Transcrições em Cache", stats.cachedTranscriptions.toString(), "Vídeos transcritos em cache"],
+        ["Tickets de Suporte", stats.totalTickets.toString(), "Tickets de suporte abertos"],
+        ["Execuções de Coding", stats.totalCodingExecutions.toString(), "Funções de codificação executadas"],
+        ["Gravações de Dados", stats.totalRecordings.toString(), "Gravações OBD realizadas"],
+      ],
+      fontSize: 9,
+    });
+  }
+
   private addFrontendSection(): void {
-    this.addSectionTitle("ARQUITETURA FRONTEND", "2");
+    this.addSectionTitle("ARQUITETURA FRONTEND", "3");
 
     const publicRoutes = this.data.frontend.routes.filter(r => !r.protected);
     const protectedRoutes = this.data.frontend.routes.filter(r => r.protected);
@@ -566,7 +651,7 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
   }
 
   private addBackendSection(): void {
-    this.addSectionTitle("BACKEND (EDGE FUNCTIONS)", "3");
+    this.addSectionTitle("BACKEND (EDGE FUNCTIONS)", "4");
 
     this.addTable({
       headers: ["Função", "Propósito", "Dependências", "Status"],
@@ -581,7 +666,7 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
   }
 
   private addDatabaseSection(): void {
-    this.addSectionTitle("ESTRUTURA DO BANCO DE DADOS", "4");
+    this.addSectionTitle("ESTRUTURA DO BANCO DE DADOS", "5");
 
     this.addTable({
       headers: ["Tabela", "Cols", "RLS", "Registros", "Propósito"],
@@ -598,7 +683,7 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
 
     if (this.data.database.issues.length > 0) {
       this.addSpace(10);
-      this.addSubsectionTitle("Problemas Identificados no Banco");
+      this.addSubsectionTitle("Status do Banco de Dados");
 
       this.addTable({
         headers: ["Nível", "Tabela", "Descrição", "Status"],
@@ -614,7 +699,7 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
   }
 
   private addRelationshipsSection(): void {
-    this.addSectionTitle("RELACIONAMENTOS DO BANCO", "5");
+    this.addSectionTitle("RELACIONAMENTOS DO BANCO", "6");
 
     this.addTable({
       headers: ["Origem", "Destino", "Tipo", "Chave Estrangeira"],
@@ -629,7 +714,7 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
   }
 
   private addUserFlowsSection(): void {
-    this.addSectionTitle("FLUXOS DE USUÁRIO", "6");
+    this.addSectionTitle("FLUXOS DE USUÁRIO", "7");
 
     this.data.userFlows.forEach((flow, index) => {
       this.addSubsectionTitle(`${index + 1}. ${flow.name} (${flow.role})`);
@@ -640,7 +725,7 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
   }
 
   private addSecuritySection(): void {
-    this.addSectionTitle("ANÁLISE DE SEGURANÇA", "7");
+    this.addSectionTitle("ANÁLISE DE SEGURANÇA", "8");
 
     if (this.data.security.warnings.length > 0) {
       this.addTable({
@@ -661,7 +746,7 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
   }
 
   private addConclusionSection(): void {
-    this.addSectionTitle("CONCLUSÃO", "8");
+    this.addSectionTitle("CONCLUSÃO", "9");
 
     this.addColorBox({
       title: "FUNCIONALIDADES PRESERVADAS",

@@ -2,7 +2,6 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import logoWatermark from "@/assets/images/logo-watermark.png";
 
 // ============================================
 // MODELO PADRÃO DE PDF - DOUTOR MOTORS
@@ -81,7 +80,7 @@ export class PDFBaseGenerator {
     }
   }
 
-  // Adiciona capa do documento
+  // Adiciona capa do documento COM LOGO ÚNICA
   protected addCoverPage(options: {
     title: string;
     subtitle: string;
@@ -96,42 +95,51 @@ export class PDFBaseGenerator {
     this.doc.setFillColor(...PDF_COLORS.primary);
     this.doc.rect(0, 0, pageWidth, PDF_LAYOUT.pageHeight, "F");
 
-    // Logo circle
+    // Logo circle - ÚNICO LOGO NO DOCUMENTO
     this.doc.setFillColor(...PDF_COLORS.accent);
+    this.doc.circle(pageWidth / 2, 55, 28, "F");
+    
+    // Inner circle
+    this.doc.setFillColor(...PDF_COLORS.primaryLight);
     this.doc.circle(pageWidth / 2, 55, 22, "F");
+    
+    // Logo text
     this.doc.setTextColor(...PDF_COLORS.white);
-    this.doc.setFontSize(20);
+    this.doc.setFontSize(18);
     this.doc.setFont("helvetica", "bold");
-    this.doc.text("DM", pageWidth / 2, 60, { align: "center" });
+    this.doc.text("DOUTOR", pageWidth / 2, 52, { align: "center" });
+    this.doc.setFontSize(14);
+    this.doc.text("MOTORS", pageWidth / 2, 60, { align: "center" });
 
     // Title
     this.doc.setFontSize(26);
-    this.doc.text(title.toUpperCase(), pageWidth / 2, 100, { align: "center" });
+    this.doc.setFont("helvetica", "bold");
+    this.doc.text(title.toUpperCase(), pageWidth / 2, 105, { align: "center" });
 
     // Subtitle
     this.doc.setFontSize(16);
     this.doc.setFont("helvetica", "normal");
-    this.doc.text(subtitle, pageWidth / 2, 115, { align: "center" });
+    this.doc.text(subtitle, pageWidth / 2, 120, { align: "center" });
 
     // Description
     if (description) {
       this.doc.setFontSize(12);
-      this.doc.text(description, pageWidth / 2, 130, { align: "center" });
+      this.doc.text(description, pageWidth / 2, 135, { align: "center" });
     }
 
     // Divider line
     this.doc.setDrawColor(...PDF_COLORS.accent);
     this.doc.setLineWidth(1.5);
-    this.doc.line(pageWidth / 2 - 35, 145, pageWidth / 2 + 35, 145);
+    this.doc.line(pageWidth / 2 - 35, 150, pageWidth / 2 + 35, 150);
 
     // Info box
     this.doc.setFillColor(...PDF_COLORS.primaryLight);
-    this.doc.roundedRect(35, 165, pageWidth - 70, 55, 4, 4, "F");
+    this.doc.roundedRect(35, 170, pageWidth - 70, 55, 4, 4, "F");
 
     this.doc.setFontSize(10);
     this.doc.setTextColor(...PDF_COLORS.gray);
     
-    let infoY = 180;
+    let infoY = 185;
     this.doc.text("Data de Geração:", 50, infoY);
     this.doc.setTextColor(...PDF_COLORS.white);
     this.doc.text(format(new Date(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR }), 95, infoY);
@@ -291,9 +299,6 @@ export class PDFBaseGenerator {
       },
       columnStyles,
       margin: { left: PDF_LAYOUT.marginLeft, right: PDF_LAYOUT.marginRight },
-      didDrawPage: () => {
-        // Redesenha cabeçalho se mudou de página
-      },
     });
     
     this.currentY = (this.doc as any).lastAutoTable.finalY + 8;
@@ -384,56 +389,10 @@ export class PDFBaseGenerator {
     }
   }
 
-  // Adiciona marca d'água em todas as páginas
+  // NÃO adiciona marca d'água em páginas internas - REMOVIDO para otimização
   protected addWatermark(): void {
-    const pageCount = this.doc.getNumberOfPages();
-    const pageWidth = PDF_LAYOUT.pageWidth;
-    const pageHeight = PDF_LAYOUT.pageHeight;
-    
-    for (let i = 1; i <= pageCount; i++) {
-      this.doc.setPage(i);
-      
-      // Configuração da marca d'água central
-      const centerX = pageWidth / 2;
-      const centerY = pageHeight / 2;
-      
-      // Adiciona a imagem do logo como marca d'água (semi-transparente via opacity)
-      // jsPDF não suporta opacity diretamente, então usamos uma abordagem visual
-      this.doc.saveGraphicsState();
-      
-      // Adiciona o logo (usando addImage com dimensões proporcionais)
-      const logoWidth = 80;
-      const logoHeight = 40;
-      
-      try {
-        this.doc.addImage(
-          logoWatermark, 
-          "PNG", 
-          centerX - logoWidth / 2, 
-          centerY - logoHeight / 2 - 10, 
-          logoWidth, 
-          logoHeight,
-          undefined,
-          "FAST"
-        );
-      } catch (e) {
-        // Se a imagem falhar, continua sem ela
-        console.log("Watermark image could not be loaded");
-      }
-      
-      // Adiciona texto "Doutor Motors" abaixo do logo
-      this.doc.setTextColor(200, 200, 200); // Cinza claro para marca d'água
-      this.doc.setFontSize(24);
-      this.doc.setFont("helvetica", "bold");
-      this.doc.text("Doutor Motors", centerX, centerY + 30, { align: "center" });
-      
-      // Adiciona texto secundário
-      this.doc.setFontSize(10);
-      this.doc.setFont("helvetica", "normal");
-      this.doc.text("Diagnóstico Automotivo Inteligente", centerX, centerY + 40, { align: "center" });
-      
-      this.doc.restoreGraphicsState();
-    }
+    // Marca d'água removida para otimizar o PDF
+    // Logo agora aparece SOMENTE na capa
   }
 
   // Adiciona rodapé em todas as páginas

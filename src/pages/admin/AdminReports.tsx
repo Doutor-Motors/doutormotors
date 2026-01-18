@@ -57,18 +57,17 @@ const AdminReports = () => {
         { name: "Concluído", value: statusCounts.completed },
       ]);
 
-      // Fetch diagnostic items by priority
+      // Fetch diagnostic items by priority - USANDO PRIORIDADES CORRETAS DO SISTEMA
       const { data: items } = await supabase
         .from("diagnostic_items")
         .select("priority, created_at")
         .gte("created_at", startDate.toISOString());
 
+      // Prioridades corretas: critical, attention, preventive (definidas no enum diagnostic_priority)
       const priorityCounts: Record<string, number> = {
         critical: 0,
-        urgent: 0,
         attention: 0,
-        normal: 0,
-        low: 0,
+        preventive: 0,
       };
 
       items?.forEach((i) => {
@@ -79,10 +78,8 @@ const AdminReports = () => {
 
       setDiagnosticsByPriority([
         { name: "Crítico", value: priorityCounts.critical },
-        { name: "Urgente", value: priorityCounts.urgent },
         { name: "Atenção", value: priorityCounts.attention },
-        { name: "Normal", value: priorityCounts.normal },
-        { name: "Baixo", value: priorityCounts.low },
+        { name: "Preventivo", value: priorityCounts.preventive },
       ]);
 
       // Fetch registrations trend
