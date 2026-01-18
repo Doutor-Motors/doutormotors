@@ -940,7 +940,9 @@ async function fetchAllVideosFromModelPage(
     console.log(`[ModelVideosIndex] Fetching all videos index for ${year} ${brand} ${model}...`);
     
     let html = "";
+    let markdown = "";
     let successfulUrl = "";
+    const yearStr = year;
     
     for (const url of urlFormats) {
       try {
@@ -964,8 +966,9 @@ async function fetchAllVideosFromModelPage(
           
           if (isValidPage(fetchedMarkdown, fetchedHtml) && fetchedHtml.length > 1000) {
             html = fetchedHtml;
+            markdown = fetchedMarkdown;
             successfulUrl = url;
-            console.log(`[ModelVideosIndex] Successfully fetched from ${url} (${html.length} chars)`);
+            console.log(`[ModelVideosIndex] Successfully fetched from ${url} (${html.length} chars, ${markdown.length} chars markdown)`);
             break;
           }
         }
@@ -979,20 +982,65 @@ async function fetchAllVideosFromModelPage(
       return null;
     }
     
-    // Extrair TODOS os procedimentos da página
+    // Função auxiliar para categorizar procedimentos automaticamente
+    const categorizeProcedure = (procName: string): string => {
+      const p = procName.toLowerCase();
+      
+      // Mapeamento de palavras-chave para categorias
+      const categoryKeywords: Record<string, string[]> = {
+        "oil": ["oil", "motor oil", "oil filter", "oil change", "oil drain"],
+        "battery": ["battery", "jump", "starter", "alternator"],
+        "air_filter_engine": ["air filter engine", "engine air filter", "engine filter"],
+        "air_filter_cabin": ["air filter cabin", "cabin filter", "cabin air"],
+        "brakes": ["brake", "pad", "rotor", "caliper"],
+        "coolant": ["coolant", "antifreeze", "radiator", "thermostat", "water pump"],
+        "headlight": ["headlight", "headlamp", "bulb", "front light"],
+        "taillight": ["taillight", "tail light", "brake light", "rear light", "turn signal"],
+        "fog_light": ["fog light", "fog lamp"],
+        "windshield": ["windshield", "wiper", "washer", "washer fluid"],
+        "tire": ["tire", "wheel", "spare", "flat"],
+        "fuse": ["fuse", "fuse box", "electrical"],
+        "spark_plug": ["spark plug", "ignition", "coil"],
+        "transmission": ["transmission", "trans fluid", "atf", "gearbox"],
+        "power_steering": ["power steering", "steering fluid", "steering pump"],
+        "suspension": ["suspension", "shock", "strut", "spring", "sway bar", "control arm", "ball joint"],
+        "exhaust": ["exhaust", "muffler", "catalytic", "oxygen sensor"],
+        "fuel": ["fuel", "fuel pump", "fuel filter", "gas"],
+        "belt": ["belt", "serpentine", "timing"],
+        "engine": ["engine", "motor", "valve", "gasket"],
+        "ac": ["air conditioning", "a/c", "ac", "freon", "recharge"],
+        "horn": ["horn"],
+        "door": ["door", "lock", "window", "handle"],
+      };
+      
+      for (const [category, keywords] of Object.entries(categoryKeywords)) {
+        for (const keyword of keywords) {
+          if (p.includes(keyword)) {
+            return category;
+          }
+        }
+      }
+      
+      return "maintenance"; // Categoria genérica
+    };
+    
+    // Extrair TODOS os procedimentos da página usando MÚLTIPLOS padrões
     const procedures: ModelVideosIndex["procedures"] = [];
     const seen = new Set<string>();
-    
-    // Padrão 1: Links de procedimentos no formato /video/Vehicle/Category/Procedure
-    // Ex: /video/2019_Honda_Civic_2.0L_4_Cyl./oil/change
-    const procedurePattern1 = /href="((?:https?:\/\/www\.carcarekiosk\.com)?\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"/gi;
     let match;
     
-    while ((match = procedurePattern1.exec(html)) !== null) {
-      const [, urlPath, categorySlug, procedureSlug] = match;
+    // Função auxiliar para adicionar procedimento de forma segura
+    const addProcedure = (categorySlug: string, procedureSlug: string, urlPath: string, thumbnail?: string) => {
       const key = `${categorySlug}_${procedureSlug}`.toLowerCase();
       
-      if (!seen.has(key) && procedureSlug && categorySlug) {
+      // Filtrar entradas inválidas
+      if (!categorySlug || !procedureSlug) return;
+      if (categorySlug.length < 2 || procedureSlug.length < 2) return;
+      if (categorySlug.includes('svg') || procedureSlug.includes('svg')) return;
+      if (categorySlug.includes('img') || procedureSlug.includes('img')) return;
+      if (categorySlug.includes('icon') || procedureSlug.includes('icon')) return;
+      
+      if (!seen.has(key)) {
         seen.add(key);
         
         const fullUrl = urlPath.startsWith("http") 
@@ -1001,37 +1049,162 @@ async function fetchAllVideosFromModelPage(
         
         procedures.push({
           category: translateCategoryName(categorySlug.replace(/_/g, " ")),
-          categorySlug,
-          procedure: procedureSlug.replace(/_/g, " "),
-          procedureSlug,
+          categorySlug: categorySlug.toLowerCase().replace(/-/g, "_"),
+          procedure: procedureSlug.replace(/_/g, " ").replace(/-/g, " "),
+          procedureSlug: procedureSlug.toLowerCase().replace(/-/g, "_"),
           url: fullUrl,
+          thumbnail,
         });
+      }
+    };
+    
+    // ============================================================================
+    // PADRÕES DE REGEX MELHORADOS PARA CAPTURAR MAIS PROCEDIMENTOS
+    // ============================================================================
+    
+    // Padrão 1: Links de procedimentos no formato /video/Vehicle/Category/Procedure
+    // Ex: /video/2019_Honda_Civic_2.0L_4_Cyl./oil/change
+    const procedurePattern1 = /href="((?:https?:\/\/www\.carcarekiosk\.com)?\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"/gi;
+    while ((match = procedurePattern1.exec(html)) !== null) {
+      const [, urlPath, categorySlug, procedureSlug] = match;
+      addProcedure(categorySlug, procedureSlug, urlPath);
+    }
+    
+    // Padrão 2: Links com atributo data-video ou class específica
+    // Ex: <a href="/video/..." class="functions" data-toggle="collapse">
+    const procedurePattern2 = /<a[^>]*href="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*(?:class="[^"]*functions[^"]*"|data-toggle)[^>]*>/gi;
+    while ((match = procedurePattern2.exec(html)) !== null) {
+      const [, urlPath, categorySlug, procedureSlug] = match;
+      addProcedure(categorySlug, procedureSlug, urlPath);
+    }
+    
+    // Padrão 3: Links dentro de listas de procedimentos
+    // Ex: <li><a href="/video/.../category/procedure">Procedure Name</a></li>
+    const procedurePattern3 = /<li[^>]*>\s*<a[^>]*href="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*>[^<]+<\/a>/gi;
+    while ((match = procedurePattern3.exec(html)) !== null) {
+      const [, urlPath, categorySlug, procedureSlug] = match;
+      addProcedure(categorySlug, procedureSlug, urlPath);
+    }
+    
+    // Padrão 4: Cards de categoria com imagens e links
+    // Ex: <div class="card">...<a href="/video/...">...</a>...</div>
+    const cardPattern = /<div[^>]*class="[^"]*card[^"]*"[^>]*>[\s\S]*?href="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[\s\S]*?<\/div>/gi;
+    while ((match = cardPattern.exec(html)) !== null) {
+      const [, urlPath, categorySlug, procedureSlug] = match;
+      addProcedure(categorySlug, procedureSlug, urlPath);
+    }
+    
+    // Padrão 5: Extrair do markdown - formato de lista
+    // Ex: - [Oil Change](/video/...)
+    const markdownLinkPattern = /\[([^\]]+)\]\(([^)]*\/video\/[^)]+\/([^)\/]+)\/([^)\/]+))\)/gi;
+    while ((match = markdownLinkPattern.exec(markdown)) !== null) {
+      const [, , urlPath, categorySlug, procedureSlug] = match;
+      addProcedure(categorySlug, procedureSlug, urlPath);
+    }
+    
+    // Padrão 6: Links com texto de procedimento
+    // Ex: <a href="...">Oil Change</a>
+    const procedureWithTextPattern = /<a[^>]*href="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*>([^<]+)<\/a>/gi;
+    while ((match = procedureWithTextPattern.exec(html)) !== null) {
+      const [, urlPath, categorySlug, procedureSlug] = match;
+      addProcedure(categorySlug, procedureSlug, urlPath);
+    }
+    
+    // Padrão 7: URLs absolutas no HTML
+    // Ex: https://www.carcarekiosk.com/video/2019_Honda_Civic/oil/change
+    const absoluteUrlPattern = /(https:\/\/www\.carcarekiosk\.com\/video\/[^\s"'<>]+\/([a-z_-]+)\/([a-z_-]+))/gi;
+    while ((match = absoluteUrlPattern.exec(html)) !== null) {
+      const [, urlPath, categorySlug, procedureSlug] = match;
+      addProcedure(categorySlug, procedureSlug, urlPath);
+    }
+    
+    // Padrão 8: Botões de procedimentos
+    // Ex: <button onclick="location.href='/video/...'">
+    const buttonPattern = /onclick="[^"]*location\.href='([^']*\/video\/[^']+\/([^'\/]+)\/([^'\/]+))'"/gi;
+    while ((match = buttonPattern.exec(html)) !== null) {
+      const [, urlPath, categorySlug, procedureSlug] = match;
+      addProcedure(categorySlug, procedureSlug, urlPath);
+    }
+    
+    // Padrão 9: Links em atributos data-*
+    // Ex: data-href="/video/..." ou data-url="..."
+    const dataAttrPattern = /data-(?:href|url)="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"/gi;
+    while ((match = dataAttrPattern.exec(html)) !== null) {
+      const [, urlPath, categorySlug, procedureSlug] = match;
+      addProcedure(categorySlug, procedureSlug, urlPath);
+    }
+    
+    // Padrão 10: Extrair categorias de collapse panels
+    // O site CarCareKiosk usa painéis colapsáveis para cada categoria
+    const collapsePattern = /<a[^>]*data-toggle="collapse"[^>]*href="#collapse-([^"]+)"[^>]*>[^<]*<\/a>[\s\S]*?<div[^>]*id="collapse-\1"[^>]*>([\s\S]*?)<\/div>/gi;
+    while ((match = collapsePattern.exec(html)) !== null) {
+      const [, categoryId, innerContent] = match;
+      
+      // Dentro do painel, buscar todos os procedimentos
+      const innerProcPattern = /href="([^"]*\/video\/[^"]+\/[^"\/]+\/([^"\/]+))"/gi;
+      let innerMatch;
+      while ((innerMatch = innerProcPattern.exec(innerContent)) !== null) {
+        const [, urlPath, procedureSlug] = innerMatch;
+        addProcedure(categoryId, procedureSlug, urlPath);
       }
     }
     
-    // Padrão 2: Links com thumbnails do CloudFront (contêm informação sobre o procedimento)
-    // Ex: https://d2n97g4vasjwsk.cloudfront.net/2019_Honda_Civic/Oil+Change+-+480p.webp
-    const thumbnailPattern = /https:\/\/d2n97g4vasjwsk\.cloudfront\.net\/[^"'\s]+\.(?:webp|jpg|png)/gi;
-    const thumbnails: string[] = [];
+    // ============================================================================
+    // EXTRAIR THUMBNAILS E ASSOCIAR COM PROCEDIMENTOS
+    // ============================================================================
     
+    // Padrão de thumbnails do CloudFront
+    const thumbnailPattern = /https:\/\/d2n97g4vasjwsk\.cloudfront\.net\/[^"'\s\)]+\.(?:webp|jpg|png)/gi;
+    const thumbnails: string[] = [];
     while ((match = thumbnailPattern.exec(html)) !== null) {
       thumbnails.push(match[0]);
     }
     
-    // Associar thumbnails com procedimentos baseado no nome
+    // Também extrair do markdown
+    while ((match = thumbnailPattern.exec(markdown)) !== null) {
+      if (!thumbnails.includes(match[0])) {
+        thumbnails.push(match[0]);
+      }
+    }
+    
+    // Extrair procedimentos das thumbnails (quando não encontramos via links)
+    // Ex: https://d2n97g4vasjwsk.cloudfront.net/2019_Honda_Civic/Oil+Change+-+480p.webp
     for (const thumb of thumbnails) {
-      const decodedThumb = decodeURIComponent(thumb.replace(/\+/g, " ")).toLowerCase();
+      // Decodificar URL e extrair nome do procedimento
+      const decodedThumb = decodeURIComponent(thumb.replace(/\+/g, " "));
       
+      // Formato: /Vehicle/ProcedureName - Resolution.webp
+      const thumbProcMatch = decodedThumb.match(/cloudfront\.net\/[^\/]+\/([^\/\-]+)/i);
+      if (thumbProcMatch) {
+        const procedureName = thumbProcMatch[1].trim().toLowerCase().replace(/\s+/g, "_");
+        
+        // Se esse procedimento ainda não foi encontrado, adicionar como procedimento genérico
+        const hasThisProc = procedures.some(p => 
+          p.procedureSlug.toLowerCase().includes(procedureName) ||
+          procedureName.includes(p.procedureSlug.toLowerCase())
+        );
+        
+        if (!hasThisProc && procedureName.length > 3) {
+          // Categorizar automaticamente baseado no nome
+          const category = categorizeProcedure(procedureName);
+          addProcedure(category, procedureName, `/video/${yearStr}_${brandSlug}_${modelSlug}/${category}/${procedureName}`, thumb);
+        }
+      }
+      
+      // Associar thumbnails com procedimentos existentes
       for (const proc of procedures) {
         const procName = proc.procedureSlug.replace(/_/g, " ").toLowerCase();
-        if (decodedThumb.includes(procName) && !proc.thumbnail) {
-          proc.thumbnail = thumb;
-          break;
+        const thumbLower = decodedThumb.toLowerCase();
+        
+        if (thumbLower.includes(procName) || procName.includes(thumbLower.split("/").pop()?.split("-")[0]?.trim() || "")) {
+          if (!proc.thumbnail) {
+            proc.thumbnail = thumb;
+          }
         }
       }
     }
     
-    console.log(`[ModelVideosIndex] Found ${procedures.length} procedures from model page`);
+    console.log(`[ModelVideosIndex] Found ${procedures.length} procedures from model page using enhanced patterns`);
     
     return {
       procedures,
