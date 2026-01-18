@@ -688,88 +688,108 @@ async function fetchBrandsFromCarCareKiosk(apiKey: string): Promise<any[]> {
   }
 }
 
-// Buscar modelos de uma marca do CarCareKiosk
+// Buscar modelos de uma marca do CarCareKiosk - NOVO FORMATO: /videos/Brand/Model/Year
 async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promise<any[]> {
   try {
-    // Novo formato de URL: /videos/Brand (não mais /make/)
-    const brandSlug = brand.replace(/\s+/g, "+");
-    const url = `https://www.carcarekiosk.com/videos/${brandSlug}`;
+    // O CarCareKiosk usa múltiplos formatos de URL - tentar todos
+    const urlFormats = [
+      `https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}`,  // /videos/Honda
+      `https://www.carcarekiosk.com/videos/${brand.replace(/\s+/g, "-")}`, // /videos/Land-Rover
+      `https://www.carcarekiosk.com/make/${brand.toLowerCase().replace(/\s+/g, "-")}`, // Formato antigo: /make/honda
+    ];
     
-    console.log(`Fetching models for ${brand} from ${url}...`);
+    let html = "";
+    let successfulUrl = "";
+    
+    // Tentar cada formato de URL até encontrar um que funcione
+    for (const url of urlFormats) {
+      console.log(`Trying to fetch models for ${brand} from ${url}...`);
+      
+      try {
+        const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url,
+            formats: ["html", "markdown"],
+            waitFor: 3000,
+          }),
+        });
 
-    const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url,
-        formats: ["html"],
-        waitFor: 2000,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Firecrawl error fetching models:", response.status);
+        if (response.ok) {
+          const data = await response.json();
+          const fetchedHtml = data.data?.html || "";
+          const markdown = data.data?.markdown || "";
+          
+          // Verificar se a página é válida (não é NOT FOUND)
+          if (isValidPage(markdown, fetchedHtml) && fetchedHtml.length > 1000) {
+            html = fetchedHtml;
+            successfulUrl = url;
+            console.log(`Successfully fetched from ${url} (${html.length} chars)`);
+            break;
+          } else {
+            console.log(`Page from ${url} appears invalid, trying next format...`);
+          }
+        }
+      } catch (e) {
+        console.log(`Failed to fetch from ${url}:`, e);
+      }
+    }
+    
+    if (!html) {
+      console.log("All URL formats failed, using static data for", brand);
       return getStaticModels(brand);
     }
-
-    const data = await response.json();
-    const html = data.data?.html || "";
     
     const models: any[] = [];
     const seen = new Set();
 
-    const modelRegex = /<a[^>]*href="(\/video\/[^"]+)"[^>]*>[\s\S]*?<img[^>]*src="([^"]*)"[\s\S]*?<\/a>/gi;
-    
+    // Padrão 1: Novo formato /videos/Brand/Model/Year
+    const newFormatRegex = /href="\/videos\/([^\/]+)\/([^\/]+)\/(\d{4})"/gi;
     let match;
-    while ((match = modelRegex.exec(html)) !== null) {
-      const [, videoPath, imageUrl] = match;
+    while ((match = newFormatRegex.exec(html)) !== null) {
+      const [, , modelSlug, year] = match;
+      const modelName = formatModelName(modelSlug.replace(/-/g, " "), brand);
+      const key = `${modelName.toLowerCase()}_${year}`;
       
-      const pathMatch = videoPath.match(/\/video\/(\d{4})_([^\/]+)/);
-      if (pathMatch) {
-        const year = pathMatch[1];
-        const modelSlug = pathMatch[2];
-        const modelName = formatModelName(modelSlug, brand);
-        const key = modelName.toLowerCase();
-        
-        if (!seen.has(key)) {
-          seen.add(key);
-          models.push({
-            id: videoPath.replace('/video/', ''),
-            name: modelName,
-            years: year,
-            image: imageUrl.startsWith('http') ? imageUrl : `https://www.carcarekiosk.com${imageUrl}`,
-            url: `https://www.carcarekiosk.com${videoPath}`,
-          });
-        }
+      if (!seen.has(key)) {
+        seen.add(key);
+        models.push({
+          id: `${year}_${brand.replace(/\s+/g, "_")}_${modelSlug.replace(/-/g, "_")}`,
+          name: modelName,
+          years: year,
+          image: `https://www.carcarekiosk.com/imager/vehicles/${year}_${brand.replace(/\s+/g, "_")}_${modelSlug.replace(/-/g, "_")}/front.jpg`,
+          url: `https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${modelSlug}/${year}`,
+        });
       }
     }
 
-    if (models.length === 0) {
-      const altRegex = /href="\/video\/(\d{4})_([^"\/]+)(?:\/([^"]+))?"/gi;
-      while ((match = altRegex.exec(html)) !== null) {
-        const [, year, modelSlug] = match;
-        const modelName = formatModelName(modelSlug, brand);
-        const key = modelName.toLowerCase();
-        
-        if (!seen.has(key)) {
-          seen.add(key);
-          models.push({
-            id: `${year}_${modelSlug}`,
-            name: modelName,
-            years: year,
-            image: `https://www.carcarekiosk.com/imager/vehicles/${year}_${modelSlug}/front.jpg`,
-            url: `https://www.carcarekiosk.com/video/${year}_${modelSlug}`,
-          });
-        }
+    // Padrão 2: Formato antigo /video/Year_Brand_Model
+    const oldFormatRegex = /href="\/video\/(\d{4})_([^\/]+)(?:\/([^"]+))?"/gi;
+    while ((match = oldFormatRegex.exec(html)) !== null) {
+      const [, year, modelSlug] = match;
+      const modelName = formatModelName(modelSlug, brand);
+      const key = `${modelName.toLowerCase()}_${year}`;
+      
+      if (!seen.has(key)) {
+        seen.add(key);
+        models.push({
+          id: `${year}_${modelSlug}`,
+          name: modelName,
+          years: year,
+          image: `https://www.carcarekiosk.com/imager/vehicles/${year}_${modelSlug}/front.jpg`,
+          url: `https://www.carcarekiosk.com/video/${year}_${modelSlug}`,
+        });
       }
     }
 
     console.log(`Found ${models.length} models for ${brand}`);
     
     if (models.length === 0) {
+      console.log("No models found from scraping, using static data for", brand);
       return getStaticModels(brand);
     }
 
@@ -784,7 +804,7 @@ async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promi
   }
 }
 
-// Buscar vídeos de um modelo específico
+// Buscar vídeos de um modelo específico - SUPORTA AMBOS FORMATOS DE URL
 async function fetchVideosFromCarCareKiosk(
   apiKey: string, 
   brand: string, 
@@ -792,82 +812,131 @@ async function fetchVideosFromCarCareKiosk(
   year?: string
 ): Promise<any[]> {
   try {
-    const brandSlug = brand.toLowerCase().replace(/\s+/g, "_");
-    const modelSlug = model.toLowerCase().replace(/\s+/g, "_");
+    const brandSlug = brand.replace(/\s+/g, "_");
+    const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
     const yearStr = year || new Date().getFullYear().toString();
-    const url = `https://www.carcarekiosk.com/video/${yearStr}_${brandSlug}_${modelSlug}`;
     
-    console.log(`Fetching videos from ${url}...`);
+    // Tentar múltiplos formatos de URL
+    const urlFormats = [
+      // Novo formato: /videos/Brand/Model/Year
+      `https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${yearStr}`,
+      // Formato alternativo com slugs
+      `https://www.carcarekiosk.com/videos/${brand.replace(/\s+/g, "-")}/${model.replace(/\s+/g, "-")}/${yearStr}`,
+      // Formato antigo: /video/Year_Brand_Model
+      `https://www.carcarekiosk.com/video/${yearStr}_${brandSlug}_${modelSlug}`,
+    ];
+    
+    let html = "";
+    let markdown = "";
+    let successfulUrl = "";
+    
+    for (const url of urlFormats) {
+      console.log(`Trying to fetch videos from ${url}...`);
+      
+      try {
+        const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url,
+            formats: ["html", "markdown"],
+            waitFor: 3000,
+          }),
+        });
 
-    const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url,
-        formats: ["html", "markdown"],
-        waitFor: 2000,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Firecrawl error fetching videos:", response.status);
+        if (response.ok) {
+          const data = await response.json();
+          const fetchedHtml = data.data?.html || "";
+          const fetchedMarkdown = data.data?.markdown || "";
+          
+          if (isValidPage(fetchedMarkdown, fetchedHtml) && fetchedHtml.length > 500) {
+            html = fetchedHtml;
+            markdown = fetchedMarkdown;
+            successfulUrl = url;
+            console.log(`Successfully fetched from ${url} (${html.length} chars)`);
+            break;
+          } else {
+            console.log(`Page from ${url} appears invalid, trying next format...`);
+          }
+        }
+      } catch (e) {
+        console.log(`Failed to fetch from ${url}:`, e);
+      }
+    }
+    
+    if (!html) {
+      console.log(`All URL formats failed for ${brand} ${model} ${yearStr}, using static categories`);
       return getStaticCategories(brand, model, year);
     }
-
-    const data = await response.json();
-    const html = data.data?.html || "";
-    const markdown = data.data?.markdown || "";
     
     const categories: any[] = [];
     const seen = new Set();
 
-    const categoryRegex = /<a[^>]*href="(\/video\/[^"]+\/[^"]+)"[^>]*>[\s\S]*?<img[^>]*src="([^"]*)"[\s\S]*?([^<]+)<\/a>/gi;
-    
+    // Padrão 1: Links de categorias no novo formato /videos/Brand/Model/Year/Category
+    const newCategoryRegex = /href="(\/videos\/[^"]+\/[^"]+\/\d{4}\/([^"]+))"[^>]*>([^<]*)</gi;
     let match;
-    while ((match = categoryRegex.exec(html)) !== null) {
-      const [, path, thumbnail, title] = match;
-      const cleanTitle = title.trim().replace(/\s+/g, ' ');
+    while ((match = newCategoryRegex.exec(html)) !== null) {
+      const [, path, categorySlug, title] = match;
+      const cleanTitle = (title || categorySlug).trim().replace(/\s+/g, ' ');
       
-      if (cleanTitle && !seen.has(cleanTitle.toLowerCase())) {
+      if (cleanTitle && !seen.has(cleanTitle.toLowerCase()) && cleanTitle.length > 2) {
         seen.add(cleanTitle.toLowerCase());
         categories.push({
-          id: path.split('/').pop() || cleanTitle.toLowerCase().replace(/\s+/g, '-'),
-          name: cleanTitle,
+          id: categorySlug || cleanTitle.toLowerCase().replace(/\s+/g, '-'),
+          name: translateCategoryName(cleanTitle),
           nameEn: cleanTitle,
           icon: getCategoryIcon(cleanTitle),
-          thumbnail: thumbnail.startsWith('http') ? thumbnail : `https://www.carcarekiosk.com${thumbnail}`,
           url: `https://www.carcarekiosk.com${path}`,
-          vehicleContext: `${brand} ${model} ${year || ""}`,
+          vehicleContext: `${brand} ${model} ${yearStr}`,
         });
       }
     }
 
-    if (categories.length === 0) {
-      const linkRegex = /\[([^\]]+)\]\((\/video\/[^\)]+)\)/gi;
-      while ((match = linkRegex.exec(markdown)) !== null) {
-        const [, title, path] = match;
-        const cleanTitle = title.trim();
-        
-        if (cleanTitle && !seen.has(cleanTitle.toLowerCase()) && path.includes('/')) {
-          seen.add(cleanTitle.toLowerCase());
-          categories.push({
-            id: path.split('/').pop() || cleanTitle.toLowerCase().replace(/\s+/g, '-'),
-            name: cleanTitle,
-            nameEn: cleanTitle,
-            icon: getCategoryIcon(cleanTitle),
-            url: `https://www.carcarekiosk.com${path}`,
-            vehicleContext: `${brand} ${model} ${year || ""}`,
-          });
-        }
+    // Padrão 2: Links de categorias no formato antigo /video/Year_Brand_Model/category
+    const oldCategoryRegex = /<a[^>]*href="(\/video\/[^"]+\/([^"]+))"[^>]*>[\s\S]*?([^<]+)<\/a>/gi;
+    while ((match = oldCategoryRegex.exec(html)) !== null) {
+      const [, path, categorySlug, title] = match;
+      const cleanTitle = (title || categorySlug).trim().replace(/\s+/g, ' ');
+      
+      if (cleanTitle && !seen.has(cleanTitle.toLowerCase()) && cleanTitle.length > 2 && !path.includes('/video/' + yearStr + '_' + brandSlug)) {
+        seen.add(cleanTitle.toLowerCase());
+        categories.push({
+          id: categorySlug || cleanTitle.toLowerCase().replace(/\s+/g, '-'),
+          name: translateCategoryName(cleanTitle),
+          nameEn: cleanTitle,
+          icon: getCategoryIcon(cleanTitle),
+          url: `https://www.carcarekiosk.com${path}`,
+          vehicleContext: `${brand} ${model} ${yearStr}`,
+        });
+      }
+    }
+
+    // Padrão 3: Links em markdown
+    const markdownLinkRegex = /\[([^\]]+)\]\((\/(?:video|videos)\/[^\)]+)\)/gi;
+    while ((match = markdownLinkRegex.exec(markdown)) !== null) {
+      const [, title, path] = match;
+      const cleanTitle = title.trim();
+      
+      if (cleanTitle && !seen.has(cleanTitle.toLowerCase()) && path.split('/').length > 4) {
+        seen.add(cleanTitle.toLowerCase());
+        categories.push({
+          id: path.split('/').pop() || cleanTitle.toLowerCase().replace(/\s+/g, '-'),
+          name: translateCategoryName(cleanTitle),
+          nameEn: cleanTitle,
+          icon: getCategoryIcon(cleanTitle),
+          url: `https://www.carcarekiosk.com${path}`,
+          vehicleContext: `${brand} ${model} ${yearStr}`,
+        });
       }
     }
 
     console.log(`Found ${categories.length} video categories for ${brand} ${model}`);
     
     if (categories.length === 0) {
+      console.log(`No categories found for ${brand} ${model}, using static data`);
       return getStaticCategories(brand, model, year);
     }
 
@@ -878,7 +947,41 @@ async function fetchVideosFromCarCareKiosk(
   }
 }
 
-// Tentar múltiplos formatos de URL do CarCareKiosk
+// Traduzir nome da categoria para português
+function translateCategoryName(name: string): string {
+  const translations: Record<string, string> = {
+    "air conditioner": "Ar Condicionado",
+    "air filter engine": "Filtro de Ar (Motor)",
+    "cabin air filter": "Filtro de Ar (Cabine)",
+    "battery": "Bateria",
+    "brakes": "Freios",
+    "brake light": "Luz de Freio",
+    "coolant antifreeze": "Arrefecimento",
+    "headlight": "Faróis",
+    "highbeam": "Farol Alto",
+    "oil": "Óleo do Motor",
+    "power steering": "Direção Hidráulica",
+    "tail light": "Lanterna Traseira",
+    "transmission fluid": "Fluido de Transmissão",
+    "washer fluid": "Fluido do Limpador",
+    "wipers": "Palhetas",
+    "windshield wipers": "Palhetas do Para-brisa",
+    "tires wheels": "Pneus e Rodas",
+    "interior fuse": "Fusíveis Internos",
+    "engine fuse": "Fusíveis do Motor",
+    "turn signal": "Setas",
+    "fog light": "Farol de Neblina",
+    "reverse light": "Luz de Ré",
+    "parking light": "Luz de Estacionamento",
+    "license plate light": "Luz da Placa",
+    "check engine light": "Luz do Motor",
+  };
+  
+  const lowerName = name.toLowerCase().trim();
+  return translations[lowerName] || name;
+}
+
+// Gerar todas as variantes de URL possíveis do CarCareKiosk (suporta AMBOS formatos)
 function generateUrlVariants(videoUrl: string, brand?: string, model?: string, year?: string): string[] {
   const urls: string[] = [];
   
@@ -888,61 +991,114 @@ function generateUrlVariants(videoUrl: string, brand?: string, model?: string, y
   // Se é uma URL completa, usar diretamente
   if (baseUrl.startsWith('http')) {
     urls.push(baseUrl);
+    
+    // Converter entre formatos se possível
+    // Formato antigo: /video/2012_Honda_Civic/category/procedure
+    // Formato novo:   /videos/Honda/Civic/2012/category/procedure
+    
+    const oldFormatMatch = baseUrl.match(/\/video\/(\d{4})_([^\/]+)_([^\/]+)(\/.*)?$/);
+    if (oldFormatMatch) {
+      const [, urlYear, urlBrand, urlModel, rest] = oldFormatMatch;
+      const newUrl = `https://www.carcarekiosk.com/videos/${urlBrand.replace(/_/g, "-")}/${urlModel.replace(/_/g, "-")}/${urlYear}${rest || ""}`;
+      urls.push(newUrl);
+    }
+    
+    const newFormatMatch = baseUrl.match(/\/videos\/([^\/]+)\/([^\/]+)\/(\d{4})(\/.*)?$/);
+    if (newFormatMatch) {
+      const [, urlBrand, urlModel, urlYear, rest] = newFormatMatch;
+      const oldUrl = `https://www.carcarekiosk.com/video/${urlYear}_${urlBrand.replace(/-/g, "_")}_${urlModel.replace(/-/g, "_")}${rest || ""}`;
+      urls.push(oldUrl);
+    }
   } else if (baseUrl.startsWith('/')) {
-    // Se começa com /, adicionar domínio
+    // Se começa com /, adicionar domínio e tentar ambos formatos
     urls.push(`https://www.carcarekiosk.com${baseUrl}`);
-  } else {
-    // Se não é URL completa, construir URL a partir de brand/model/year
-    if (brand && model && year) {
-      const brandSlug = brand.replace(/\s+/g, "_");
-      const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
-      const procedureSlug = baseUrl.replace(/\s+/g, "_").toLowerCase();
-      
-      // Tentar extrair categoria do videoUrl se tiver formato path
-      const pathParts = baseUrl.split('/').filter(Boolean);
-      
-      if (pathParts.length >= 2) {
-        // Parece ter categoria e procedimento
-        const [category, ...procParts] = pathParts;
-        const procedure = procParts.join('/');
-        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/${category}/${procedure}`);
-      } else {
-        // Só tem o slug do procedimento, adicionar formatos possíveis
-        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/maintenance/${procedureSlug}`);
-        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/air_filter/${procedureSlug}`);
-        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/engine/${procedureSlug}`);
+    
+    // Converter para o outro formato
+    if (baseUrl.startsWith('/video/')) {
+      const match = baseUrl.match(/^\/video\/(\d{4})_([^\/]+)_([^\/]+)(\/.*)?$/);
+      if (match) {
+        const [, urlYear, urlBrand, urlModel, rest] = match;
+        urls.push(`https://www.carcarekiosk.com/videos/${urlBrand.replace(/_/g, "-")}/${urlModel.replace(/_/g, "-")}/${urlYear}${rest || ""}`);
+      }
+    } else if (baseUrl.startsWith('/videos/')) {
+      const match = baseUrl.match(/^\/videos\/([^\/]+)\/([^\/]+)\/(\d{4})(\/.*)?$/);
+      if (match) {
+        const [, urlBrand, urlModel, urlYear, rest] = match;
+        urls.push(`https://www.carcarekiosk.com/video/${urlYear}_${urlBrand.replace(/-/g, "_")}_${urlModel.replace(/-/g, "_")}${rest || ""}`);
       }
     }
-    // Fallback: ainda tentar com a URL diretamente (pode falhar mas tenta)
-    urls.push(`https://www.carcarekiosk.com/video/${baseUrl}`);
+  } else {
+    // É um slug ou categoria/procedimento - construir URLs a partir do contexto do veículo
+    if (brand && model && year) {
+      const brandSlugUnderscore = brand.replace(/\s+/g, "_");
+      const brandSlugDash = brand.replace(/\s+/g, "-");
+      const modelSlugUnderscore = model.replace(/\s+/g, "_").replace(/-/g, "_");
+      const modelSlugDash = model.replace(/\s+/g, "-");
+      
+      // Determinar se é categoria/procedimento ou apenas procedimento
+      const parts = baseUrl.split('/').filter(Boolean);
+      
+      if (parts.length >= 2) {
+        // Tem categoria e procedimento: category/procedure
+        const category = parts[0];
+        const procedure = parts.slice(1).join('/');
+        
+        // Novo formato: /videos/Brand/Model/Year/category/procedure
+        urls.push(`https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}/${category}/${procedure}`);
+        urls.push(`https://www.carcarekiosk.com/videos/${brandSlugDash}/${modelSlugDash}/${year}/${category}/${procedure}`);
+        
+        // Formato antigo: /video/Year_Brand_Model/category/procedure
+        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlugUnderscore}_${modelSlugUnderscore}/${category}/${procedure}`);
+      } else if (parts.length === 1) {
+        // Só tem categoria ou procedimento
+        const slug = parts[0].replace(/\s+/g, "_").toLowerCase();
+        
+        // Tentar como categoria (página de listagem)
+        urls.push(`https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}/${slug}`);
+        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlugUnderscore}_${modelSlugUnderscore}/${slug}`);
+        
+        // Tentar categorias comuns com esse procedimento
+        const commonCategories = ['maintenance', 'air_filter', 'engine', 'brakes', 'battery', 'coolant', 'oil', 'lights'];
+        for (const cat of commonCategories) {
+          urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlugUnderscore}_${modelSlugUnderscore}/${cat}/${slug}`);
+        }
+      }
+    }
+    
+    // Fallback: tentar diretamente
+    if (!baseUrl.startsWith('http')) {
+      urls.push(`https://www.carcarekiosk.com/video/${baseUrl}`);
+      urls.push(`https://www.carcarekiosk.com/videos/${baseUrl}`);
+    }
   }
   
-  // Se temos brand/model/year, adicionar mais formatos alternativos
+  // Se temos contexto do veículo, adicionar mais variantes
   if (brand && model && year) {
-    const brandSlug = brand.replace(/\s+/g, "_");
-    const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
+    const brandSlugUnderscore = brand.replace(/\s+/g, "_");
+    const brandSlugDash = brand.replace(/\s+/g, "-");
+    const modelSlugUnderscore = model.replace(/\s+/g, "_").replace(/-/g, "_");
+    const modelSlugDash = model.replace(/\s+/g, "-");
     
-    // Extrair a categoria/procedimento do URL original (se for URL completa)
+    // Página principal do veículo (ambos formatos)
+    urls.push(`https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}`);
+    urls.push(`https://www.carcarekiosk.com/videos/${brandSlugDash}/${modelSlugDash}/${year}`);
+    urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlugUnderscore}_${modelSlugUnderscore}`);
+    
+    // Extrair categoria/procedimento da URL original se existir
     const pathMatch = baseUrl.match(/\/([^\/]+)\/([^\/]+)$/);
     if (pathMatch) {
       const [, category, procedure] = pathMatch;
       
-      // Formato: /video/{year}_{Brand}_{Model}/{category}/{procedure}
-      const altUrl1 = `https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/${category}/${procedure}`;
-      if (!urls.includes(altUrl1)) urls.push(altUrl1);
+      // Novo formato
+      urls.push(`https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}/${category}/${procedure}`);
       
-      // Formato: /video/{Brand}/{Model}/{year}/{category}/{procedure}
-      const altUrl2 = `https://www.carcarekiosk.com/video/${brand}/${model}/${year}/${category}/${procedure}`;
-      if (!urls.includes(altUrl2)) urls.push(altUrl2);
+      // Formato antigo
+      urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlugUnderscore}_${modelSlugUnderscore}/${category}/${procedure}`);
     }
-    
-    // Tentar página principal do veículo como fallback
-    const vehiclePage = `https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}`;
-    if (!urls.includes(vehiclePage)) urls.push(vehiclePage);
   }
   
   // Remover duplicatas e URLs inválidas
-  const validUrls = urls.filter(url => url && url.includes('carcarekiosk.com'));
+  const validUrls = urls.filter(url => url && url.includes('carcarekiosk.com') && url.startsWith('http'));
   return [...new Set(validUrls)];
 }
 
@@ -1069,19 +1225,26 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       }
     }
     
-    // Se nenhuma URL funcionou, retornar erro
+    // Se nenhuma URL funcionou, usar fallback com dados estáticos
     if (!validData) {
-      console.error("All URL variants failed or returned NOT FOUND");
+      console.log("All URL variants failed, using static fallback data");
+      
+      // Extrair categoria/procedimento da URL para gerar passos estáticos
+      const procedureSlug = videoUrl.split('/').pop() || "";
+      const categorySlug = videoUrl.split('/').slice(-2, -1)[0] || "";
+      
+      const fallbackSteps = generateStaticFallbackSteps(procedureSlug, categorySlug, vehicleContext);
+      
       return {
-        title: "Vídeo Não Encontrado",
-        description: "O tutorial solicitado não está disponível no momento.",
+        title: formatProcedureTitle(procedureSlug, vehicleContext),
+        description: `Tutorial de manutenção para ${vehicleContext || "seu veículo"}.`,
         videoUrl: null,
         sourceUrl: primaryUrl,
-        steps: [],
+        steps: fallbackSteps,
         transcriptionUsed: false,
         fromCache: false,
-        error: true,
-        errorMessage: "Tutorial não encontrado no CarCareKiosk. Tente outro procedimento."
+        isStaticFallback: true,
+        errorMessage: "Conteúdo gerado automaticamente. Para o tutorial completo, visite o CarCareKiosk."
       };
     }
 
@@ -1313,6 +1476,174 @@ function searchStaticData(query: string, brand?: string, model?: string): any[] 
   }
   
   return results.slice(0, 20);
+}
+
+// Gerar passos estáticos de fallback baseados na categoria e procedimento
+function generateStaticFallbackSteps(procedure: string, category: string, vehicleContext?: string): string[] {
+  const vehicle = vehicleContext || "seu veículo";
+  const procedureName = procedure.replace(/_/g, " ").replace(/-/g, " ");
+  const categoryName = category.replace(/_/g, " ").replace(/-/g, " ");
+  
+  // Passos genéricos baseados na categoria
+  const categorySteps: Record<string, string[]> = {
+    "oil": [
+      "1️⃣ **Preparação**: Estacione o veículo em superfície plana e desligue o motor. Aguarde alguns minutos para o óleo esfriar.",
+      "2️⃣ **Materiais**: Reúna óleo novo (verificar especificação no manual), filtro de óleo, funil, chave para dreno e recipiente para óleo usado.",
+      "3️⃣ **Drenagem**: Localize o bujão de dreno sob o veículo. Posicione o recipiente e remova o bujão. Aguarde o óleo escoar completamente.",
+      "4️⃣ **Filtro**: Remova o filtro de óleo antigo. Aplique uma fina camada de óleo novo na borracha do filtro novo e instale.",
+      "5️⃣ **Recolocar bujão**: Limpe a área do bujão, coloque nova arruela se necessário e aperte o bujão conforme especificação.",
+      "6️⃣ **Adicionar óleo**: Remova a tampa do óleo no motor e adicione a quantidade especificada usando o funil.",
+      "7️⃣ **Verificação**: Ligue o motor por alguns minutos, desligue e verifique o nível com a vareta. Complete se necessário.",
+      "⚠️ **Importante**: Descarte o óleo usado em um ponto de coleta adequado. Nunca despeje no meio ambiente.",
+    ],
+    "battery": [
+      "1️⃣ **Segurança**: Desligue o veículo e remova a chave. Use óculos e luvas de proteção.",
+      "2️⃣ **Localização**: Abra o capô e localize a bateria. Em alguns veículos pode estar no porta-malas.",
+      "3️⃣ **Desconectar**: SEMPRE desconecte primeiro o terminal NEGATIVO (-), depois o POSITIVO (+).",
+      "4️⃣ **Remover**: Solte as travas de fixação da bateria e remova-a com cuidado (é pesada!).",
+      "5️⃣ **Limpar**: Limpe os terminais e a bandeja com solução de bicarbonato se houver corrosão.",
+      "6️⃣ **Instalar**: Posicione a bateria nova e fixe com as travas. Conecte primeiro o POSITIVO (+), depois o NEGATIVO (-).",
+      "7️⃣ **Teste**: Ligue o veículo e verifique se todos os sistemas elétricos funcionam corretamente.",
+      "⚠️ **Atenção**: Após a troca, pode ser necessário reprogramar o rádio e ajustar o relógio.",
+    ],
+    "brakes": [
+      "1️⃣ **Preparação**: Estacione em local plano, acione o freio de mão e coloque calços nas rodas.",
+      "2️⃣ **Remover roda**: Afrouxe os parafusos, levante o veículo com macaco e remova a roda.",
+      "3️⃣ **Inspecionar**: Verifique a espessura das pastilhas e o estado do disco de freio.",
+      "4️⃣ **Caliper**: Remova os parafusos do caliper e suspenda-o com arame (não deixe pendurado pela mangueira!).",
+      "5️⃣ **Pastilhas**: Remova as pastilhas antigas e compare com as novas. Limpe as guias.",
+      "6️⃣ **Recuar pistão**: Use uma ferramenta apropriada para recuar o pistão do caliper.",
+      "7️⃣ **Montar**: Instale as pastilhas novas, recoloque o caliper e aperte os parafusos corretamente.",
+      "8️⃣ **Finalizar**: Recoloque a roda, abaixe o veículo e antes de dirigir, acione o pedal várias vezes.",
+      "⚠️ **Crítico**: Freios são itens de segurança. Se não tiver experiência, procure um profissional.",
+    ],
+    "air_filter": [
+      "1️⃣ **Localizar**: Abra o capô e localize a caixa do filtro de ar (geralmente uma caixa preta próxima ao motor).",
+      "2️⃣ **Abrir**: Solte as travas ou parafusos que prendem a tampa da caixa do filtro.",
+      "3️⃣ **Remover**: Retire o filtro antigo e observe como está posicionado.",
+      "4️⃣ **Limpar**: Limpe o interior da caixa do filtro com um pano seco para remover detritos.",
+      "5️⃣ **Instalar**: Coloque o filtro novo na mesma posição do antigo.",
+      "6️⃣ **Fechar**: Recoloque a tampa e prenda as travas/parafusos.",
+      "⚠️ **Dica**: Troque o filtro a cada 15.000-30.000 km ou conforme indicado no manual.",
+    ],
+    "cabin_air_filter": [
+      "1️⃣ **Localizar**: O filtro de cabine geralmente fica atrás do porta-luvas ou sob o painel.",
+      "2️⃣ **Acessar**: Remova o porta-luvas ou a tampa de acesso (consulte o manual para seu modelo específico).",
+      "3️⃣ **Remover**: Retire a tampa do compartimento do filtro e deslize o filtro antigo para fora.",
+      "4️⃣ **Comparar**: Compare o filtro novo com o antigo para confirmar que é o modelo correto.",
+      "5️⃣ **Instalar**: Insira o filtro novo observando a direção do fluxo de ar (seta no filtro).",
+      "6️⃣ **Montar**: Recoloque a tampa e o porta-luvas.",
+      "⚠️ **Recomendação**: Troque a cada 15.000 km ou 1 ano para manter a qualidade do ar.",
+    ],
+    "coolant": [
+      "1️⃣ **Segurança**: NUNCA abra o sistema de arrefecimento com o motor quente!",
+      "2️⃣ **Localizar**: Encontre o reservatório de expansão (tampa com símbolo de radiador).",
+      "3️⃣ **Verificar nível**: O líquido deve estar entre as marcas MIN e MAX com motor frio.",
+      "4️⃣ **Adicionar**: Se necessário, complete com a mistura correta de água destilada e aditivo.",
+      "5️⃣ **Verificar**: Procure por vazamentos nas mangueiras, conexões e radiador.",
+      "⚠️ **Importante**: Use sempre o tipo de fluido recomendado pelo fabricante.",
+    ],
+    "headlight": [
+      "1️⃣ **Identificar**: Verifique o tipo de lâmpada necessária (consulte o manual ou a lâmpada antiga).",
+      "2️⃣ **Acessar**: Abra o capô e localize a parte traseira do farol. Em alguns casos, pode ser necessário remover peças.",
+      "3️⃣ **Desconectar**: Desconecte o soquete elétrico da lâmpada queimada.",
+      "4️⃣ **Remover**: Solte a trava de metal ou gire o soquete para liberar a lâmpada.",
+      "5️⃣ **Instalar**: Segure a lâmpada nova pela base (não toque no vidro!) e insira no soquete.",
+      "6️⃣ **Reconectar**: Recoloque a trava e conecte o soquete elétrico.",
+      "7️⃣ **Testar**: Ligue os faróis para verificar o funcionamento.",
+      "⚠️ **Atenção**: Lâmpadas halógenas podem explodir se tocadas com os dedos.",
+    ],
+    "wipers": [
+      "1️⃣ **Levantar**: Levante o braço do limpador afastando-o do para-brisa.",
+      "2️⃣ **Destravar**: Localize a trava de liberação da palheta (geralmente um botão ou clipe).",
+      "3️⃣ **Remover**: Pressione a trava e deslize a palheta antiga para fora do braço.",
+      "4️⃣ **Instalar**: Deslize a palheta nova até ouvir o clique de travamento.",
+      "5️⃣ **Abaixar**: Baixe cuidadosamente o braço de volta ao para-brisa.",
+      "6️⃣ **Testar**: Borrife água e acione os limpadores para verificar o funcionamento.",
+      "⚠️ **Dica**: Troque as palhetas a cada 6-12 meses para melhor visibilidade.",
+    ],
+    "fuse": [
+      "1️⃣ **Localizar**: Encontre a caixa de fusíveis (geralmente sob o painel ou no compartimento do motor).",
+      "2️⃣ **Diagrama**: Consulte a tampa da caixa ou o manual para identificar o fusível correto.",
+      "3️⃣ **Desligar**: Desligue a ignição antes de mexer nos fusíveis.",
+      "4️⃣ **Verificar**: Use o extrator de fusíveis para remover o fusível suspeito e verificar se está queimado.",
+      "5️⃣ **Substituir**: Coloque um fusível novo com a mesma amperagem (nunca use maior!).",
+      "6️⃣ **Testar**: Ligue a ignição e verifique se o sistema voltou a funcionar.",
+      "⚠️ **Atenção**: Se o fusível queimar novamente, há um problema elétrico que precisa de diagnóstico.",
+    ],
+  };
+  
+  // Determinar qual conjunto de passos usar
+  const categoryLower = category.toLowerCase();
+  let steps: string[] = [];
+  
+  if (categoryLower.includes("oil")) {
+    steps = categorySteps["oil"];
+  } else if (categoryLower.includes("batter")) {
+    steps = categorySteps["battery"];
+  } else if (categoryLower.includes("brake")) {
+    steps = categorySteps["brakes"];
+  } else if (categoryLower.includes("cabin") || categoryLower.includes("air_filter_cabin")) {
+    steps = categorySteps["cabin_air_filter"];
+  } else if (categoryLower.includes("air") || categoryLower.includes("filter")) {
+    steps = categorySteps["air_filter"];
+  } else if (categoryLower.includes("coolant") || categoryLower.includes("antifreeze")) {
+    steps = categorySteps["coolant"];
+  } else if (categoryLower.includes("headlight") || categoryLower.includes("light") || categoryLower.includes("bulb")) {
+    steps = categorySteps["headlight"];
+  } else if (categoryLower.includes("wiper")) {
+    steps = categorySteps["wipers"];
+  } else if (categoryLower.includes("fuse")) {
+    steps = categorySteps["fuse"];
+  } else {
+    // Passos genéricos
+    steps = [
+      `1️⃣ **Preparação**: Reúna as ferramentas e peças necessárias para ${procedureName}.`,
+      `2️⃣ **Segurança**: Estacione o veículo em local seguro e plano. Desligue o motor.`,
+      `3️⃣ **Acesso**: Localize o componente a ser trabalhado em ${vehicle}.`,
+      `4️⃣ **Procedimento**: Siga as instruções específicas do manual do proprietário.`,
+      `5️⃣ **Verificação**: Após concluir, verifique se tudo está corretamente montado.`,
+      `6️⃣ **Teste**: Teste o funcionamento antes de usar o veículo normalmente.`,
+      `⚠️ **Recomendação**: Para procedimentos complexos, consulte um mecânico profissional.`,
+    ];
+  }
+  
+  return steps;
+}
+
+// Formatar título do procedimento
+function formatProcedureTitle(procedure: string, vehicleContext?: string): string {
+  const translations: Record<string, string> = {
+    "replace": "Substituição",
+    "change": "Troca",
+    "add": "Adicionar",
+    "check": "Verificar",
+    "flush": "Troca Completa",
+    "oil": "Óleo",
+    "filter": "Filtro",
+    "battery": "Bateria",
+    "brake": "Freio",
+    "brakes": "Freios",
+    "coolant": "Fluido de Arrefecimento",
+    "headlight": "Farol",
+    "wipers": "Palhetas",
+    "fuse": "Fusível",
+    "air": "Ar",
+    "cabin": "Cabine",
+    "engine": "Motor",
+    "front": "Dianteiro",
+    "rear": "Traseiro",
+    "bulb": "Lâmpada",
+  };
+  
+  const words = procedure
+    .replace(/_/g, " ")
+    .replace(/-/g, " ")
+    .split(" ")
+    .map(word => translations[word.toLowerCase()] || word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+  
+  const title = words.join(" ");
+  return vehicleContext ? `${title} - ${vehicleContext}` : title;
 }
 
 // Helpers
