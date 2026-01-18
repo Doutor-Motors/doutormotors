@@ -11,7 +11,8 @@ import {
   ArrowUp,
   ArrowDown,
   Minus,
-  Bell
+  Bell,
+  BarChart2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { KPITargetEditor, KPITarget } from "./KPITargetEditor";
@@ -20,6 +21,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { KPITrendChart, useKPIHistoricalData } from "./KPITrendChart";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface KPIMetric {
   id: string;
@@ -41,6 +44,130 @@ interface KPIPanelProps {
   monthlyDiagnostics: number;
   monthlyRecordings: number;
   dailyActiveUsers?: number;
+}
+
+// Individual KPI Card with trend chart
+function KPICard({ metric, getProgressPercentage, getStatusBadge, getTrendIcon }: {
+  metric: KPIMetric;
+  getProgressPercentage: (current: number, target: number) => number;
+  getStatusBadge: (percentage: number) => { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive'; className: string };
+  getTrendIcon: (trend?: 'up' | 'down' | 'stable') => React.ReactNode;
+}) {
+  const [showTrend, setShowTrend] = useState(false);
+  const trendData = useKPIHistoricalData(metric.id, metric.current, 14);
+  
+  const percentage = getProgressPercentage(metric.current, metric.target);
+  const status = getStatusBadge(percentage);
+  const Icon = metric.icon;
+  const isBelowThreshold = metric.alertEnabled && percentage < (metric.alertThreshold || 50);
+
+  return (
+    <Card className={cn(
+      "relative overflow-hidden",
+      isBelowThreshold && "border-destructive/50"
+    )}>
+      {/* Indicador de cor no topo */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-1"
+        style={{ backgroundColor: isBelowThreshold ? 'hsl(var(--destructive))' : metric.color }}
+      />
+      
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div 
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: `${metric.color}20` }}
+            >
+              <Icon 
+                className="w-4 h-4" 
+                style={{ color: metric.color }}
+              />
+            </div>
+            <div>
+              <CardTitle className="text-sm font-medium">{metric.name}</CardTitle>
+              {metric.alertEnabled && (
+                <p className="text-xs text-muted-foreground">
+                  Alerta: &lt;{metric.alertThreshold}%
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setShowTrend(!showTrend)}
+              title="Ver tendência"
+            >
+              <BarChart2 className={cn(
+                "w-4 h-4",
+                showTrend ? "text-primary" : "text-muted-foreground"
+              )} />
+            </Button>
+            <Badge 
+              variant={status.variant}
+              className={cn("text-xs", status.className)}
+            >
+              {status.label}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-3">
+        {/* Valores */}
+        <div className="flex items-end justify-between">
+          <div>
+            <span className="text-2xl font-bold">{metric.current.toLocaleString()}</span>
+            <span className="text-muted-foreground text-sm ml-1">
+              / {metric.target.toLocaleString()}
+            </span>
+          </div>
+          {metric.trend && metric.trendValue !== undefined && (
+            <div className="flex items-center gap-1 text-sm">
+              {getTrendIcon(metric.trend)}
+              <span className={cn(
+                metric.trend === 'up' && 'text-green-500',
+                metric.trend === 'down' && 'text-red-500',
+                metric.trend === 'stable' && 'text-muted-foreground'
+              )}>
+                {metric.trendValue}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Barra de progresso */}
+        <div className="space-y-1">
+          <Progress 
+            value={percentage} 
+            className="h-2"
+            style={{
+              '--progress-background': isBelowThreshold ? 'hsl(var(--destructive))' : metric.color,
+            } as React.CSSProperties}
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{percentage.toFixed(0)}% da meta</span>
+            <span>Faltam {Math.max(0, metric.target - metric.current).toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Gráfico de tendência */}
+        {showTrend && (
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground mb-2">Tendência (últimos 14 dias)</p>
+            <KPITrendChart 
+              data={trendData} 
+              color={metric.color}
+              height={80}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export function KPIPanel({ 
@@ -187,7 +314,12 @@ export function KPIPanel({
               </div>
               <div>
                 <CardTitle className="text-xl">Metas & KPIs</CardTitle>
-                <CardDescription>Progresso geral do sistema</CardDescription>
+                <CardDescription>
+                  Progresso geral do sistema
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    (Verificação automática: diariamente às 9h)
+                  </span>
+                </CardDescription>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -232,96 +364,17 @@ export function KPIPanel({
         </CardContent>
       </Card>
 
-      {/* Grid de KPIs individuais */}
+      {/* Grid de KPIs individuais com gráficos de tendência */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {kpiMetrics.map((metric) => {
-          const percentage = getProgressPercentage(metric.current, metric.target);
-          const status = getStatusBadge(percentage);
-          const Icon = metric.icon;
-          const isBelowThreshold = metric.alertEnabled && percentage < (metric.alertThreshold || 50);
-
-          return (
-            <Card key={metric.id} className={cn(
-              "relative overflow-hidden",
-              isBelowThreshold && "border-destructive/50"
-            )}>
-              {/* Indicador de cor no topo */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-1"
-                style={{ backgroundColor: isBelowThreshold ? 'hsl(var(--destructive))' : metric.color }}
-              />
-              
-              <CardHeader className="pb-2 pt-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="p-2 rounded-lg"
-                      style={{ backgroundColor: `${metric.color}20` }}
-                    >
-                      <Icon 
-                        className="w-4 h-4" 
-                        style={{ color: metric.color }}
-                      />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-medium">{metric.name}</CardTitle>
-                      {metric.alertEnabled && (
-                        <p className="text-xs text-muted-foreground">
-                          Alerta: &lt;{metric.alertThreshold}%
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Badge 
-                    variant={status.variant}
-                    className={cn("text-xs", status.className)}
-                  >
-                    {status.label}
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-3">
-                {/* Valores */}
-                <div className="flex items-end justify-between">
-                  <div>
-                    <span className="text-2xl font-bold">{metric.current.toLocaleString()}</span>
-                    <span className="text-muted-foreground text-sm ml-1">
-                      / {metric.target.toLocaleString()}
-                    </span>
-                  </div>
-                  {metric.trend && metric.trendValue !== undefined && (
-                    <div className="flex items-center gap-1 text-sm">
-                      {getTrendIcon(metric.trend)}
-                      <span className={cn(
-                        metric.trend === 'up' && 'text-green-500',
-                        metric.trend === 'down' && 'text-red-500',
-                        metric.trend === 'stable' && 'text-muted-foreground'
-                      )}>
-                        {metric.trendValue}%
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Barra de progresso */}
-                <div className="space-y-1">
-                  <Progress 
-                    value={percentage} 
-                    className="h-2"
-                    style={{
-                      '--progress-background': isBelowThreshold ? 'hsl(var(--destructive))' : metric.color,
-                    } as React.CSSProperties}
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{percentage.toFixed(0)}% da meta</span>
-                    <span>Faltam {Math.max(0, metric.target - metric.current).toLocaleString()}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {kpiMetrics.map((metric) => (
+          <KPICard
+            key={metric.id}
+            metric={metric}
+            getProgressPercentage={getProgressPercentage}
+            getStatusBadge={getStatusBadge}
+            getTrendIcon={getTrendIcon}
+          />
+        ))}
       </div>
 
       {/* Resumo de performance */}
