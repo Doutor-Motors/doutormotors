@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useMemo } from "react";
 
 export type PlanType = "basic" | "pro";
 
@@ -15,6 +16,25 @@ export interface Subscription {
   stripe_customer_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Hook para verificar se usuário é admin (evita dependência circular)
+function useIsAdminInternal(userId: string | undefined) {
+  const { data: isAdmin, isLoading } = useQuery({
+    queryKey: ["is-admin-internal", userId],
+    queryFn: async () => {
+      if (!userId) return false;
+      const { data, error } = await supabase.rpc("has_role", {
+        _role: "admin",
+        _user_id: userId,
+      });
+      if (error) return false;
+      return Boolean(data);
+    },
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
+  });
+  return { isAdmin: isAdmin ?? false, isLoading };
 }
 
 // Definição das features por plano
@@ -85,6 +105,9 @@ export const PLAN_FEATURES = {
 export function useSubscription() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Verificar se é admin internamente
+  const { isAdmin, isLoading: adminLoading } = useIsAdminInternal(user?.id);
 
   const normalizePlanType = (value: unknown): PlanType => {
     const v = String(value ?? "").trim().toLowerCase();
@@ -193,12 +216,18 @@ export function useSubscription() {
     },
   });
 
-  // Helpers para verificar features
-  const currentPlan = subscription?.plan_type || "basic";
-  const planFeatures = PLAN_FEATURES[currentPlan];
-  const isPro = currentPlan === "pro";
+  // IMPORTANTE: Admin sempre tem acesso PRO, independente da assinatura
+  const effectivePlan: PlanType = useMemo(() => {
+    if (isAdmin) return "pro";
+    return subscription?.plan_type || "basic";
+  }, [isAdmin, subscription?.plan_type]);
+
+  const planFeatures = PLAN_FEATURES[effectivePlan];
+  const isPro = effectivePlan === "pro";
 
   const canUseFeature = (feature: keyof typeof PLAN_FEATURES.pro): boolean => {
+    // Admin sempre pode usar qualquer feature
+    if (isAdmin) return true;
     const value = planFeatures[feature as keyof typeof planFeatures];
     if (typeof value === "boolean") return value;
     if (typeof value === "number") return value !== 0;
@@ -206,6 +235,8 @@ export function useSubscription() {
   };
 
   const getFeatureLimit = (feature: keyof typeof PLAN_FEATURES.pro): number => {
+    // Admin tem limites ilimitados
+    if (isAdmin) return -1;
     const value = planFeatures[feature as keyof typeof planFeatures];
     if (typeof value === "number") return value;
     return -1;
@@ -213,21 +244,22 @@ export function useSubscription() {
 
   return {
     subscription,
-    isLoading,
+    isLoading: isLoading || adminLoading,
     error,
-    currentPlan,
+    currentPlan: effectivePlan,
     planFeatures,
     isPro,
+    isAdmin,
     canUseFeature,
     getFeatureLimit,
     createSubscription,
-    // Helpers específicos
-    canRecordData: planFeatures.dataRecording,
-    canExportCSV: planFeatures.exportCSV,
-    canUseCoding: planFeatures.codingFunctions,
-    canOptimizeOBD: planFeatures.obdOptimization,
-    maxVehicles: planFeatures.maxVehicles,
-    maxDiagnostics: planFeatures.maxDiagnosticsPerMonth,
-    maxParameters: planFeatures.maxRealTimeParameters,
+    // Helpers específicos - Admin sempre tem acesso
+    canRecordData: isAdmin || planFeatures.dataRecording,
+    canExportCSV: isAdmin || planFeatures.exportCSV,
+    canUseCoding: isAdmin || planFeatures.codingFunctions,
+    canOptimizeOBD: isAdmin || planFeatures.obdOptimization,
+    maxVehicles: isAdmin ? -1 : planFeatures.maxVehicles,
+    maxDiagnostics: isAdmin ? -1 : planFeatures.maxDiagnosticsPerMonth,
+    maxParameters: isAdmin ? -1 : planFeatures.maxRealTimeParameters,
   };
 }

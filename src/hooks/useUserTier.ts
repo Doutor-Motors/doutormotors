@@ -65,29 +65,28 @@ export function useUserTier() {
   const { 
     subscription, 
     isLoading: subscriptionLoading, 
-    currentPlan, 
     isPro,
     canUseFeature,
     getFeatureLimit,
     planFeatures,
+    isAdmin: subscriptionIsAdmin, // Também vem do useSubscription agora
   } = useSubscription();
 
   const isLoading = adminLoading || subscriptionLoading;
 
   // Determine user tier: Admin > Pro > Basic
+  // Usa tanto o hook useAdmin quanto o que vem do useSubscription para consistência
   const tier: UserTier = useMemo(() => {
-    if (isAdmin) return "admin";
+    if (isAdmin || subscriptionIsAdmin) return "admin";
     if (isPro) return "pro";
     return "basic";
-  }, [isAdmin, isPro]);
+  }, [isAdmin, subscriptionIsAdmin, isPro]);
 
   const tierConfig = TIER_CONFIGS[tier];
 
   // Check if user can access a specific feature
+  // Delegamos para useSubscription que já considera admin
   const canAccess = (feature: keyof typeof PLAN_FEATURES.pro): boolean => {
-    // Admins can access everything
-    if (isAdmin) return true;
-    // Otherwise check subscription
     return canUseFeature(feature);
   };
 
@@ -107,8 +106,13 @@ export function useUserTier() {
 
   // Check if feature is locked for current user
   const isFeatureLocked = (feature: keyof typeof PLAN_FEATURES.pro): boolean => {
+    // Admin nunca tem features bloqueadas
+    if (isAdmin || subscriptionIsAdmin) return false;
     return isProFeature(feature) && !canAccess(feature);
   };
+
+  // Calcular se é efetivamente Pro (inclui admin)
+  const effectivelyPro = isAdmin || subscriptionIsAdmin || isPro;
 
   return {
     // State
@@ -119,8 +123,8 @@ export function useUserTier() {
     
     // Flags
     isBasic: tier === "basic",
-    isPro: tier === "pro" || tier === "admin",
-    isAdmin,
+    isPro: effectivelyPro, // Admin também é considerado Pro
+    isAdmin: isAdmin || subscriptionIsAdmin,
     
     // Feature access
     canAccess,

@@ -58,8 +58,8 @@ const CATEGORY_ICONS = {
 };
 
 export default function CodingFunctionsPage() {
-  const { currentPlan } = useSubscription();
-  const isPro = currentPlan === 'pro';
+  const { isPro, isAdmin } = useSubscription();
+  const hasProAccess = isPro || isAdmin;
   const { saveExecution } = useCodingHistory();
   const { canUse, incrementUsage } = useUsageTracking();
   
@@ -82,7 +82,7 @@ export default function CodingFunctionsPage() {
     setSelectedFunction(func);
     setResult(null);
     
-    const { canExecute, reason } = codingManager.canExecuteFunction(func, isPro);
+    const { canExecute, reason } = codingManager.canExecuteFunction(func, hasProAccess);
     
     if (!canExecute && reason?.includes('Pro')) {
       return; // Will show upgrade prompt
@@ -185,7 +185,7 @@ export default function CodingFunctionsPage() {
             </p>
           </div>
           
-          {!isPro && (
+          {!hasProAccess && (
             <Badge variant="secondary" className="gap-1">
               <Lock className="h-3 w-3" />
               Algumas funções requerem Pro
@@ -251,7 +251,7 @@ export default function CodingFunctionsPage() {
                   <div className="grid gap-3">
                     {functionsForCategory.map((func) => {
                       const riskConfig = RISK_LEVEL_CONFIG[func.riskLevel];
-                      const isLocked = func.requiresPro && !isPro;
+                      const isLocked = func.requiresPro && !hasProAccess;
                       const isSelected = selectedFunction?.id === func.id;
                       
                       return (
@@ -329,7 +329,7 @@ export default function CodingFunctionsPage() {
                     <Settings2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
                     <p>Selecione uma função ao lado</p>
                   </div>
-                ) : selectedFunction.requiresPro && !isPro ? (
+                ) : selectedFunction.requiresPro && !hasProAccess ? (
                   <UpgradePrompt 
                     feature="funções avançadas de coding"
                     compact
