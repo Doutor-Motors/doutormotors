@@ -1551,7 +1551,48 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         const procedureSlug = videoUrl.split('/').pop()?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
         const categorySlug = videoUrl.split('/').slice(-2, -1)[0]?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
         
-        console.log(`Looking for video matching procedure: "${procedureSlug}", category: "${categorySlug}"`);
+        // Normalizar o procedimento para busca (oil_change -> oil change, change_oil -> change oil)
+        const normalizedProcedure = procedureSlug.replace(/_/g, ' ').replace(/-/g, ' ').toLowerCase();
+        const procedureWords = normalizedProcedure.split(' ').filter(w => w.length > 2);
+        
+        console.log(`Looking for video matching procedure: "${normalizedProcedure}" (words: ${procedureWords.join(', ')}), category: "${categorySlug}"`);
+        
+        // Mapear termos comuns para palavras-chave nas thumbnails
+        const keywordMap: Record<string, string[]> = {
+          // Oil related
+          'oil change': ['oil', 'motor oil', 'oil fill', 'oil drain', 'oil filter', 'engine oil'],
+          'change oil': ['oil', 'motor oil', 'oil fill', 'oil drain', 'oil filter', 'engine oil'],
+          'oil': ['oil', 'motor oil', 'oil fill', 'oil drain', 'oil filter', 'engine oil'],
+          // Battery
+          'battery': ['battery', 'bateria', 'jump start'],
+          'replace battery': ['battery', 'bateria'],
+          'jump start': ['battery', 'jump start', 'jumper'],
+          // Air filters
+          'air filter': ['air filter', 'filtro de ar'],
+          'air filter cabin': ['cabin', 'air filter cabin', 'cabin filter'],
+          'air filter engine': ['air filter engine', 'engine filter'],
+          // Brakes
+          'brakes': ['brake', 'freio', 'brake fluid', 'brake pad'],
+          'brake fluid': ['brake fluid', 'brake'],
+          // Lights
+          'headlight': ['headlight', 'farol', 'headlamp', 'bulb'],
+          'taillight': ['taillight', 'tail light', 'brake light'],
+          // Fluids
+          'coolant': ['coolant', 'antifreeze', 'radiator'],
+          'transmission fluid': ['transmission', 'trans fluid'],
+          'power steering': ['power steering', 'steering fluid'],
+          // Wipers
+          'wipers': ['wiper', 'windshield', 'wiper blade'],
+          'windshield': ['wiper', 'windshield', 'washer'],
+          // AC
+          'air conditioner': ['air conditioning', 'a/c', 'ac', 'freon', 'recharge'],
+          'recharge freon': ['freon', 'a/c', 'ac', 'air conditioning'],
+          // Check engine
+          'check engine light': ['obd', 'check engine', 'diagnose'],
+          // Tire
+          'tire': ['tire', 'pneu', 'wheel', 'spare'],
+          'flat tire': ['tire', 'spare', 'flat'],
+        };
         
         // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
         const rankedThumbnails = thumbnailMatches
@@ -1559,42 +1600,57 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
             const thumbLower = decodeURIComponent(thumb.replace(/\+/g, ' ')).toLowerCase();
             let score = 0;
             
-            // Pontuação baseada em correspondência com procedimento
-            if (procedureSlug && thumbLower.includes(procedureSlug)) score += 10;
+            // Pontuação baseada em correspondência direta com procedimento
+            if (normalizedProcedure && thumbLower.includes(normalizedProcedure)) score += 15;
             if (categorySlug && thumbLower.includes(categorySlug)) score += 5;
             
-            // Mapear termos comuns para palavras-chave nas thumbnails
-            const keywordMap: Record<string, string[]> = {
-              'change_oil': ['oil', 'oil change', 'motor oil'],
-              'oil': ['oil', 'oil change', 'motor oil'],
-              'battery': ['battery', 'bateria'],
-              'replace_battery': ['battery', 'bateria'],
-              'air_filter': ['air filter', 'filtro de ar'],
-              'cabin_air_filter': ['cabin', 'air filter cabin'],
-              'brakes': ['brake', 'freio'],
-              'headlight': ['headlight', 'farol'],
-              'wipers': ['wiper', 'windshield'],
-              'coolant': ['coolant', 'antifreeze'],
-            };
+            // Pontuação por palavras individuais do procedimento encontradas na thumbnail
+            for (const word of procedureWords) {
+              if (thumbLower.includes(word)) score += 6;
+            }
             
-            const keywords = keywordMap[procedureSlug] || [procedureSlug.replace(/_/g, ' ')];
+            // Buscar keywords mapeados para o procedimento
+            const keywords = keywordMap[normalizedProcedure] || [];
             for (const keyword of keywords) {
               if (thumbLower.includes(keyword)) score += 8;
             }
             
-            // Ignorar thumbnails de "Review" se buscando procedimento específico
-            if (procedureSlug && thumbLower.includes('review') && !procedureSlug.includes('review')) {
+            // Tentar todas as combinações de palavras no keywordMap
+            for (const [key, values] of Object.entries(keywordMap)) {
+              // Verificar se o procedimento contém alguma das palavras da chave
+              const keyWords = key.split(' ');
+              const procedureMatchesKey = keyWords.every(kw => normalizedProcedure.includes(kw)) || 
+                                          normalizedProcedure.split(' ').some(pw => keyWords.includes(pw));
+              if (procedureMatchesKey) {
+                for (const value of values) {
+                  if (thumbLower.includes(value)) score += 6;
+                }
+              }
+            }
+            
+            // Penalizar thumbnails de "Review" se buscando procedimento específico
+            if (normalizedProcedure && thumbLower.includes('review') && !normalizedProcedure.includes('review')) {
+              score -= 10;
+            }
+            
+            // Penalizar thumbnails genéricas (vehicle, front, etc.)
+            if (thumbLower.includes('vehicle -') || thumbLower.includes('/front.')) {
               score -= 5;
             }
             
             return { url: thumb, score };
           })
+          .filter(t => t.score > 0) // Só considerar thumbnails com alguma relevância
           .sort((a, b) => b.score - a.score);
         
-        console.log(`Found ${rankedThumbnails.length} thumbnails, best match score: ${rankedThumbnails[0]?.score}`);
+        // Se nenhuma thumbnail teve score > 0, usar todas ordenadas
+        const thumbnailsToTry = rankedThumbnails.length > 0 ? rankedThumbnails : 
+          thumbnailMatches.map(url => ({ url, score: 0 }));
+        
+        console.log(`Found ${thumbnailsToTry.length} thumbnails, best match score: ${thumbnailsToTry[0]?.score}`);
         
         // Tentar as thumbnails em ordem de relevância
-        for (const { url: thumbUrl, score } of rankedThumbnails) {
+        for (const { url: thumbUrl, score } of thumbnailsToTry) {
           // Converter URL de thumbnail para URL de vídeo
           // Remover " - 480p.webp" ou similares e adicionar ".mp4"
           let videoUrlFromThumb = thumbUrl
