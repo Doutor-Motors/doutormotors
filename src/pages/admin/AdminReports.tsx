@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -9,9 +10,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { Download, TrendingUp, Users, Car, Activity } from "lucide-react";
+import { Download, TrendingUp, Users, Car, Activity, Wifi, WifiOff } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { toast } from "sonner";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
@@ -22,6 +25,37 @@ const AdminReports = () => {
   const [registrationsTrend, setRegistrationsTrend] = useState<any[]>([]);
   const [topBrands, setTopBrands] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+
+  // Realtime subscription para atualização automática
+  const handleRealtimeChange = useCallback(({ table, eventType }: { table: string; eventType: string; new: any; old: any }) => {
+    console.log(`[Realtime Reports] ${eventType} on ${table}`);
+    
+    // Atualizar relatórios quando dados mudam
+    if (['diagnostics', 'diagnostic_items', 'profiles', 'vehicles'].includes(table)) {
+      fetchReportData();
+      toast.info("📊 Relatórios atualizados em tempo real", { duration: 2000 });
+    }
+    
+    setIsRealtimeConnected(true);
+  }, []);
+
+  useRealtimeSubscription({
+    tables: [
+      { table: 'diagnostics', event: '*' },
+      { table: 'diagnostic_items', event: '*' },
+      { table: 'profiles', event: '*' },
+      { table: 'vehicles', event: '*' },
+    ],
+    onDataChange: handleRealtimeChange,
+    enabled: true,
+  });
+
+  // Marcar como conectado após mount
+  useEffect(() => {
+    const timer = setTimeout(() => setIsRealtimeConnected(true), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     fetchReportData();
@@ -171,9 +205,22 @@ const AdminReports = () => {
             <h1 className="text-3xl font-bold font-chakra text-foreground">
               Relatórios e Estatísticas
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Análise de dados do sistema
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-muted-foreground">
+                Análise de dados do sistema
+              </p>
+              {isRealtimeConnected ? (
+                <Badge variant="outline" className="text-green-500 border-green-500/50 gap-1">
+                  <Wifi className="w-3 h-3" />
+                  Tempo Real
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 gap-1">
+                  <WifiOff className="w-3 h-3" />
+                  Conectando...
+                </Badge>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2">
