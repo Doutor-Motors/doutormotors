@@ -1649,6 +1649,22 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'power steering fluid': ['power steering', 'steering fluid', 'steering pump', 'ps fluid'],
           'steering fluid': ['power steering', 'steering fluid', 'steering'],
           'steering': ['power steering', 'steering fluid', 'steering pump', 'steering wheel'],
+          // Timing belt
+          'timing belt': ['timing belt', 'timing chain', 'timing', 'cam belt', 'belt replacement', 'timing cover'],
+          'timing chain': ['timing chain', 'timing', 'chain', 'timing cover'],
+          'timing': ['timing belt', 'timing chain', 'timing', 'cam belt'],
+          // Serpentine belt
+          'serpentine belt': ['serpentine belt', 'serpentine', 'drive belt', 'accessory belt', 'belt', 'fan belt'],
+          'serpentine': ['serpentine belt', 'serpentine', 'drive belt', 'accessory belt'],
+          'drive belt': ['serpentine belt', 'drive belt', 'belt', 'accessory belt'],
+          'accessory belt': ['serpentine belt', 'accessory belt', 'drive belt'],
+          // Thermostat
+          'thermostat': ['thermostat', 'cooling', 'overheat', 'temperature', 'coolant flow'],
+          'temperature': ['thermostat', 'temperature', 'cooling', 'overheat'],
+          // Water pump
+          'water pump': ['water pump', 'pump', 'coolant pump', 'cooling', 'water', 'coolant circulation'],
+          'water': ['water pump', 'coolant', 'cooling system'],
+          'coolant pump': ['water pump', 'coolant pump', 'pump'],
         };
         
         // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
@@ -2225,6 +2241,52 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
       "7️⃣ **Verificar vazamentos**: Inspecione as mangueiras e conexões da bomba de direção.",
       "⚠️ **Atenção**: Nível muito baixo pode danificar a bomba. Procure vazamentos se precisar completar frequentemente.",
     ],
+    "timing_belt": [
+      "1️⃣ **Aviso**: A troca da correia dentada é um procedimento complexo. Recomenda-se fortemente um mecânico experiente.",
+      "2️⃣ **Preparação**: Desconecte a bateria. Remova as tampas de proteção do motor e acessórios que bloqueiam o acesso.",
+      "3️⃣ **Marcação**: Antes de remover, marque a posição da correia em relação às engrenagens do comando e virabrequim.",
+      "4️⃣ **Tensionador**: Afrouxe o tensionador da correia para liberar a tensão.",
+      "5️⃣ **Remover**: Retire a correia antiga com cuidado, observando o percurso exato.",
+      "6️⃣ **Inspeção**: Verifique o estado do tensionador, polias e bomba d'água. Troque se necessário.",
+      "7️⃣ **Instalar**: Instale a correia nova seguindo exatamente as marcações de sincronismo.",
+      "8️⃣ **Tensão**: Ajuste o tensionador conforme especificação. Gire o motor manualmente 2 voltas completas.",
+      "9️⃣ **Verificação**: Confirme que as marcações de sincronismo ainda coincidem após girar o motor.",
+      "⚠️ **Crítico**: Sincronismo incorreto pode causar danos graves ao motor (válvulas e pistões).",
+    ],
+    "serpentine_belt": [
+      "1️⃣ **Identificação**: Localize a correia serpentina na frente do motor. Observe o diagrama de roteamento (geralmente no compartimento do motor).",
+      "2️⃣ **Ferramentas**: Você precisará de uma chave ou ferramenta para tensionador de correia.",
+      "3️⃣ **Tensionador**: Localize o tensionador automático (polia com mola). Use a ferramenta para aliviar a tensão.",
+      "4️⃣ **Remover**: Com a tensão aliviada, deslize a correia para fora das polias. Observe o percurso exato.",
+      "5️⃣ **Inspecionar**: Verifique todas as polias por desgaste, ruído ou jogo excessivo.",
+      "6️⃣ **Instalar**: Instale a correia nova seguindo o diagrama de roteamento. Deixe o tensionador por último.",
+      "7️⃣ **Verificar**: Solte o tensionador lentamente. Confirme que a correia está centralizada em todas as polias.",
+      "8️⃣ **Teste**: Ligue o motor e observe se a correia funciona suavemente sem ruídos ou vibração.",
+      "⚠️ **Dica**: Tire uma foto do roteamento antes de remover. Uma correia mal instalada pode danificar componentes.",
+    ],
+    "thermostat": [
+      "1️⃣ **Segurança**: NUNCA trabalhe no sistema de arrefecimento com o motor quente! Espere esfriar completamente.",
+      "2️⃣ **Drenar**: Drene parcialmente o líquido de arrefecimento para evitar vazamentos durante o trabalho.",
+      "3️⃣ **Localizar**: O termostato geralmente fica na carcaça onde a mangueira superior do radiador conecta ao motor.",
+      "4️⃣ **Remover**: Desconecte a mangueira e remova os parafusos da carcaça. Retire o termostato antigo.",
+      "5️⃣ **Limpar**: Limpe as superfícies de vedação. Remova restos de junta antiga.",
+      "6️⃣ **Instalar**: Posicione o termostato novo (observe a direção correta - a parte sensível para o motor).",
+      "7️⃣ **Junta**: Use junta nova ou vedante apropriado. Recoloque a carcaça e aperte uniformemente.",
+      "8️⃣ **Reabastecer**: Complete o líquido de arrefecimento. Sangre o sistema de bolhas de ar.",
+      "⚠️ **Importante**: Após aquecer o motor, verifique se há vazamentos e confirme que a temperatura estabiliza corretamente.",
+    ],
+    "water_pump": [
+      "1️⃣ **Aviso**: A troca da bomba d'água é um trabalho complexo. Recomenda-se experiência ou mecânico profissional.",
+      "2️⃣ **Preparação**: Motor frio! Desconecte a bateria. Drene completamente o líquido de arrefecimento.",
+      "3️⃣ **Acesso**: Remova a correia serpentina ou correia dentada (dependendo do modelo). Remova componentes que bloqueiam o acesso.",
+      "4️⃣ **Remover mangueiras**: Desconecte as mangueiras de arrefecimento ligadas à bomba.",
+      "5️⃣ **Parafusos**: Remova os parafusos da bomba d'água. Podem estar travados - use a sequência correta.",
+      "6️⃣ **Limpar**: Limpe completamente a superfície de montagem. Remova todos os restos de junta antiga.",
+      "7️⃣ **Junta**: Aplique junta nova ou vedante conforme especificação do fabricante.",
+      "8️⃣ **Instalar**: Posicione a bomba nova e aperte os parafusos em sequência cruzada, com torque especificado.",
+      "9️⃣ **Reabastecer**: Reinstale correias, mangueiras. Complete o líquido de arrefecimento e sangre o sistema.",
+      "⚠️ **Crítico**: Teste exaustivamente por vazamentos. Monitore a temperatura nas primeiras viagens.",
+    ],
   };
   
   // Determinar qual conjunto de passos usar - verificar tanto category quanto procedure
@@ -2258,6 +2320,14 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
     steps = categorySteps["wipers"];
   } else if (searchTerm.includes("fuse")) {
     steps = categorySteps["fuse"];
+  } else if (searchTerm.includes("timing") || searchTerm.includes("cam belt")) {
+    steps = categorySteps["timing_belt"];
+  } else if (searchTerm.includes("serpentine") || searchTerm.includes("drive belt") || searchTerm.includes("accessory belt")) {
+    steps = categorySteps["serpentine_belt"];
+  } else if (searchTerm.includes("thermostat") || (searchTerm.includes("temperature") && searchTerm.includes("sensor"))) {
+    steps = categorySteps["thermostat"];
+  } else if (searchTerm.includes("water pump") || (searchTerm.includes("water") && searchTerm.includes("pump"))) {
+    steps = categorySteps["water_pump"];
   } else {
     // Passos genéricos
     steps = [
