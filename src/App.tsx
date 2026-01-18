@@ -50,6 +50,9 @@ import UpgradePage from "./pages/dashboard/UpgradePage";
 import DataRecordingPage from "./pages/dashboard/DataRecordingPage";
 import OBDSettingsPage from "./pages/dashboard/OBDSettingsPage";
 import CodingFunctionsPage from "./pages/dashboard/CodingFunctionsPage";
+import CodingHistoryPage from "./pages/dashboard/CodingHistoryPage";
+import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -94,6 +97,7 @@ const App = () => (
                 <Route path="/dashboard/data-recording" element={<ProtectedRoute><DataRecordingPage /></ProtectedRoute>} />
                 <Route path="/dashboard/obd-settings" element={<ProtectedRoute><OBDSettingsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/coding" element={<ProtectedRoute><CodingFunctionsPage /></ProtectedRoute>} />
+                <Route path="/dashboard/coding/history" element={<ProtectedRoute><CodingHistoryPage /></ProtectedRoute>} />
                 <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
                 
@@ -108,6 +112,7 @@ const App = () => (
                 <Route path="/admin/logs" element={<ProtectedRoute><AdminProtectedRoute><AdminLogs /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/settings" element={<ProtectedRoute><AdminProtectedRoute><AdminSettings /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/alerts" element={<ProtectedRoute><AdminProtectedRoute><AdminAlerts /></AdminProtectedRoute></ProtectedRoute>} />
+                <Route path="/admin/subscriptions" element={<ProtectedRoute><AdminProtectedRoute><AdminSubscriptions /></AdminProtectedRoute></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>

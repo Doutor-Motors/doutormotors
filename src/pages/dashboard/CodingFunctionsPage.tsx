@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,8 +33,11 @@ import {
   Info,
   Bluetooth,
   Crown,
+  History,
 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCodingHistory } from '@/hooks/useCodingHistory';
+import { useUsageTracking } from '@/hooks/useUsageTracking';
 import { 
   getOBDCodingManager, 
   CodingFunction, 
@@ -56,6 +60,8 @@ const CATEGORY_ICONS = {
 export default function CodingFunctionsPage() {
   const { currentPlan } = useSubscription();
   const isPro = currentPlan === 'pro';
+  const { saveExecution } = useCodingHistory();
+  const { canUse, incrementUsage } = useUsageTracking();
   
   const [selectedCategory, setSelectedCategory] = useState<CodingCategory>('adaptation_reset');
   const [selectedFunction, setSelectedFunction] = useState<CodingFunction | null>(null);
@@ -68,6 +74,7 @@ export default function CodingFunctionsPage() {
   const connectionManager = getOBDConnectionManager();
   const connectionInfo = connectionManager.getConnectionInfo();
   const isConnected = connectionInfo.state === 'connected';
+  const canExecuteCoding = canUse('coding_executions');
 
   const categories = Object.entries(CATEGORY_LABELS) as [CodingCategory, typeof CATEGORY_LABELS[CodingCategory]][];
 
