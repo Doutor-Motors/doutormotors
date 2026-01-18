@@ -6,9 +6,6 @@ import type {
   TutorialDifficulty 
 } from '@/types/tutorials';
 
-// Re-export types
-export type { Tutorial, TutorialCategory, TutorialStep };
-
 export interface SearchParams {
   query?: string;
   make?: string;
