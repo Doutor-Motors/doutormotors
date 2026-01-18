@@ -10,9 +10,16 @@ import {
   Trophy,
   ArrowUp,
   ArrowDown,
-  Minus
+  Minus,
+  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { KPITargetEditor, KPITarget } from "./KPITargetEditor";
+import { useKPITargets } from "@/hooks/useKPITargets";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface KPIMetric {
   id: string;
@@ -24,6 +31,8 @@ interface KPIMetric {
   color: string;
   trend?: 'up' | 'down' | 'stable';
   trendValue?: number;
+  alertEnabled?: boolean;
+  alertThreshold?: number;
 }
 
 interface KPIPanelProps {
@@ -41,61 +50,71 @@ export function KPIPanel({
   monthlyRecordings,
   dailyActiveUsers = 0 
 }: KPIPanelProps) {
-  // Metas configuráveis do sistema
+  const { targets, isLoading, saveTargets, getTarget, getAlertSettings } = useKPITargets();
+  const { toast } = useToast();
+  const [checkingAlerts, setCheckingAlerts] = useState(false);
+
+  // Build KPI metrics with dynamic targets
   const kpiMetrics: KPIMetric[] = [
     {
       id: 'total-users',
       name: 'Usuários Totais',
       current: totalUsers,
-      target: 1000,
+      target: getTarget('total-users'),
       icon: Users,
       color: 'hsl(var(--chart-1))',
       trend: 'up',
-      trendValue: 12
+      trendValue: 12,
+      ...getAlertSettings('total-users'),
     },
     {
       id: 'pro-subscribers',
       name: 'Assinantes Pro',
       current: proUsers,
-      target: 100,
+      target: getTarget('pro-subscribers'),
       icon: Trophy,
       color: 'hsl(var(--chart-2))',
       trend: 'up',
-      trendValue: 8
+      trendValue: 8,
+      ...getAlertSettings('pro-subscribers'),
     },
     {
       id: 'monthly-diagnostics',
       name: 'Diagnósticos/Mês',
       current: monthlyDiagnostics,
-      target: 5000,
+      target: getTarget('monthly-diagnostics'),
       icon: Activity,
       color: 'hsl(var(--chart-3))',
       trend: 'stable',
-      trendValue: 0
+      trendValue: 0,
+      ...getAlertSettings('monthly-diagnostics'),
     },
     {
       id: 'monthly-recordings',
       name: 'Gravações/Mês',
       current: monthlyRecordings,
-      target: 2000,
+      target: getTarget('monthly-recordings'),
       icon: Zap,
       color: 'hsl(var(--chart-4))',
       trend: 'up',
-      trendValue: 15
+      trendValue: 15,
+      ...getAlertSettings('monthly-recordings'),
     },
     {
       id: 'daily-active',
       name: 'Usuários Ativos/Dia',
       current: dailyActiveUsers,
-      target: 200,
+      target: getTarget('daily-active'),
       icon: TrendingUp,
       color: 'hsl(var(--chart-5))',
       trend: 'down',
-      trendValue: 5
+      trendValue: 5,
+      ...getAlertSettings('daily-active'),
     }
   ];
 
   const getProgressPercentage = (current: number, target: number) => {
+    if (target === 0) return 0;
     return Math.min((current / target) * 100, 100);
   };
 
@@ -122,16 +141,46 @@ export function KPIPanel({
     }
   };
 
+  const handleCheckAlerts = async () => {
+    setCheckingAlerts(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-kpi-alerts');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Verificação Concluída",
+        description: data.message || "Alertas verificados com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error checking alerts:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível verificar os alertas.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingAlerts(false);
+    }
+  };
+
   const overallProgress = kpiMetrics.reduce((acc, metric) => {
     return acc + getProgressPercentage(metric.current, metric.target);
   }, 0) / kpiMetrics.length;
+
+  // Count KPIs that are below their alert threshold
+  const alertCount = kpiMetrics.filter(m => {
+    if (!m.alertEnabled) return false;
+    const percentage = getProgressPercentage(m.current, m.target);
+    return percentage < (m.alertThreshold || 50);
+  }).length;
 
   return (
     <div className="space-y-6">
       {/* Header com progresso geral */}
       <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/20">
                 <Target className="w-6 h-6 text-primary" />
@@ -141,11 +190,37 @@ export function KPIPanel({
                 <CardDescription>Progresso geral do sistema</CardDescription>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-primary">{overallProgress.toFixed(0)}%</div>
-              <p className="text-sm text-muted-foreground">Meta Geral</p>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-3xl font-bold text-primary">{overallProgress.toFixed(0)}%</div>
+                <p className="text-sm text-muted-foreground">Meta Geral</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <KPITargetEditor 
+                  targets={targets} 
+                  onSave={saveTargets} 
+                  isLoading={isLoading} 
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={handleCheckAlerts}
+                  disabled={checkingAlerts}
+                >
+                  <Bell className="w-4 h-4" />
+                  {checkingAlerts ? 'Verificando...' : 'Verificar Alertas'}
+                </Button>
+              </div>
             </div>
           </div>
+          {alertCount > 0 && (
+            <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <p className="text-sm text-destructive font-medium">
+                ⚠️ {alertCount} KPI(s) abaixo do limite de alerta
+              </p>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <Progress value={overallProgress} className="h-3" />
@@ -163,13 +238,17 @@ export function KPIPanel({
           const percentage = getProgressPercentage(metric.current, metric.target);
           const status = getStatusBadge(percentage);
           const Icon = metric.icon;
+          const isBelowThreshold = metric.alertEnabled && percentage < (metric.alertThreshold || 50);
 
           return (
-            <Card key={metric.id} className="relative overflow-hidden">
+            <Card key={metric.id} className={cn(
+              "relative overflow-hidden",
+              isBelowThreshold && "border-destructive/50"
+            )}>
               {/* Indicador de cor no topo */}
               <div 
                 className="absolute top-0 left-0 right-0 h-1"
-                style={{ backgroundColor: metric.color }}
+                style={{ backgroundColor: isBelowThreshold ? 'hsl(var(--destructive))' : metric.color }}
               />
               
               <CardHeader className="pb-2 pt-4">
@@ -184,7 +263,14 @@ export function KPIPanel({
                         style={{ color: metric.color }}
                       />
                     </div>
-                    <CardTitle className="text-sm font-medium">{metric.name}</CardTitle>
+                    <div>
+                      <CardTitle className="text-sm font-medium">{metric.name}</CardTitle>
+                      {metric.alertEnabled && (
+                        <p className="text-xs text-muted-foreground">
+                          Alerta: &lt;{metric.alertThreshold}%
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <Badge 
                     variant={status.variant}
@@ -224,7 +310,7 @@ export function KPIPanel({
                     value={percentage} 
                     className="h-2"
                     style={{
-                      '--progress-background': metric.color,
+                      '--progress-background': isBelowThreshold ? 'hsl(var(--destructive))' : metric.color,
                     } as React.CSSProperties}
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
