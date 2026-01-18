@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   Home,
@@ -12,6 +12,8 @@ import {
   Database,
   Clock,
   Loader2,
+  Play,
+  List,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +37,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
-import { CarBrand, CarModel, VideoCategory, Procedure, VideoDetails } from "./types";
+import { CarBrand, CarModel, VideoCategory, Procedure, VideoDetails, RelatedVideo } from "./types";
 
 interface VideoViewProps {
   selectedBrand: CarBrand;
@@ -72,6 +74,17 @@ const VideoView = ({
   onModelClick,
   onProceduresClick,
 }: VideoViewProps) => {
+  // Estado para controlar qual vídeo está sendo exibido quando há múltiplos
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
+  
+  // Determinar o vídeo atual a ser exibido
+  const currentVideoUrl = useMemo(() => {
+    if (videoDetails?.relatedVideos && videoDetails.relatedVideos.length > 0 && selectedVideoIndex > 0) {
+      return videoDetails.relatedVideos[selectedVideoIndex - 1]?.url || videoDetails.videoUrl;
+    }
+    return videoDetails?.videoUrl;
+  }, [videoDetails, selectedVideoIndex]);
+
   // Verificar se é uma URL de vídeo MP4 (CloudFront ou outro CDN)
   const isMP4Video = (url: string | undefined): boolean => {
     if (!url) return false;
@@ -209,14 +222,15 @@ const VideoView = ({
                       <p className="text-lg font-medium">Carregando vídeo...</p>
                     )}
                   </div>
-                ) : videoDetails?.videoUrl ? (
+                ) : currentVideoUrl ? (
                   <>
                     <AspectRatio ratio={16 / 9}>
-                      {isMP4Video(videoDetails.videoUrl) ? (
+                      {isMP4Video(currentVideoUrl) ? (
                         // Player nativo para vídeos MP4 (CloudFront)
                         <video
-                          src={videoDetails.videoUrl}
-                          title={videoDetails.title || selectedCategory.name}
+                          key={currentVideoUrl} // Force re-render when URL changes
+                          src={currentVideoUrl}
+                          title={videoDetails?.title || selectedCategory.name}
                           className="w-full h-full bg-black"
                           controls
                           preload="metadata"
@@ -228,10 +242,10 @@ const VideoView = ({
                         // Iframe para YouTube
                         <iframe
                           src={
-                            getYouTubeEmbedUrl(videoDetails.videoUrl) ||
-                            videoDetails.videoUrl
+                            getYouTubeEmbedUrl(currentVideoUrl) ||
+                            currentVideoUrl
                           }
-                          title={videoDetails.title || selectedCategory.name}
+                          title={videoDetails?.title || selectedCategory.name}
                           className="w-full h-full"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
@@ -239,14 +253,55 @@ const VideoView = ({
                       )}
                     </AspectRatio>
                     <div className="p-4 bg-gradient-to-r from-primary/5 to-transparent">
-                      <h2 className="font-chakra font-bold text-lg">
-                        {videoDetails?.title ||
-                          `${selectedProcedure?.name || selectedCategory.name}`}
-                      </h2>
-                      {videoDetails?.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {videoDetails.description}
-                        </p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="font-chakra font-bold text-lg">
+                            {videoDetails?.title ||
+                              `${selectedProcedure?.name || selectedCategory.name}`}
+                          </h2>
+                          {videoDetails?.description && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {videoDetails.description}
+                            </p>
+                          )}
+                        </div>
+                        {videoDetails?.relatedVideos && videoDetails.relatedVideos.length > 0 && (
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <List className="w-3 h-3" />
+                            {videoDetails.relatedVideos.length + 1} vídeos
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Lista de vídeos relacionados quando há múltiplos */}
+                      {videoDetails?.relatedVideos && videoDetails.relatedVideos.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-border/50">
+                          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                            <Play className="w-3 h-3" />
+                            Vídeos relacionados nesta categoria:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant={selectedVideoIndex === 0 ? "default" : "outline"}
+                              onClick={() => setSelectedVideoIndex(0)}
+                              className="text-xs h-7"
+                            >
+                              Principal
+                            </Button>
+                            {videoDetails.relatedVideos.map((video, idx) => (
+                              <Button
+                                key={idx}
+                                size="sm"
+                                variant={selectedVideoIndex === idx + 1 ? "default" : "outline"}
+                                onClick={() => setSelectedVideoIndex(idx + 1)}
+                                className="text-xs h-7"
+                              >
+                                {video.name || `Vídeo ${idx + 2}`}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </>

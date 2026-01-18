@@ -1638,19 +1638,35 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
               score -= 5;
             }
             
-            return { url: thumb, score };
+            // Extrair nome do procedimento da thumbnail para exibição
+            const thumbPath = decodeURIComponent(thumb.replace(/\+/g, ' '));
+            const thumbName = thumbPath
+              .split('/')
+              .pop()
+              ?.replace(/\s*-\s*\d+p\.webp$/i, '')
+              ?.replace(/\.webp$/i, '')
+              ?.replace(/ - Part \d+/i, '')
+              ?.trim() || '';
+            
+            return { url: thumb, score, name: thumbName };
           })
           .filter(t => t.score > 0) // Só considerar thumbnails com alguma relevância
           .sort((a, b) => b.score - a.score);
         
         // Se nenhuma thumbnail teve score > 0, usar todas ordenadas
         const thumbnailsToTry = rankedThumbnails.length > 0 ? rankedThumbnails : 
-          thumbnailMatches.map(url => ({ url, score: 0 }));
+          thumbnailMatches.map(url => ({ url, score: 0, name: '' }));
         
         console.log(`Found ${thumbnailsToTry.length} thumbnails, best match score: ${thumbnailsToTry[0]?.score}`);
         
+        // Coletar TODOS os vídeos relacionados (não só o primeiro)
+        // Mas APENAS os que são realmente relevantes para o procedimento (score mínimo)
+        const relatedVideosFound: Array<{ url: string; name: string; score: number; verified: boolean }> = [];
+        const seenUrls = new Set<string>();
+        const MIN_SCORE_FOR_RELATED = 5; // Score mínimo para considerar como relacionado
+        
         // Tentar as thumbnails em ordem de relevância
-        for (const { url: thumbUrl, score } of thumbnailsToTry) {
+        for (const { url: thumbUrl, score, name } of thumbnailsToTry.slice(0, 10)) { // Limitar a 10 para performance
           // Converter URL de thumbnail para URL de vídeo
           // Remover " - 480p.webp" ou similares e adicionar ".mp4"
           let videoUrlFromThumb = thumbUrl
@@ -1658,25 +1674,44 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
             .replace(/\s*-\s*\d+p\.webp$/i, '.mp4')
             .replace(/\.webp$/i, '.mp4');
           
+          // Evitar duplicatas
+          if (seenUrls.has(videoUrlFromThumb)) continue;
+          
           // Verificar se parece uma URL de vídeo válida
           if (videoUrlFromThumb.includes('.mp4')) {
-            console.log(`Trying video URL (score=${score}):`, videoUrlFromThumb.slice(0, 80) + '...');
-            
             // Verificar se o vídeo existe (fazer HEAD request rápido)
             try {
               const headResponse = await fetch(videoUrlFromThumb, { method: 'HEAD' });
               if (headResponse.ok) {
-                videoEmbedUrl = videoUrlFromThumb;
-                videoSource = "cloudfront";
-                console.log("Verified video URL exists:", videoEmbedUrl);
-                break;
-              } else {
-                console.log("Video URL returned", headResponse.status, "- trying next...");
+                seenUrls.add(videoUrlFromThumb);
+                
+                // O primeiro vídeo verificado é o principal
+                if (!videoEmbedUrl) {
+                  videoEmbedUrl = videoUrlFromThumb;
+                  videoSource = "cloudfront";
+                  console.log("Primary video URL:", videoEmbedUrl);
+                } else if (score >= MIN_SCORE_FOR_RELATED) {
+                  // Só adicionar como relacionado se tiver score suficiente e não for o principal
+                  relatedVideosFound.push({
+                    url: videoUrlFromThumb,
+                    name: name || 'Vídeo',
+                    score,
+                    verified: true,
+                  });
+                }
               }
             } catch (e) {
-              console.log("Failed to verify video URL:", e);
+              // Ignorar erros de verificação
             }
           }
+        }
+        
+        console.log(`Found ${relatedVideosFound.length} verified related videos (score >= ${MIN_SCORE_FOR_RELATED})`);
+        
+        // Armazenar vídeos relacionados para uso posterior (sem o vídeo principal)
+        if (relatedVideosFound.length > 0) {
+          // @ts-ignore - Adicionar propriedade temporária
+          validData.relatedVideos = relatedVideosFound;
         }
       }
     }
@@ -1874,6 +1909,10 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       videoDescription: videoDescription || procedureDescription || undefined,
     });
 
+    // Extrair vídeos relacionados se disponíveis
+    // @ts-ignore - Acessar propriedade temporária
+    const relatedVideos = validData?.relatedVideos || [];
+    
     const result = {
       title: translatedMeta.title || title,
       description: translatedMeta.description || metadata.description || procedureDescription || "",
@@ -1886,6 +1925,11 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       transcriptionUsed,
       fromCache: false,
       markdown: markdown.slice(0, 5000),
+      // Incluir vídeos relacionados (outros procedimentos na mesma categoria)
+      relatedVideos: relatedVideos.length > 1 ? relatedVideos.map((v: any) => ({
+        url: v.url,
+        name: v.name,
+      })) : undefined,
     };
 
     // ========== SALVAR NO CACHE ==========
