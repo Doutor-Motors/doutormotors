@@ -19,12 +19,14 @@ import {
   Download,
   FileText,
   Loader2,
+  Target,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import SystemUsageChart from "@/components/admin/SystemUsageChart";
 import UserSubscriptionStats from "@/components/admin/UserSubscriptionStats";
 import TopUsersTable from "@/components/admin/TopUsersTable";
 import PeriodComparisonCard from "@/components/admin/PeriodComparisonCard";
+import { KPIPanel } from "@/components/admin/KPIPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -527,6 +529,10 @@ const AdminDashboard = () => {
               <BarChart3 className="w-4 h-4" />
               Visão Geral
             </TabsTrigger>
+            <TabsTrigger value="kpis" className="gap-2">
+              <Target className="w-4 h-4" />
+              Metas & KPIs
+            </TabsTrigger>
             <TabsTrigger value="users" className="gap-2">
               <Users className="w-4 h-4" />
               Usuários
@@ -665,6 +671,16 @@ const AdminDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="kpis" className="space-y-6">
+            <KPIPanel
+              totalUsers={stats.totalUsers}
+              proUsers={subscriptionStats.pro}
+              monthlyDiagnostics={periodComparison?.currentMonth.diagnostics || 0}
+              monthlyRecordings={periodComparison?.currentMonth.recordings || 0}
+              dailyActiveUsers={stats.activeToday}
+            />
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
