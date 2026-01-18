@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
-import logo from "@/assets/images/logo-new.png";
+import logo from "@/assets/images/logo-new-car.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
 const SignUpPage = () => {
@@ -116,8 +116,8 @@ const SignUpPage = () => {
       <div className="w-full max-w-md">
         {/* Logo sem link de redirecionamento */}
         <div className="flex flex-col items-center mb-8 cursor-default">
-          <img src={logo} alt="Doutor Motors" className="h-[130px] w-[200px] object-contain" />
-          <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[60px]">DOUTOR MOTORS</span>
+          <img src={logo} alt="Doutor Motors" className="h-[100px] w-auto object-contain" />
+          <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[29px]">DOUTOR MOTORS</span>
         </div>
 
         {/* Card */}

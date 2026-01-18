@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminNotification } from "@/contexts/AdminNotificationContext";
-import logo from "@/assets/images/logo-new.png";
+import logo from "@/assets/images/logo-new-car.png";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -78,9 +78,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           <div className="flex items-center justify-between">
             {/* Logo sem link de redirecionamento */}
             <div className="flex flex-col items-center cursor-default">
-              <img src={logo} alt="Doutor Motors" className="h-[90px] w-[130px] object-contain" />
-              <div className="flex items-center gap-2 -mt-[40px]">
-                <span className="font-chakra text-primary-foreground text-[10px] font-bold tracking-wider">DOUTOR MOTORS</span>
+              <img src={logo} alt="Doutor Motors" className="h-[80px] w-auto object-contain" />
+              <div className="flex items-center gap-2 -mt-[22px]">
+                <span className="font-chakra text-primary-foreground text-xs font-bold tracking-wider">DOUTOR MOTORS</span>
                 <span className="font-chakra text-[8px] uppercase text-primary bg-primary/20 px-1.5 py-0.5 rounded">
                   Admin
                 </span>
