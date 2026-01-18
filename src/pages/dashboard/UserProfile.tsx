@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database, Bell, History, BarChart3 } from "lucide-react";
+import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database, Bell, History, BarChart3, Crown, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import PushNotificationManager from "@/components/notifications/PushNotification
 import ChartPreferencesSection from "@/components/profile/ChartPreferencesSection";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserTier } from "@/hooks/useUserTier";
+import { UserBadge } from "@/components/subscription/UserBadge";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
@@ -26,6 +28,7 @@ const UserProfile = () => {
   const { toast } = useToast();
   const { notifyProfileUpdated, notifyPasswordChanged, notifyError } = useNotifications();
   const navigate = useNavigate();
+  const { tier, tierConfig, isPro, isAdmin, isLoading: tierLoading } = useUserTier();
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [name, setName] = useState("");
@@ -183,14 +186,31 @@ const UserProfile = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 max-w-2xl">
-        {/* Header */}
-        <div>
-          <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase text-foreground">
-            Meu Perfil
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie suas informações pessoais e configurações de conta.
-          </p>
+        {/* Header with Badge */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="font-chakra text-2xl md:text-3xl font-bold uppercase text-foreground">
+                Meu Perfil
+              </h1>
+              <UserBadge size="md" />
+            </div>
+            <p className="text-muted-foreground">
+              Gerencie suas informações pessoais e configurações de conta.
+            </p>
+          </div>
+          
+          {/* Upgrade CTA for Basic users */}
+          {!isPro && !isAdmin && (
+            <Button
+              onClick={() => navigate("/dashboard/upgrade")}
+              className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg shadow-amber-500/25 shrink-0"
+            >
+              <Crown className="w-4 h-4" />
+              Fazer Upgrade
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         {/* Tabs for Profile and Settings */}
