@@ -119,7 +119,7 @@ const SystemScanReportPage = () => {
   const handleExportFullReport = async () => {
     setIsExportingFull(true);
     try {
-      generateTechnicalReportPDF({ generatedAt: new Date().toISOString(), generatedBy: "Admin" });
+      generateTechnicalReportPDF();
       toast({
         title: "Relatório Técnico Completo Exportado!",
         description: "O PDF com todas as 15 seções foi baixado com sucesso.",
