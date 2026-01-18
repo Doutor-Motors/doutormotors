@@ -45,8 +45,7 @@ import { UpgradePrompt } from "@/components/subscription/UpgradePrompt";
 
 export default function OBDSettingsPage() {
   const navigate = useNavigate();
-  // All features are now available for all users
-  const canOptimizeOBD = true;
+  const { canOptimizeOBD, isPro } = useSubscription();
   const {
     settings,
     isLoading,

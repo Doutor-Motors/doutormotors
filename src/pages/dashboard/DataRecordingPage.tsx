@@ -26,9 +26,7 @@ interface Vehicle {
 export default function DataRecordingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  // All features are now available for all users
-  const canRecordData = true;
-  const canExportCSV = true;
+  const { canRecordData, canExportCSV, isPro } = useSubscription();
   const {
     recordings,
     isLoadingRecordings,

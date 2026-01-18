@@ -58,8 +58,8 @@ const CATEGORY_ICONS = {
 };
 
 export default function CodingFunctionsPage() {
-  // All features are now available for all users
-  const hasProAccess = true;
+  const { isPro, isAdmin } = useSubscription();
+  const hasProAccess = isPro || isAdmin;
   const { saveExecution } = useCodingHistory();
   const { canUse, incrementUsage } = useUsageTracking();
   
@@ -87,7 +87,7 @@ export default function CodingFunctionsPage() {
     if (!canExecute && reason?.includes('Pro')) {
       return; // Will show upgrade prompt
     }
-  }, [codingManager, hasProAccess]);
+  }, [codingManager, isPro]);
 
   const handleExecute = useCallback(async () => {
     if (!selectedFunction) return;
