@@ -877,18 +877,100 @@ async function fetchVideosFromCarCareKiosk(
   }
 }
 
-// Buscar detalhes de um vídeo específico
+// Tentar múltiplos formatos de URL do CarCareKiosk
+function generateUrlVariants(videoUrl: string, brand?: string, model?: string, year?: string): string[] {
+  const urls: string[] = [];
+  
+  // URL original
+  const baseUrl = videoUrl.startsWith('http') 
+    ? videoUrl 
+    : `https://www.carcarekiosk.com${videoUrl}`;
+  urls.push(baseUrl);
+  
+  // Se temos brand/model/year, tentar formatos alternativos
+  if (brand && model && year) {
+    const brandSlug = brand.replace(/\s+/g, "_");
+    const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
+    
+    // Extrair a categoria/procedimento do URL original
+    const pathMatch = videoUrl.match(/\/([^\/]+)\/([^\/]+)$/);
+    if (pathMatch) {
+      const [, category, procedure] = pathMatch;
+      
+      // Formato: /video/{year}_{Brand}_{Model}/{category}/{procedure}
+      urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/${category}/${procedure}`);
+      
+      // Formato: /video/{Brand}/{Model}/{year}/{category}/{procedure}
+      urls.push(`https://www.carcarekiosk.com/video/${brand}/${model}/${year}/${category}/${procedure}`);
+    }
+    
+    // Tentar página principal do veículo
+    urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}`);
+  }
+  
+  // Remover duplicatas
+  return [...new Set(urls)];
+}
+
+// Verificar se uma página é válida (não é NOT FOUND)
+function isValidPage(markdown: string, html: string): boolean {
+  const invalidIndicators = [
+    'NOT FOUND',
+    'not found',
+    'page was not found',
+    '404',
+    'Error 404',
+    'Page Not Found'
+  ];
+  
+  const contentLower = (markdown + html).toLowerCase();
+  
+  for (const indicator of invalidIndicators) {
+    if (contentLower.includes(indicator.toLowerCase())) {
+      // Verificar se "not found" é parte do título principal
+      const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+      if (titleMatch && titleMatch[1].toLowerCase().includes('not found')) {
+        return false;
+      }
+      // Verificar no markdown
+      if (markdown.toLowerCase().startsWith('# not found')) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
+// Buscar detalhes de um vídeo específico com fallback de URLs
 async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContext?: string, skipCache?: boolean): Promise<any> {
   try {
-    const url = videoUrl.startsWith('http') 
-      ? videoUrl 
-      : `https://www.carcarekiosk.com${videoUrl}`;
+    // Parse vehicle context para extrair brand/model/year
+    let brand: string | undefined;
+    let model: string | undefined;
+    let year: string | undefined;
     
-    console.log(`Fetching video details from ${url}... (skipCache: ${skipCache})`);
+    if (vehicleContext) {
+      const parts = vehicleContext.split(' ').filter(Boolean);
+      if (parts.length >= 3) {
+        brand = parts[0];
+        model = parts.slice(1, -1).join(' ');
+        year = parts[parts.length - 1];
+      } else if (parts.length === 2) {
+        brand = parts[0];
+        model = parts[1];
+      }
+    }
+    
+    const urlVariants = generateUrlVariants(videoUrl, brand, model, year);
+    const primaryUrl = urlVariants[0];
+    
+    console.log(`Fetching video details from ${primaryUrl}... (skipCache: ${skipCache})`);
+    console.log(`URL variants to try: ${urlVariants.length}`);
 
     // ========== VERIFICAR CACHE PRIMEIRO (se não skipCache) ==========
     if (!skipCache) {
-      const cached = await getCachedTranscription(url);
+      const cached = await getCachedTranscription(primaryUrl);
       if (cached) {
         console.log("Returning cached transcription data");
         return {
@@ -896,7 +978,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           description: cached.translated_description || "",
           videoDescription: cached.translated_video_description || undefined,
           videoUrl: cached.youtube_video_id ? `https://www.youtube.com/embed/${cached.youtube_video_id}` : null,
-          sourceUrl: url,
+          sourceUrl: primaryUrl,
           steps: cached.elaborated_steps || [],
           transcriptionUsed: cached.transcription_used,
           fromCache: true,
@@ -907,39 +989,64 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       console.log("Skipping cache, forcing reprocessing...");
     }
 
-    const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url,
-        formats: ["html", "markdown"],
-        waitFor: 3000,
-      }),
-    });
+    // Tentar cada variante de URL até encontrar uma válida
+    let validData: { html: string; markdown: string; metadata: any } | null = null;
+    let successfulUrl = primaryUrl;
+    
+    for (const urlToTry of urlVariants) {
+      console.log(`Trying URL: ${urlToTry}`);
+      
+      const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: urlToTry,
+          formats: ["html", "markdown"],
+          waitFor: 3000,
+        }),
+      });
 
-    if (!response.ok) {
-      console.error("Firecrawl error fetching video details:", response.status);
-      // Retornar objeto com erro mas com sourceUrl para fallback
+      if (!response.ok) {
+        console.log(`HTTP error for ${urlToTry}: ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const html = data.data?.html || "";
+      const markdown = data.data?.markdown || "";
+      const metadata = data.data?.metadata || {};
+      
+      // Verificar se a página é válida
+      if (isValidPage(markdown, html)) {
+        validData = { html, markdown, metadata };
+        successfulUrl = urlToTry;
+        console.log(`Found valid page at: ${urlToTry}`);
+        break;
+      } else {
+        console.log(`Page not found at: ${urlToTry}`);
+      }
+    }
+    
+    // Se nenhuma URL funcionou, retornar erro
+    if (!validData) {
+      console.error("All URL variants failed or returned NOT FOUND");
       return {
-        title: "Vídeo Indisponível",
-        description: "Não foi possível carregar os detalhes do vídeo.",
+        title: "Vídeo Não Encontrado",
+        description: "O tutorial solicitado não está disponível no momento.",
         videoUrl: null,
-        sourceUrl: url,
+        sourceUrl: primaryUrl,
         steps: [],
         transcriptionUsed: false,
         fromCache: false,
         error: true,
-        errorMessage: `Erro ao buscar conteúdo (HTTP ${response.status})`
+        errorMessage: "Tutorial não encontrado no CarCareKiosk. Tente outro procedimento."
       };
     }
 
-    const data = await response.json();
-    const html = data.data?.html || "";
-    const markdown = data.data?.markdown || "";
-    const metadata = data.data?.metadata || {};
+    const { html, markdown, metadata } = validData;
     
     let videoEmbedUrl = null;
     let youtubeVideoId: string | null = null;
@@ -1055,7 +1162,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       description: translatedMeta.description || metadata.description || "",
       videoDescription: translatedMeta.videoDescription || videoDescription || undefined,
       videoUrl: videoEmbedUrl,
-      sourceUrl: url,
+      sourceUrl: successfulUrl,
       steps: finalSteps.length > 0 ? finalSteps : htmlSteps,
       transcriptionUsed,
       fromCache: false,
@@ -1064,7 +1171,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
 
     // ========== SALVAR NO CACHE ==========
     await saveToCache({
-      video_url: url,
+      video_url: successfulUrl,
       youtube_video_id: youtubeVideoId || undefined,
       original_transcription: originalTranscription || undefined,
       elaborated_steps: result.steps,
