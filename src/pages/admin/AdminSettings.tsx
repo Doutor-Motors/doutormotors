@@ -52,11 +52,13 @@ import {
   Video,
   Calendar,
   Play,
-  FileDown
+  FileDown,
+  ClipboardList
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { downloadFullSystemDiagnosticReport } from "@/services/pdf/fullSystemDiagnosticReport";
 
 interface SystemSetting {
   id: string;
@@ -1248,6 +1250,31 @@ const AdminSettings = () => {
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Exportar Backup (JSON)
+                    </Button>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label>Relatório Completo do Sistema</Label>
+                    <p className="text-sm text-muted-foreground">
+                      PDF com dados em tempo real: usuários, veículos, diagnósticos, assinaturas e saúde do sistema
+                    </p>
+                    <Button
+                      onClick={() => {
+                        toast.loading("Gerando relatório com dados em tempo real...", { id: "report" });
+                        downloadFullSystemDiagnosticReport().then(() => {
+                          toast.success("Relatório gerado com sucesso!", { id: "report" });
+                        }).catch((err) => {
+                          console.error(err);
+                          toast.error("Erro ao gerar relatório", { id: "report" });
+                        });
+                      }}
+                      variant="outline"
+                      className="w-full bg-primary/5 hover:bg-primary/10 border-primary/20"
+                    >
+                      <ClipboardList className="w-4 h-4 mr-2" />
+                      Baixar Relatório PDF (Tempo Real)
                     </Button>
                   </div>
                 </CardContent>
