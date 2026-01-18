@@ -20,6 +20,7 @@ import {
   CreditCard,
   BookOpen,
   FileSearch,
+  Map,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,6 +44,7 @@ const menuItems = [
   { icon: FileText, label: "Logs", path: "/admin/logs" },
   { icon: BookOpen, label: "Guia Monetização", path: "/admin/monetization-guide" },
   { icon: FileSearch, label: "Varredura Sistema", path: "/admin/system-scan" },
+  { icon: Map, label: "Guia Implementação", path: "/admin/implementation-guide" },
   { icon: Settings, label: "Configurações", path: "/admin/settings" },
 ];
 
