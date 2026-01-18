@@ -1612,6 +1612,8 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'brakes': ['brake', 'freio', 'brake fluid', 'brake pad', 'brake light'],
           'brake fluid': ['brake fluid', 'brake', 'reservoir', 'check fluid'],
           'brake pad': ['brake pad', 'brake', 'brakes'],
+          'brake rotors': ['brake rotor', 'rotor', 'brake disc', 'disc', 'rotors', 'brake rotors'],
+          'brake rotor': ['brake rotor', 'rotor', 'brake disc', 'disc', 'rotors'],
           // Lights - expanded
           'headlight': ['headlight', 'farol', 'headlamp', 'bulb', 'front light'],
           'taillight': ['taillight', 'tail light', 'brake light', 'rear light'],
@@ -1665,6 +1667,23 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'water pump': ['water pump', 'pump', 'coolant pump', 'cooling', 'water', 'coolant circulation'],
           'water': ['water pump', 'coolant', 'cooling system'],
           'coolant pump': ['water pump', 'coolant pump', 'pump'],
+          // Alternator - NEW
+          'alternator': ['alternator', 'charging', 'generator', 'alternator belt', 'charging system', 'battery charge'],
+          'charging': ['alternator', 'charging system', 'battery', 'generator'],
+          'generator': ['alternator', 'generator', 'charging'],
+          // Starter motor - NEW
+          'starter': ['starter', 'starter motor', 'starting', 'crank', 'ignition', 'start motor'],
+          'starter motor': ['starter', 'starter motor', 'starting system', 'crank', 'solenoid', 'start motor'],
+          'starting': ['starter', 'starter motor', 'starting', 'crank'],
+          // Wheel bearing - NEW
+          'wheel bearing': ['wheel bearing', 'bearing', 'hub', 'hub bearing', 'wheel hub', 'front bearing', 'rear bearing'],
+          'bearing': ['wheel bearing', 'bearing', 'hub bearing'],
+          'hub bearing': ['wheel bearing', 'hub bearing', 'hub', 'wheel hub'],
+          'wheel hub': ['wheel hub', 'hub', 'wheel bearing', 'hub assembly'],
+          // Brake rotors - NEW
+          'rotors': ['brake rotor', 'rotor', 'brake disc', 'disc', 'rotors', 'brake rotors'],
+          'brake disc': ['brake rotor', 'rotor', 'brake disc', 'disc'],
+          'disc': ['brake rotor', 'rotor', 'brake disc', 'disc'],
         };
         
         // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
@@ -2287,6 +2306,56 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
       "9️⃣ **Reabastecer**: Reinstale correias, mangueiras. Complete o líquido de arrefecimento e sangre o sistema.",
       "⚠️ **Crítico**: Teste exaustivamente por vazamentos. Monitore a temperatura nas primeiras viagens.",
     ],
+    "alternator": [
+      "1️⃣ **Preparação**: Desconecte o terminal negativo da bateria. Deixe o motor esfriar se necessário.",
+      "2️⃣ **Localização**: Localize o alternador - geralmente na parte frontal do motor, acionado pela correia serpentina.",
+      "3️⃣ **Correia**: Afrouxe o tensionador e remova a correia serpentina do alternador.",
+      "4️⃣ **Conexões elétricas**: Desconecte os cabos elétricos do alternador. Fotografe antes para referência!",
+      "5️⃣ **Parafusos de fixação**: Remova os parafusos que prendem o alternador ao suporte.",
+      "6️⃣ **Remoção**: Retire o alternador antigo. Pode ser necessário manobrar por espaços apertados.",
+      "7️⃣ **Comparação**: Compare o alternador novo com o antigo para confirmar que são iguais.",
+      "8️⃣ **Instalação**: Posicione o alternador novo e aperte os parafusos de fixação.",
+      "9️⃣ **Conexões**: Reconecte todos os cabos elétricos corretamente.",
+      "🔟 **Correia**: Reinstale a correia serpentina e verifique a tensão.",
+      "⚠️ **Teste**: Reconecte a bateria, ligue o motor e verifique a voltagem (deve ser 13.5-14.5V).",
+    ],
+    "starter_motor": [
+      "1️⃣ **Segurança**: Desconecte o terminal negativo da bateria. Aguarde alguns minutos.",
+      "2️⃣ **Localização**: Localize o motor de arranque - geralmente na parte inferior do motor, conectado ao volante.",
+      "3️⃣ **Acesso**: Pode ser necessário levantar o veículo ou remover componentes para acessar o motor de arranque.",
+      "4️⃣ **Conexões elétricas**: Desconecte os cabos do motor de arranque (cabo grosso da bateria e fio do solenoide).",
+      "5️⃣ **Parafusos**: Remova os parafusos de fixação do motor de arranque (geralmente 2-3 parafusos).",
+      "6️⃣ **Remoção**: Retire o motor de arranque com cuidado - é pesado!",
+      "7️⃣ **Comparação**: Verifique se o motor novo é compatível (número de dentes, posição dos parafusos).",
+      "8️⃣ **Instalação**: Posicione o motor novo e aperte os parafusos em sequência.",
+      "9️⃣ **Reconectar**: Conecte os cabos elétricos corretamente.",
+      "⚠️ **Teste**: Reconecte a bateria e teste a partida. O motor deve girar forte e consistente.",
+    ],
+    "wheel_bearing": [
+      "1️⃣ **Aviso**: A troca de rolamento de roda requer ferramentas especiais. Considere um mecânico profissional.",
+      "2️⃣ **Preparação**: Levante o veículo e remova a roda. Remova o caliper de freio e o disco.",
+      "3️⃣ **Cubo**: Remova a porca central do cubo da roda (pode precisar de muita força).",
+      "4️⃣ **Desmontagem**: Remova o cubo da roda do eixo. Pode precisar de extrator.",
+      "5️⃣ **Rolamento antigo**: Remova o rolamento antigo do cubo usando prensa ou ferramentas especializadas.",
+      "6️⃣ **Limpeza**: Limpe completamente a superfície do cubo e inspecione por danos.",
+      "7️⃣ **Instalação**: Pressione o rolamento novo uniformemente - nunca bata diretamente no rolamento!",
+      "8️⃣ **Montagem**: Reinstale o cubo, aperte a porca central com torque especificado.",
+      "9️⃣ **Freios**: Reinstale o disco e caliper de freio. Recoloque a roda.",
+      "⚠️ **Teste**: Gire a roda à mão - deve girar suavemente, sem ruído ou jogo.",
+    ],
+    "brake_rotors": [
+      "1️⃣ **Preparação**: Estacione em local plano, acione o freio de mão e coloque calços nas rodas.",
+      "2️⃣ **Remover roda**: Afrouxe os parafusos, levante o veículo e remova a roda.",
+      "3️⃣ **Caliper**: Remova os parafusos do caliper e suspenda-o com arame (não deixe pendurado pela mangueira!).",
+      "4️⃣ **Suporte do caliper**: Remova o suporte do caliper se necessário para acessar o disco.",
+      "5️⃣ **Disco antigo**: Remova os parafusos de fixação do disco (se houver) e puxe o disco.",
+      "6️⃣ **Limpeza**: Limpe a superfície do cubo. Remova ferrugem ou detritos.",
+      "7️⃣ **Disco novo**: Limpe o disco novo com desengordurante para remover o óleo protetor.",
+      "8️⃣ **Instalação**: Posicione o disco novo e fixe com parafusos se necessário.",
+      "9️⃣ **Montagem**: Reinstale o suporte do caliper, caliper e pastilhas. Verifique alinhamento.",
+      "🔟 **Finalizar**: Recoloque a roda e aperte os parafusos em cruz. Bombeie o pedal antes de andar!",
+      "⚠️ **Amaciamento**: Evite frenagens bruscas nos primeiros 300 km para amaciar os discos.",
+    ],
   };
   
   // Determinar qual conjunto de passos usar - verificar tanto category quanto procedure
@@ -2296,6 +2365,7 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
   let steps: string[] = [];
   
   // Verificar primeiro procedimentos específicos, depois categorias
+  // IMPORTANTE: Verificar categorias mais específicas ANTES das genéricas
   if (searchTerm.includes("spark") || searchTerm.includes("plug") || procedureLower.includes("ignition")) {
     steps = categorySteps["spark_plug"];
   } else if (searchTerm.includes("transmission") || searchTerm.includes("trans")) {
@@ -2306,6 +2376,9 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
     steps = categorySteps["oil"];
   } else if (searchTerm.includes("batter")) {
     steps = categorySteps["battery"];
+  } else if (searchTerm.includes("rotor") || searchTerm.includes("brake disc") || searchTerm.includes("brake_rotors") || procedureLower.includes("rotor")) {
+    // DEVE vir ANTES de "brake" genérico!
+    steps = categorySteps["brake_rotors"];
   } else if (searchTerm.includes("brake")) {
     steps = categorySteps["brakes"];
   } else if (searchTerm.includes("cabin") || categoryLower.includes("air_filter_cabin")) {
@@ -2328,6 +2401,12 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
     steps = categorySteps["thermostat"];
   } else if (searchTerm.includes("water pump") || (searchTerm.includes("water") && searchTerm.includes("pump"))) {
     steps = categorySteps["water_pump"];
+  } else if (searchTerm.includes("alternator") || searchTerm.includes("charging system") || searchTerm.includes("generator")) {
+    steps = categorySteps["alternator"];
+  } else if (searchTerm.includes("starter") || searchTerm.includes("starting") || (searchTerm.includes("start") && searchTerm.includes("motor"))) {
+    steps = categorySteps["starter_motor"];
+  } else if (searchTerm.includes("wheel bearing") || searchTerm.includes("hub bearing") || searchTerm.includes("bearing")) {
+    steps = categorySteps["wheel_bearing"];
   } else {
     // Passos genéricos
     steps = [
@@ -2367,6 +2446,30 @@ function formatProcedureTitle(procedure: string, vehicleContext?: string): strin
     "front": "Dianteiro",
     "rear": "Traseiro",
     "bulb": "Lâmpada",
+    // Novas traduções
+    "spark": "Vela de Ignição",
+    "plug": "Vela",
+    "transmission": "Transmissão",
+    "fluid": "Fluido",
+    "power": "Direção",
+    "steering": "Hidráulica",
+    "timing": "Correia Dentada",
+    "belt": "Correia",
+    "serpentine": "Correia Serpentina",
+    "thermostat": "Termostato",
+    "water": "Bomba d'Água",
+    "pump": "Bomba",
+    "alternator": "Alternador",
+    "starter": "Motor de Arranque",
+    "motor": "Motor",
+    "wheel": "Roda",
+    "bearing": "Rolamento",
+    "hub": "Cubo",
+    "rotor": "Disco",
+    "rotors": "Discos",
+    "disc": "Disco",
+    "pad": "Pastilha",
+    "pads": "Pastilhas",
   };
   
   const words = procedure
