@@ -18,13 +18,15 @@ import {
   Settings2,
   Crown,
   Code2,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAdminNotification } from "@/contexts/AdminNotificationContext";
-import { useSubscription } from "@/hooks/useSubscription";
+import { useUserTier } from "@/hooks/useUserTier";
+import { ProBadge, AdminBadge } from "@/components/subscription/UserBadge";
 import logo from "@/assets/images/logo-new-car.png";
 
 interface DashboardLayoutProps {
@@ -59,7 +61,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const { unreadCount } = useAdminNotification();
-  const { isPro } = useSubscription();
+  const { isPro, canAccess, isProFeature } = useUserTier();
 
   // Build menu items dynamically based on admin status
   const menuItems: MenuItem[] = isAdmin 
@@ -95,27 +97,31 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
         <nav className="flex-1 px-4">
           <ul className="space-y-2">
-            {menuItems.map((item) => {
+          {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
               const showNotificationBadge = item.showBadge && unreadCount > 0;
-              const showProBadge = item.isPro && !isPro;
+              const isProItem = item.isPro;
+              const isLocked = isProItem && !isPro && !isAdmin;
+              
               return (
                 <li key={item.path}>
                   <Link
-                    to={item.path}
+                    to={isLocked ? "/dashboard/upgrade" : item.path}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg font-chakra uppercase text-sm transition-colors ${
                       isActive
                         ? "bg-primary text-primary-foreground"
+                        : isLocked
+                        ? "text-muted-foreground/60 hover:bg-muted/20 hover:text-muted-foreground"
                         : "text-dm-cadet hover:bg-dm-blue-2 hover:text-primary-foreground"
                     }`}
                   >
-                    <item.icon className="w-5 h-5" />
-                    <span className="flex-1">{item.label}</span>
-                    {showProBadge && (
-                      <Badge variant="secondary" className="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0">
-                        <Crown className="w-3 h-3 mr-0.5" />
-                        PRO
-                      </Badge>
+                    <item.icon className={`w-5 h-5 ${isLocked ? "opacity-50" : ""}`} />
+                    <span className={`flex-1 ${isLocked ? "opacity-60" : ""}`}>{item.label}</span>
+                    {isLocked && (
+                      <ProBadge locked size="sm" />
+                    )}
+                    {isProItem && isPro && !isAdmin && (
+                      <ProBadge locked={false} size="sm" />
                     )}
                     {showNotificationBadge && (
                       <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse">
@@ -176,34 +182,38 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           >
             <nav className="flex-1 px-4 py-4">
               <ul className="space-y-2">
-                {menuItems.map((item) => {
+              {menuItems.map((item) => {
                   const isActive = location.pathname === item.path;
                   const showNotificationBadge = item.showBadge && unreadCount > 0;
-                  const showProBadge = item.isPro && !isPro;
+                  const isProItem = item.isPro;
+                  const isLocked = isProItem && !isPro && !isAdmin;
+                  
                   return (
                     <li key={item.path}>
                       <Link
-                        to={item.path}
+                        to={isLocked ? "/dashboard/upgrade" : item.path}
                         onClick={() => setIsSidebarOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg font-chakra uppercase text-sm transition-colors ${
                           isActive
                             ? "bg-primary text-primary-foreground"
+                            : isLocked
+                            ? "text-muted-foreground/60 hover:bg-muted/20 hover:text-muted-foreground"
                             : "text-dm-cadet hover:bg-dm-blue-2 hover:text-primary-foreground"
                         }`}
                       >
-                        <item.icon className="w-5 h-5" />
-                        <span className="flex-1">{item.label}</span>
-                        {showProBadge && (
-                          <Badge variant="secondary" className="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0">
-                            <Crown className="w-3 h-3 mr-0.5" />
-                            PRO
-                          </Badge>
+                        <item.icon className={`w-5 h-5 ${isLocked ? "opacity-50" : ""}`} />
+                        <span className={`flex-1 ${isLocked ? "opacity-60" : ""}`}>{item.label}</span>
+                        {isLocked && (
+                          <ProBadge locked size="sm" />
+                        )}
+                        {isProItem && isPro && !isAdmin && (
+                          <ProBadge locked={false} size="sm" />
                         )}
                         {showNotificationBadge ? (
                           <span className="bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse">
                             {unreadCount > 9 ? '9+' : unreadCount}
                           </span>
-                        ) : (
+                        ) : !isLocked && !isProItem && (
                           <ChevronRight className="w-4 h-4" />
                         )}
                       </Link>
