@@ -1325,7 +1325,27 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       }
     }
     
+    // ESTRATÉGIA: Se recebemos apenas um procedimento simples (sem URL completa),
+    // devemos buscar a página base do veículo que contém TODOS os thumbnails de vídeos
+    // e de lá extrair os vídeos relevantes para o procedimento solicitado
+    const isSimpleProcedure = !videoUrl.startsWith('http') && !videoUrl.startsWith('/') && !videoUrl.includes('/');
+    
+    // Se é um procedimento simples e temos contexto do veículo, buscar página base primeiro
+    let vehiclePageUrl: string | undefined;
+    if (isSimpleProcedure && brand && model && year) {
+      const brandSlugDash = brand.replace(/\s+/g, '-');
+      const modelSlugDash = model.replace(/\s+/g, '-');
+      vehiclePageUrl = `https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}`;
+      console.log(`Simple procedure detected: "${videoUrl}". Will search in vehicle page: ${vehiclePageUrl}`);
+    }
+    
     const urlVariants = generateUrlVariants(videoUrl, brand, model, year);
+    
+    // Se temos a página base do veículo, colocá-la como primeira opção
+    if (vehiclePageUrl && !urlVariants.includes(vehiclePageUrl)) {
+      urlVariants.unshift(vehiclePageUrl);
+    }
+    
     const primaryUrl = urlVariants[0];
     
     console.log(`Fetching video details from ${primaryUrl}... (skipCache: ${skipCache})`);
@@ -1547,9 +1567,23 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       // Procurar thumbnails no markdown que indicam vídeos disponíveis
       const thumbnailMatches = markdown.match(/https:\/\/d2n97g4vasjwsk\.cloudfront\.net\/[^\s\)]+\.webp/gi);
       if (thumbnailMatches && thumbnailMatches.length > 0) {
-        // Extrair o procedimento solicitado para priorizar a thumbnail correta
-        const procedureSlug = videoUrl.split('/').pop()?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
-        const categorySlug = videoUrl.split('/').slice(-2, -1)[0]?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
+        // IMPORTANTE: Usar o videoUrl ORIGINAL passado para a função (não a URL de sucesso)
+        // Isso garante que buscamos pelo procedimento correto mesmo quando caímos na página base do veículo
+        
+        // Extrair o procedimento da URL original
+        let procedureSlug: string;
+        let categorySlug: string;
+        
+        // Verificar se é um procedimento simples (sem barras) ou uma URL completa
+        if (!videoUrl.includes('/') || videoUrl.startsWith('http') === false && videoUrl.split('/').length <= 2) {
+          // Procedimento simples como "battery" ou "oil_change"
+          procedureSlug = videoUrl.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ');
+          categorySlug = ''; // Sem categoria específica
+        } else {
+          // URL com caminho - extrair partes
+          procedureSlug = videoUrl.split('/').pop()?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
+          categorySlug = videoUrl.split('/').slice(-2, -1)[0]?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
+        }
         
         // Normalizar o procedimento para busca (oil_change -> oil change, change_oil -> change oil)
         const normalizedProcedure = procedureSlug.replace(/_/g, ' ').replace(/-/g, ' ').toLowerCase();
@@ -1563,35 +1597,47 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'oil change': ['oil', 'motor oil', 'oil fill', 'oil drain', 'oil filter', 'engine oil'],
           'change oil': ['oil', 'motor oil', 'oil fill', 'oil drain', 'oil filter', 'engine oil'],
           'oil': ['oil', 'motor oil', 'oil fill', 'oil drain', 'oil filter', 'engine oil'],
-          // Battery
-          'battery': ['battery', 'bateria', 'jump start'],
-          'replace battery': ['battery', 'bateria'],
+          // Battery - expanded keywords
+          'battery': ['battery', 'bateria', 'jump start', 'battery locate', 'battery clean', 'battery replacement'],
+          'battery replacement': ['battery', 'battery locate', 'battery clean', 'battery replacement', 'jump start'],
+          'replace battery': ['battery', 'battery locate', 'battery clean', 'battery replacement'],
           'jump start': ['battery', 'jump start', 'jumper'],
-          // Air filters
-          'air filter': ['air filter', 'filtro de ar'],
-          'air filter cabin': ['cabin', 'air filter cabin', 'cabin filter'],
-          'air filter engine': ['air filter engine', 'engine filter'],
-          // Brakes
-          'brakes': ['brake', 'freio', 'brake fluid', 'brake pad'],
-          'brake fluid': ['brake fluid', 'brake'],
-          // Lights
-          'headlight': ['headlight', 'farol', 'headlamp', 'bulb'],
-          'taillight': ['taillight', 'tail light', 'brake light'],
-          // Fluids
-          'coolant': ['coolant', 'antifreeze', 'radiator'],
-          'transmission fluid': ['transmission', 'trans fluid'],
+          // Air filters - expanded keywords
+          'air filter': ['air filter', 'filtro de ar', 'air filter engine', 'engine air filter'],
+          'air filter cabin': ['cabin', 'air filter cabin', 'cabin filter', 'cabin air filter'],
+          'air filter engine': ['air filter engine', 'engine filter', 'air filter'],
+          'cabin air filter': ['cabin', 'air filter cabin', 'cabin filter', 'cabin air filter'],
+          'engine air filter': ['air filter engine', 'engine filter', 'air filter', 'engine air filter'],
+          // Brakes - expanded keywords
+          'brakes': ['brake', 'freio', 'brake fluid', 'brake pad', 'brake light'],
+          'brake fluid': ['brake fluid', 'brake', 'reservoir', 'check fluid'],
+          'brake pad': ['brake pad', 'brake', 'brakes'],
+          // Lights - expanded
+          'headlight': ['headlight', 'farol', 'headlamp', 'bulb', 'front light'],
+          'taillight': ['taillight', 'tail light', 'brake light', 'rear light'],
+          'fog light': ['fog light', 'fog lamp'],
+          // Fluids - expanded
+          'coolant': ['coolant', 'antifreeze', 'radiator', 'reservoir', 'overflow'],
+          'transmission fluid': ['transmission', 'trans fluid', 'transmission check'],
           'power steering': ['power steering', 'steering fluid'],
+          'windshield washer': ['washer', 'washer fluid', 'windshield washer'],
           // Wipers
           'wipers': ['wiper', 'windshield', 'wiper blade'],
+          'wiper blade': ['wiper', 'wiper blade', 'windshield wiper'],
           'windshield': ['wiper', 'windshield', 'washer'],
           // AC
           'air conditioner': ['air conditioning', 'a/c', 'ac', 'freon', 'recharge'],
-          'recharge freon': ['freon', 'a/c', 'ac', 'air conditioning'],
+          'recharge freon': ['freon', 'a/c', 'ac', 'air conditioning', 'recharge'],
           // Check engine
-          'check engine light': ['obd', 'check engine', 'diagnose'],
+          'check engine light': ['obd', 'check engine', 'diagnose', 'engine light'],
           // Tire
           'tire': ['tire', 'pneu', 'wheel', 'spare'],
-          'flat tire': ['tire', 'spare', 'flat'],
+          'flat tire': ['tire', 'spare', 'flat', 'change tire'],
+          'spare tire': ['spare', 'tire', 'spare tire'],
+          // Fuses
+          'fuse': ['fuse', 'fuse box', 'fusible'],
+          // Spark plugs
+          'spark plug': ['spark plug', 'spark', 'ignition'],
         };
         
         // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
