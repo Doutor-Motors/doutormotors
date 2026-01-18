@@ -999,7 +999,7 @@ const AdminSettings = () => {
                         <p className="text-sm font-medium">Sobre o cache</p>
                         <p className="text-sm text-muted-foreground">
                           O cache armazena transcrições de vídeos do CarCareKiosk para evitar 
-                          reprocessamento e economizar créditos de API (ElevenLabs + Lovable AI).
+                          reprocessamento e economizar créditos de API (ElevenLabs + Motor IA).
                         </p>
                       </div>
                     </div>
