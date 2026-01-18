@@ -38,7 +38,7 @@ const CTASection = () => {
         </h2>
         
         <p className="text-white/90 text-lg max-w-2xl mx-auto mb-8">
-          Comece agora gratuitamente e tenha acesso ao diagnóstico completo do seu veículo. 
+          Comece agora e tenha acesso ao diagnóstico completo do seu veículo. 
           Sem surpresas, sem custos escondidos.
         </p>
 
@@ -64,7 +64,7 @@ const CTASection = () => {
               size="lg"
               className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 border border-transparent hover:border-primary-foreground transition-all hover:-translate-y-1 px-8"
             >
-              <span>Criar Conta Grátis</span>
+              <span>Criar Conta</span>
               <ArrowRight className="w-5 h-5" />
             </Button>
           </Link>

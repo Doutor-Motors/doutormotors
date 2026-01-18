@@ -68,7 +68,7 @@ const faqs = [
   },
   {
     question: "Posso usar em vários carros?",
-    answer: "Sim! Com o plano Pro, você pode cadastrar até 5 veículos e alternar entre eles facilmente. O plano gratuito permite 1 veículo.",
+    answer: "Sim! Com o plano Pro, você pode cadastrar até 5 veículos e alternar entre eles facilmente. O plano básico permite 1 veículo.",
   },
 ];
 
@@ -211,7 +211,7 @@ const HowItWorksPage = () => {
           </h2>
           
           <p className="text-white/90 text-lg max-w-2xl mx-auto mb-8">
-            Crie sua conta grátis e faça seu primeiro diagnóstico em menos de 5 minutos.
+            Crie sua conta e faça seu primeiro diagnóstico em menos de 5 minutos.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -220,7 +220,7 @@ const HowItWorksPage = () => {
                 size="lg"
                 className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 border border-transparent hover:border-primary-foreground transition-all hover:-translate-y-1 px-8"
               >
-                <span>Experimente Grátis</span>
+                <span>Comece Agora</span>
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>

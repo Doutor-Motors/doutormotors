@@ -86,7 +86,7 @@ const HowItWorksSection = () => {
               size="lg"
               className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 mx-auto border border-transparent hover:border-foreground transition-all hover:-translate-y-1"
             >
-              <span>Experimente Grátis</span>
+              <span>Comece Agora</span>
               <ArrowRight className="w-5 h-5" />
             </Button>
           </Link>

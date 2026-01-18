@@ -26,7 +26,7 @@ const FAQPage = () => {
         },
         {
           question: "Preciso pagar para usar a plataforma?",
-          answer: "Oferecemos um plano gratuito com funcionalidades básicas. Para recursos avançados como histórico completo, múltiplos veículos e conteúdo premium, oferecemos planos pagos. Consulte nossa página de preços para mais detalhes."
+          answer: "Oferecemos um plano básico com funcionalidades essenciais. Para recursos avançados como histórico completo, múltiplos veículos e conteúdo premium, oferecemos planos pagos. Consulte nossa página de preços para mais detalhes."
         },
         {
           question: "Como faço para criar uma conta?",

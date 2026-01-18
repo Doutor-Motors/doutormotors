@@ -426,7 +426,7 @@ const StudyCarPage = () => {
                           Estude seu <span className="text-primary">Carro</span>
                         </h1>
                         <p className="text-lg text-muted-foreground mb-2">
-                          Com mais de 60.000 vídeos tutoriais gratuitos, aprenda a cuidar do seu veículo.
+                          Com mais de 60.000 vídeos tutoriais, aprenda a cuidar do seu veículo.
                         </p>
                         <p className="text-primary font-medium mb-6">
                           Prepare-se para o reparo™ com vídeos específicos para seu carro
