@@ -33,6 +33,11 @@ export interface VideoCategory {
   procedures?: Procedure[];
 }
 
+export interface RelatedVideo {
+  url: string;
+  name: string;
+}
+
 export interface VideoDetails {
   title: string;
   description?: string;
@@ -46,6 +51,8 @@ export interface VideoDetails {
   cacheExpiresAt?: string;
   error?: boolean;
   errorMessage?: string;
+  // Vídeos relacionados encontrados na mesma página
+  relatedVideos?: RelatedVideo[];
 }
 
 export type ViewState = "brands" | "models" | "categories" | "procedures" | "video";
