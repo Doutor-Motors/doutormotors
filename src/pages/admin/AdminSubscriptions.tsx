@@ -262,14 +262,13 @@ export default function AdminSubscriptions() {
 
   // Update subscription mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, userId, updates, isVirtual }: { 
-      id: string; 
+    mutationFn: async ({ userId, updates, isVirtual }: { 
       userId: string;
-      updates: Partial<SubscriptionWithProfile>; 
+      updates: { plan_type?: string; status?: string; expires_at?: string | null }; 
       isVirtual: boolean;
     }) => {
       if (isVirtual) {
-        // Create new subscription for virtual user
+        // Create new subscription for virtual user (user without subscription record)
         const { error } = await supabase
           .from('user_subscriptions')
           .insert({
@@ -282,13 +281,16 @@ export default function AdminSubscriptions() {
 
         if (error) throw error;
       } else {
+        // Update existing subscription by user_id (not by id)
         const { error } = await supabase
           .from('user_subscriptions')
           .update({
-            ...updates,
+            plan_type: updates.plan_type,
+            status: updates.status,
+            expires_at: updates.expires_at,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', id);
+          .eq('user_id', userId);
 
         if (error) throw error;
       }
@@ -304,9 +306,14 @@ export default function AdminSubscriptions() {
     },
   });
 
-  // Cancel subscription mutation
+  // Cancel subscription mutation - use user_id instead of id
   const cancelMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ userId, isVirtual }: { userId: string; isVirtual: boolean }) => {
+      if (isVirtual) {
+        // Cannot cancel a virtual subscription (user has no subscription record)
+        throw new Error('Usuário não possui assinatura ativa para cancelar');
+      }
+      
       const { error } = await supabase
         .from('user_subscriptions')
         .update({ 
@@ -314,7 +321,7 @@ export default function AdminSubscriptions() {
           expires_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', id);
+        .eq('user_id', userId);
 
       if (error) throw error;
     },
@@ -406,7 +413,6 @@ export default function AdminSubscriptions() {
     if (!editingSubscription) return;
 
     updateMutation.mutate({
-      id: editingSubscription.id,
       userId: editingSubscription.user_id,
       updates: {
         plan_type: newPlanType,
@@ -994,7 +1000,10 @@ export default function AdminSubscriptions() {
             <AlertDialogFooter>
               <AlertDialogCancel>Não, manter</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => cancelingSubscription && cancelMutation.mutate(cancelingSubscription.id)}
+                onClick={() => cancelingSubscription && cancelMutation.mutate({ 
+                  userId: cancelingSubscription.user_id, 
+                  isVirtual: cancelingSubscription.isVirtual || false 
+                })}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {cancelMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
