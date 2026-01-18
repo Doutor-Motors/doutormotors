@@ -51,6 +51,7 @@ import DataRecordingPage from "./pages/dashboard/DataRecordingPage";
 import OBDSettingsPage from "./pages/dashboard/OBDSettingsPage";
 import CodingFunctionsPage from "./pages/dashboard/CodingFunctionsPage";
 import CodingHistoryPage from "./pages/dashboard/CodingHistoryPage";
+import PermissionsDiagnostic from "./pages/dashboard/PermissionsDiagnostic";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import MonetizationGuidePage from "./pages/admin/MonetizationGuidePage";
 import SystemScanReportPage from "./pages/admin/SystemScanReportPage";
@@ -101,6 +102,7 @@ const App = () => (
                 <Route path="/dashboard/obd-settings" element={<ProtectedRoute><OBDSettingsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/coding" element={<ProtectedRoute><CodingFunctionsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/coding/history" element={<ProtectedRoute><CodingHistoryPage /></ProtectedRoute>} />
+                <Route path="/dashboard/permissions" element={<ProtectedRoute><PermissionsDiagnostic /></ProtectedRoute>} />
                 <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
                 
