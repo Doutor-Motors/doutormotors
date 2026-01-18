@@ -1684,6 +1684,29 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'rotors': ['brake rotor', 'rotor', 'brake disc', 'disc', 'rotors', 'brake rotors'],
           'brake disc': ['brake rotor', 'rotor', 'brake disc', 'disc'],
           'disc': ['brake rotor', 'rotor', 'brake disc', 'disc'],
+          // CV Axle - NEW
+          'cv axle': ['cv axle', 'cv shaft', 'axle', 'cv joint', 'halfshaft', 'drive axle', 'cv boot', 'axle shaft'],
+          'cv shaft': ['cv axle', 'cv shaft', 'axle', 'halfshaft', 'drive shaft'],
+          'axle': ['cv axle', 'axle', 'halfshaft', 'drive axle', 'axle shaft'],
+          'cv joint': ['cv joint', 'cv axle', 'joint', 'constant velocity'],
+          'halfshaft': ['cv axle', 'halfshaft', 'cv shaft', 'half shaft', 'axle'],
+          'cv boot': ['cv boot', 'boot', 'cv axle', 'axle boot'],
+          // Control arm - NEW
+          'control arm': ['control arm', 'arm', 'lower arm', 'upper arm', 'suspension arm', 'wishbone', 'a-arm', 'lower control'],
+          'lower control arm': ['lower control arm', 'control arm', 'lower arm', 'suspension', 'lca'],
+          'upper control arm': ['upper control arm', 'control arm', 'upper arm', 'uca'],
+          'suspension arm': ['control arm', 'suspension arm', 'arm', 'wishbone'],
+          'wishbone': ['wishbone', 'control arm', 'a-arm', 'suspension'],
+          // Ball joint - NEW
+          'ball joint': ['ball joint', 'joint', 'ball', 'lower ball joint', 'upper ball joint', 'suspension joint'],
+          'lower ball joint': ['ball joint', 'lower ball joint', 'lower joint', 'ball'],
+          'upper ball joint': ['ball joint', 'upper ball joint', 'upper joint', 'ball'],
+          // Tie rod - NEW
+          'tie rod': ['tie rod', 'tie', 'rod', 'inner tie rod', 'outer tie rod', 'tie rod end', 'steering linkage'],
+          'tie rod end': ['tie rod end', 'tie rod', 'outer tie rod', 'tie', 'steering'],
+          'inner tie rod': ['inner tie rod', 'tie rod', 'inner tie', 'rack end'],
+          'outer tie rod': ['outer tie rod', 'tie rod', 'outer tie', 'tie rod end'],
+          'steering linkage': ['tie rod', 'steering linkage', 'steering', 'linkage'],
         };
         
         // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
@@ -2356,6 +2379,58 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
       "🔟 **Finalizar**: Recoloque a roda e aperte os parafusos em cruz. Bombeie o pedal antes de andar!",
       "⚠️ **Amaciamento**: Evite frenagens bruscas nos primeiros 300 km para amaciar os discos.",
     ],
+    "cv_axle": [
+      "1️⃣ **Aviso**: A troca do semi-eixo (CV axle) requer experiência e ferramentas específicas. Considere um profissional.",
+      "2️⃣ **Preparação**: Levante e apoie o veículo em cavaletes. Remova a roda.",
+      "3️⃣ **Porca central**: Remova a contrapino e a porca central do cubo (geralmente 30-36mm, muito apertada).",
+      "4️⃣ **Componentes de freio**: Pode ser necessário remover o caliper e suporte para liberar espaço.",
+      "5️⃣ **Terminal da barra**: Desconecte o terminal da barra de direção do munhão se necessário.",
+      "6️⃣ **Separar do cubo**: Empurre o eixo para dentro do cubo para liberar. Pode precisar de extrator.",
+      "7️⃣ **Lado da transmissão**: Com cuidado, puxe o eixo do diferencial/transmissão. Espere vazamento de óleo.",
+      "8️⃣ **Comparação**: Compare o eixo novo com o antigo - comprimento, estrias e juntas devem ser iguais.",
+      "9️⃣ **Instalação**: Insira o eixo novo na transmissão até sentir o anel de retenção encaixar.",
+      "🔟 **Cubo**: Posicione a ponta externa no cubo. Instale a porca central com torque especificado.",
+      "⚠️ **Importante**: Verifique o nível do óleo da transmissão após o serviço. Faça alinhamento.",
+    ],
+    "control_arm": [
+      "1️⃣ **Aviso**: A troca da bandeja (control arm) afeta a geometria da suspensão. Faça alinhamento após.",
+      "2️⃣ **Preparação**: Levante o veículo e apoie em cavaletes. Remova a roda.",
+      "3️⃣ **Pivô inferior**: Remova o parafuso/porca que prende o pivô à manga de eixo.",
+      "4️⃣ **Separar pivô**: Use um extrator de pivô para separar a junta esférica. Nunca bata diretamente!",
+      "5️⃣ **Buchas**: Remova os parafusos que prendem a bandeja ao chassi (geralmente 2 pontos).",
+      "6️⃣ **Remoção**: Retire a bandeja antiga. Inspecione os pontos de fixação por danos.",
+      "7️⃣ **Comparação**: Verifique se a bandeja nova é idêntica - mesmo comprimento e posição dos furos.",
+      "8️⃣ **Instalação**: Posicione a bandeja nova e aperte os parafusos do chassi (aperto final com peso no carro).",
+      "9️⃣ **Pivô**: Conecte o pivô à manga e aperte a porca com torque especificado. Novo contrapino se necessário.",
+      "🔟 **Finalizar**: Recoloque a roda. Baixe o veículo e aperte os parafusos das buchas com peso no carro.",
+      "⚠️ **Crítico**: Alinhamento é OBRIGATÓRIO após trocar bandeja. A geometria será alterada.",
+    ],
+    "ball_joint": [
+      "1️⃣ **Aviso**: A junta esférica (pivô) é componente crítico de segurança. Use peças de qualidade!",
+      "2️⃣ **Preparação**: Levante o veículo e remova a roda. Apoie a manga de eixo para não cair.",
+      "3️⃣ **Porca do pivô**: Remova a contrapino e a porca que prende o pivô à manga de eixo.",
+      "4️⃣ **Separar**: Use um extrator de junta esférica para separar. Nunca use martelo diretamente!",
+      "5️⃣ **Tipo de pivô**: Verifique se é prensado na bandeja ou aparafusado. Cada tipo tem processo diferente.",
+      "6️⃣ **Pivô prensado**: Será necessário prensar o novo usando ferramentas especiais ou trocar a bandeja.",
+      "7️⃣ **Pivô aparafusado**: Remova os parafusos de fixação e instale o novo com vedante se especificado.",
+      "8️⃣ **Instalação**: Insira o pino do pivô novo no orifício da manga de eixo.",
+      "9️⃣ **Aperto**: Aperte a porca com torque especificado. Instale contrapino novo (obrigatório!).",
+      "🔟 **Verificação**: Mova a suspensão para cima e baixo, verifique se não há folga.",
+      "⚠️ **Segurança**: Se o pivô soltar com o veículo em movimento, a roda pode se desprender!",
+    ],
+    "tie_rod": [
+      "1️⃣ **Preparação**: Levante o veículo e remova a roda. Centralize o volante.",
+      "2️⃣ **Marcar posição**: Antes de remover, meça e marque a posição exata do terminal na barra.",
+      "3️⃣ **Porca do terminal**: Remova a porca que prende o terminal da barra ao braço da direção.",
+      "4️⃣ **Separar**: Use um extrator para separar o terminal. Evite danificar a coifa protetora.",
+      "5️⃣ **Contra-porca**: Afrouxe a contra-porca que trava o terminal na barra de direção.",
+      "6️⃣ **Desrosquear**: Conte as voltas enquanto desenrosca o terminal antigo (importante para alinhamento!).",
+      "7️⃣ **Terminal novo**: Rosqueie o terminal novo com o mesmo número de voltas do antigo.",
+      "8️⃣ **Conectar**: Insira o pino do terminal no braço da direção. Aperte a porca com torque correto.",
+      "9️⃣ **Travar**: Aperte a contra-porca para travar o terminal na posição.",
+      "🔟 **Contrapino**: Instale contrapino novo se o tipo de porca exigir.",
+      "⚠️ **Importante**: Mesmo mantendo as medidas, faça alinhamento para garantir desgaste uniforme dos pneus.",
+    ],
   };
   
   // Determinar qual conjunto de passos usar - verificar tanto category quanto procedure
@@ -2407,6 +2482,14 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
     steps = categorySteps["starter_motor"];
   } else if (searchTerm.includes("wheel bearing") || searchTerm.includes("hub bearing") || searchTerm.includes("bearing")) {
     steps = categorySteps["wheel_bearing"];
+  } else if (searchTerm.includes("cv axle") || searchTerm.includes("cv shaft") || searchTerm.includes("halfshaft") || searchTerm.includes("cv joint") || searchTerm.includes("cv boot") || procedureLower.includes("axle")) {
+    steps = categorySteps["cv_axle"];
+  } else if (searchTerm.includes("control arm") || searchTerm.includes("control_arm") || searchTerm.includes("lower arm") || searchTerm.includes("upper arm") || searchTerm.includes("wishbone") || searchTerm.includes("a-arm") || searchTerm.includes("suspension arm") || procedureLower.includes("control")) {
+    steps = categorySteps["control_arm"];
+  } else if (searchTerm.includes("ball joint") || searchTerm.includes("ball_joint") || searchTerm.includes("ball") && searchTerm.includes("joint") || searchTerm.includes("pivot") || procedureLower.includes("ball")) {
+    steps = categorySteps["ball_joint"];
+  } else if (searchTerm.includes("tie rod") || searchTerm.includes("tie_rod") || searchTerm.includes("tierod") || searchTerm.includes("steering linkage") || procedureLower.includes("tie")) {
+    steps = categorySteps["tie_rod"];
   } else {
     // Passos genéricos
     steps = [
@@ -2470,6 +2553,27 @@ function formatProcedureTitle(procedure: string, vehicleContext?: string): strin
     "disc": "Disco",
     "pad": "Pastilha",
     "pads": "Pastilhas",
+    // Novas traduções - suspensão e direção
+    "cv": "Homocinética",
+    "axle": "Semi-Eixo",
+    "shaft": "Eixo",
+    "halfshaft": "Semi-Eixo",
+    "joint": "Junta",
+    "boot": "Coifa",
+    "control": "Bandeja",
+    "arm": "Braço",
+    "lower": "Inferior",
+    "upper": "Superior",
+    "wishbone": "Bandeja",
+    "ball": "Esférica",
+    "pivot": "Pivô",
+    "tie": "Barra de Direção",
+    "rod": "Terminal",
+    "end": "Terminal",
+    "inner": "Interno",
+    "outer": "Externo",
+    "linkage": "Articulação",
+    "suspension": "Suspensão",
   };
   
   const words = procedure
