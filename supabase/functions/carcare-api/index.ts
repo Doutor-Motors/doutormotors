@@ -691,8 +691,9 @@ async function fetchBrandsFromCarCareKiosk(apiKey: string): Promise<any[]> {
 // Buscar modelos de uma marca do CarCareKiosk
 async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promise<any[]> {
   try {
-    const brandSlug = brand.toLowerCase().replace(/\s+/g, "-");
-    const url = `https://www.carcarekiosk.com/make/${brandSlug}`;
+    // Novo formato de URL: /videos/Brand (não mais /make/)
+    const brandSlug = brand.replace(/\s+/g, "+");
+    const url = `https://www.carcarekiosk.com/videos/${brandSlug}`;
     
     console.log(`Fetching models for ${brand} from ${url}...`);
 
@@ -881,38 +882,71 @@ async function fetchVideosFromCarCareKiosk(
 function generateUrlVariants(videoUrl: string, brand?: string, model?: string, year?: string): string[] {
   const urls: string[] = [];
   
-  // URL original
-  const baseUrl = videoUrl.startsWith('http') 
-    ? videoUrl 
-    : `https://www.carcarekiosk.com${videoUrl}`;
-  urls.push(baseUrl);
+  // Normalizar a URL de entrada
+  let baseUrl = videoUrl.trim();
   
-  // Se temos brand/model/year, tentar formatos alternativos
+  // Se é uma URL completa, usar diretamente
+  if (baseUrl.startsWith('http')) {
+    urls.push(baseUrl);
+  } else if (baseUrl.startsWith('/')) {
+    // Se começa com /, adicionar domínio
+    urls.push(`https://www.carcarekiosk.com${baseUrl}`);
+  } else {
+    // Se não é URL completa, construir URL a partir de brand/model/year
+    if (brand && model && year) {
+      const brandSlug = brand.replace(/\s+/g, "_");
+      const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
+      const procedureSlug = baseUrl.replace(/\s+/g, "_").toLowerCase();
+      
+      // Tentar extrair categoria do videoUrl se tiver formato path
+      const pathParts = baseUrl.split('/').filter(Boolean);
+      
+      if (pathParts.length >= 2) {
+        // Parece ter categoria e procedimento
+        const [category, ...procParts] = pathParts;
+        const procedure = procParts.join('/');
+        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/${category}/${procedure}`);
+      } else {
+        // Só tem o slug do procedimento, adicionar formatos possíveis
+        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/maintenance/${procedureSlug}`);
+        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/air_filter/${procedureSlug}`);
+        urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/engine/${procedureSlug}`);
+      }
+    }
+    // Fallback: ainda tentar com a URL diretamente (pode falhar mas tenta)
+    urls.push(`https://www.carcarekiosk.com/video/${baseUrl}`);
+  }
+  
+  // Se temos brand/model/year, adicionar mais formatos alternativos
   if (brand && model && year) {
     const brandSlug = brand.replace(/\s+/g, "_");
     const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
     
-    // Extrair a categoria/procedimento do URL original
-    const pathMatch = videoUrl.match(/\/([^\/]+)\/([^\/]+)$/);
+    // Extrair a categoria/procedimento do URL original (se for URL completa)
+    const pathMatch = baseUrl.match(/\/([^\/]+)\/([^\/]+)$/);
     if (pathMatch) {
       const [, category, procedure] = pathMatch;
       
       // Formato: /video/{year}_{Brand}_{Model}/{category}/{procedure}
-      urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/${category}/${procedure}`);
+      const altUrl1 = `https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}/${category}/${procedure}`;
+      if (!urls.includes(altUrl1)) urls.push(altUrl1);
       
       // Formato: /video/{Brand}/{Model}/{year}/{category}/{procedure}
-      urls.push(`https://www.carcarekiosk.com/video/${brand}/${model}/${year}/${category}/${procedure}`);
+      const altUrl2 = `https://www.carcarekiosk.com/video/${brand}/${model}/${year}/${category}/${procedure}`;
+      if (!urls.includes(altUrl2)) urls.push(altUrl2);
     }
     
-    // Tentar página principal do veículo
-    urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}`);
+    // Tentar página principal do veículo como fallback
+    const vehiclePage = `https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}`;
+    if (!urls.includes(vehiclePage)) urls.push(vehiclePage);
   }
   
-  // Remover duplicatas
-  return [...new Set(urls)];
+  // Remover duplicatas e URLs inválidas
+  const validUrls = urls.filter(url => url && url.includes('carcarekiosk.com'));
+  return [...new Set(validUrls)];
 }
 
-// Verificar se uma página é válida (não é NOT FOUND)
+// Verificar se uma página é válida (não é NOT FOUND nem erro 500)
 function isValidPage(markdown: string, html: string): boolean {
   const invalidIndicators = [
     'NOT FOUND',
@@ -920,23 +954,28 @@ function isValidPage(markdown: string, html: string): boolean {
     'page was not found',
     '404',
     'Error 404',
-    'Page Not Found'
+    'Page Not Found',
+    'HTTP ERROR 500',
+    'HTTP ERROR 503',
+    'is currently unable to handle this request',
+    'This page isn\'t working',
+    'Internal Server Error',
+    'Service Unavailable',
   ];
   
   const contentLower = (markdown + html).toLowerCase();
   
   for (const indicator of invalidIndicators) {
     if (contentLower.includes(indicator.toLowerCase())) {
-      // Verificar se "not found" é parte do título principal
-      const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-      if (titleMatch && titleMatch[1].toLowerCase().includes('not found')) {
-        return false;
-      }
-      // Verificar no markdown
-      if (markdown.toLowerCase().startsWith('# not found')) {
-        return false;
-      }
+      console.log(`Invalid page detected - indicator found: "${indicator}"`);
+      return false;
     }
+  }
+  
+  // Verificar se tem conteúdo mínimo (páginas válidas têm mais de 500 caracteres)
+  if (markdown.length < 200 && html.length < 500) {
+    console.log("Invalid page detected - content too short");
+    return false;
   }
   
   return true;
