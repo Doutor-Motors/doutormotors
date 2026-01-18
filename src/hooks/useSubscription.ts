@@ -21,7 +21,7 @@ export interface Subscription {
 export const PLAN_FEATURES = {
   basic: {
     name: "Basic",
-    price: "Grátis",
+    price: "R$ 0",
     priceValue: 0,
     maxVehicles: 1,
     maxDiagnosticsPerMonth: 5,

@@ -168,7 +168,7 @@ const ServicesPage = () => {
             </p>
             
             <h2 className="font-chakra text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-foreground mb-4">
-              Comece Grátis
+              Nossos Planos
             </h2>
             
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
@@ -180,7 +180,7 @@ const ServicesPage = () => {
           <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
             <div className="bg-card p-8 rounded-lg shadow-lg border-2 border-transparent hover:border-primary transition-all">
               <h3 className="font-chakra text-xl font-semibold uppercase text-foreground mb-2">
-                Plano Gratuito
+                Plano Basic
               </h3>
               <p className="text-3xl font-bold text-primary mb-4">R$0<span className="text-base font-normal text-muted-foreground">/mês</span></p>
               <ul className="space-y-3 mb-6">
@@ -199,7 +199,7 @@ const ServicesPage = () => {
               </ul>
               <Link to="/signup">
                 <Button className="w-full bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase">
-                  Começar Grátis
+                  Começar Agora
                 </Button>
               </Link>
             </div>
@@ -256,7 +256,7 @@ const ServicesPage = () => {
           </h2>
           
           <p className="text-white/90 text-lg max-w-2xl mx-auto mb-8">
-            Crie sua conta grátis e comece a entender seu carro de verdade.
+            Crie sua conta e comece a entender seu carro de verdade.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -265,7 +265,7 @@ const ServicesPage = () => {
                 size="lg"
                 className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 border border-transparent hover:border-primary-foreground transition-all hover:-translate-y-1 px-8"
               >
-                <span>Criar Conta Grátis</span>
+                <span>Criar Conta</span>
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>

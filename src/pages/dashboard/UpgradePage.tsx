@@ -222,7 +222,7 @@ export default function UpgradePage() {
                         <th className="text-center p-4 font-medium w-32">
                           <div className="flex flex-col items-center">
                             <span>Basic</span>
-                            <span className="text-xs text-muted-foreground font-normal">Gratuito</span>
+                            <span className="text-xs text-muted-foreground font-normal">R$ 0/mês</span>
                           </div>
                         </th>
                         <th className="text-center p-4 font-medium w-32 bg-primary/5">

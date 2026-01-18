@@ -11,9 +11,6 @@ import Footer from "@/components/layout/Footer";
 import heroBg from "@/assets/images/hero-bg.jpg";
 import textBarsLight from "@/assets/images/text-bars-light.png";
 import textBarsDark from "@/assets/images/text-bars-dark.png";
-import facebookIcon from "@/assets/images/facebook.svg";
-import instagramIcon from "@/assets/images/instagram.svg";
-import twitterIcon from "@/assets/images/twitter.svg";
 
 const contactInfo = [
   {
@@ -310,33 +307,6 @@ const ContactPage = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              {/* Social Links */}
-              <div className="bg-dm-space p-6 rounded-lg">
-                <h3 className="font-chakra text-lg font-semibold uppercase text-primary-foreground mb-4">
-                  Siga-nos nas Redes
-                </h3>
-                <div className="flex gap-3">
-                  <a 
-                    href="#" 
-                    className="bg-dm-blue-3 p-3 rounded-full hover:bg-primary hover:-translate-y-1 transition-all"
-                  >
-                    <img src={facebookIcon} alt="Facebook" className="w-5 h-5" />
-                  </a>
-                  <a 
-                    href="#" 
-                    className="bg-dm-blue-3 p-3 rounded-full hover:bg-primary hover:-translate-y-1 transition-all"
-                  >
-                    <img src={instagramIcon} alt="Instagram" className="w-5 h-5" />
-                  </a>
-                  <a 
-                    href="#" 
-                    className="bg-dm-blue-3 p-3 rounded-full hover:bg-primary hover:-translate-y-1 transition-all"
-                  >
-                    <img src={twitterIcon} alt="Twitter" className="w-5 h-5" />
-                  </a>
-                </div>
               </div>
             </div>
           </div>
