@@ -8,9 +8,9 @@ import {
   CheckCircle,
   AlertTriangle,
   Info,
-  Clock,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { generateCurrentSystemReport } from "@/services/pdf/systemScanReportGenerator";
+import { generateTechnicalReportPDF } from "@/services/pdf/technicalReportGenerator";
 import { useToast } from "@/hooks/use-toast";
 
 interface TableInfo {
@@ -42,6 +43,7 @@ interface Correction {
 const SystemScanReportPage = () => {
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingFull, setIsExportingFull] = useState(false);
 
   const tables: TableInfo[] = [
     { name: "profiles", columns: 8, hasRLS: true, purpose: "Dados do perfil do usuário" },
@@ -114,6 +116,25 @@ const SystemScanReportPage = () => {
     }
   };
 
+  const handleExportFullReport = async () => {
+    setIsExportingFull(true);
+    try {
+      generateTechnicalReportPDF({ generatedAt: new Date().toISOString(), generatedBy: "Admin" });
+      toast({
+        title: "Relatório Técnico Completo Exportado!",
+        description: "O PDF com todas as 15 seções foi baixado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível gerar o relatório técnico.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingFull(false);
+    }
+  };
+
   const getLevelBadge = (level: SecurityIssue["level"]) => {
     switch (level) {
       case "critical":
@@ -158,10 +179,28 @@ const SystemScanReportPage = () => {
               Análise completa da arquitetura e segurança do Doutor Motors
             </p>
           </div>
+        <div className="flex flex-wrap gap-3">
+          <Button 
+            onClick={handleExportFullReport}
+            disabled={isExportingFull}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isExportingFull ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <BookOpen className="w-4 h-4 mr-2" />
+                Relatório Técnico Completo (PDF)
+              </>
+            )}
+          </Button>
           <Button 
             onClick={handleExportPDF}
             disabled={isExporting}
-            className="bg-primary hover:bg-dm-blue-3"
+            variant="outline"
           >
             {isExporting ? (
               <>
@@ -171,10 +210,11 @@ const SystemScanReportPage = () => {
             ) : (
               <>
                 <Download className="w-4 h-4 mr-2" />
-                Baixar PDF Completo
+                Relatório de Varredura
               </>
             )}
           </Button>
+        </div>
         </div>
 
         {/* Summary Cards */}
