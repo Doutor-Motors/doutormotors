@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { UsageDisplay } from "@/components/dashboard/UsageDisplay";
+import { UsageChart } from "@/components/dashboard/UsageChart";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppStore } from "@/store/useAppStore";
@@ -411,8 +412,11 @@ const UserDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Usage Display */}
-        <UsageDisplay />
+        {/* Usage Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <UsageChart variant="radial" height={280} />
+          <UsageDisplay />
+        </div>
 
         {/* Quick Actions */}
         <div className="grid md:grid-cols-3 gap-4">

@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.cache-admin]
 verify_jwt = false
+
+[functions.send-usage-alert]
+verify_jwt = false
