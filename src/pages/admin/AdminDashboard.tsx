@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   Users, 
   Car, 
@@ -15,13 +16,20 @@ import {
   Clock,
   BarChart3,
   Sparkles,
+  Download,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import SystemUsageChart from "@/components/admin/SystemUsageChart";
 import UserSubscriptionStats from "@/components/admin/UserSubscriptionStats";
 import TopUsersTable from "@/components/admin/TopUsersTable";
+import PeriodComparisonCard from "@/components/admin/PeriodComparisonCard";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { generateAdminReport } from "@/services/pdf/adminReportGenerator";
+import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
 interface Stats {
   totalUsers: number;
@@ -59,7 +67,22 @@ interface TopUser {
   lastActive: string;
 }
 
+interface PeriodComparison {
+  currentMonth: {
+    diagnostics: number;
+    recordings: number;
+    newUsers: number;
+  };
+  previousMonth: {
+    diagnostics: number;
+    recordings: number;
+    newUsers: number;
+  };
+}
+
 const AdminDashboard = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     totalVehicles: 0,
@@ -78,8 +101,10 @@ const AdminDashboard = () => {
   const [dailyUsage, setDailyUsage] = useState<DailyUsage[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [periodComparison, setPeriodComparison] = useState<PeriodComparison | null>(null);
   const [loading, setLoading] = useState(true);
   const [usageLoading, setUsageLoading] = useState(true);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -87,6 +112,7 @@ const AdminDashboard = () => {
     fetchSubscriptionStats();
     fetchDailyUsage();
     fetchTopUsers();
+    fetchPeriodComparison();
   }, []);
 
   const fetchStats = async () => {
@@ -295,6 +321,111 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchPeriodComparison = async () => {
+    try {
+      const now = new Date();
+      const currentMonthStart = startOfMonth(now).toISOString();
+      const currentMonthEnd = endOfMonth(now).toISOString();
+      const previousMonthStart = startOfMonth(subMonths(now, 1)).toISOString();
+      const previousMonthEnd = endOfMonth(subMonths(now, 1)).toISOString();
+
+      // Current month diagnostics
+      const { count: currentDiagnostics } = await supabase
+        .from("diagnostics")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", currentMonthStart)
+        .lte("created_at", currentMonthEnd);
+
+      // Previous month diagnostics
+      const { count: previousDiagnostics } = await supabase
+        .from("diagnostics")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", previousMonthStart)
+        .lte("created_at", previousMonthEnd);
+
+      // Current month recordings
+      const { count: currentRecordings } = await supabase
+        .from("data_recordings")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", currentMonthStart)
+        .lte("created_at", currentMonthEnd);
+
+      // Previous month recordings
+      const { count: previousRecordings } = await supabase
+        .from("data_recordings")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", previousMonthStart)
+        .lte("created_at", previousMonthEnd);
+
+      // Current month new users
+      const { count: currentNewUsers } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", currentMonthStart)
+        .lte("created_at", currentMonthEnd);
+
+      // Previous month new users
+      const { count: previousNewUsers } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", previousMonthStart)
+        .lte("created_at", previousMonthEnd);
+
+      setPeriodComparison({
+        currentMonth: {
+          diagnostics: currentDiagnostics || 0,
+          recordings: currentRecordings || 0,
+          newUsers: currentNewUsers || 0,
+        },
+        previousMonth: {
+          diagnostics: previousDiagnostics || 0,
+          recordings: previousRecordings || 0,
+          newUsers: previousNewUsers || 0,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching period comparison:", error);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    setExportingPdf(true);
+    try {
+      generateAdminReport({
+        stats,
+        subscriptionStats,
+        topUsers: topUsers.map(u => ({
+          name: u.name,
+          email: u.email,
+          plan: u.plan,
+          diagnosticsCount: u.diagnosticsCount,
+          vehiclesCount: u.vehiclesCount,
+        })),
+        dailyUsage: dailyUsage.map(d => ({
+          date: d.date,
+          diagnostics: d.diagnostics,
+          recordings: d.recordings,
+          total: d.total,
+        })),
+        periodComparison: periodComparison || undefined,
+        generatedBy: user?.email || 'Admin',
+      });
+      toast({
+        title: "PDF Exportado!",
+        description: "O relatório foi baixado com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível gerar o relatório PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const statCards = [
     {
       title: "Total Usuários",
@@ -363,7 +494,21 @@ const AdminDashboard = () => {
               Visão geral do sistema Doutor Motors
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={exportingPdf || loading}
+              className="gap-2"
+            >
+              {exportingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+              Exportar PDF
+            </Button>
             <Badge variant="outline" className="gap-1">
               <Server className="w-3 h-3" />
               Sistema Operacional
@@ -534,6 +679,14 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="usage" className="space-y-6">
+            {/* Period Comparison */}
+            {periodComparison && (
+              <PeriodComparisonCard
+                currentMonth={periodComparison.currentMonth}
+                previousMonth={periodComparison.previousMonth}
+              />
+            )}
+
             <SystemUsageChart data={dailyUsage} variant="area" />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
