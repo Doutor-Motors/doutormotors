@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      coding_executions: {
+        Row: {
+          category: string
+          created_at: string
+          details: string | null
+          duration_ms: number | null
+          function_id: string
+          function_name: string
+          id: string
+          is_simulated: boolean
+          message: string | null
+          raw_responses: string[] | null
+          risk_level: string
+          success: boolean
+          user_id: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          details?: string | null
+          duration_ms?: number | null
+          function_id: string
+          function_name: string
+          id?: string
+          is_simulated?: boolean
+          message?: string | null
+          raw_responses?: string[] | null
+          risk_level: string
+          success?: boolean
+          user_id: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          details?: string | null
+          duration_ms?: number | null
+          function_id?: string
+          function_name?: string
+          id?: string
+          is_simulated?: boolean
+          message?: string | null
+          raw_responses?: string[] | null
+          risk_level?: string
+          success?: boolean
+          user_id?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coding_executions_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_messages: {
         Row: {
           created_at: string
@@ -542,6 +601,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      usage_tracking: {
+        Row: {
+          ai_queries_count: number
+          coding_executions_count: number
+          created_at: string
+          data_recordings_count: number
+          diagnostics_count: number
+          id: string
+          last_reset_at: string
+          month_year: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_queries_count?: number
+          coding_executions_count?: number
+          created_at?: string
+          data_recordings_count?: number
+          diagnostics_count?: number
+          id?: string
+          last_reset_at?: string
+          month_year: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_queries_count?: number
+          coding_executions_count?: number
+          created_at?: string
+          data_recordings_count?: number
+          diagnostics_count?: number
+          id?: string
+          last_reset_at?: string
+          month_year?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_notification_preferences: {
         Row: {

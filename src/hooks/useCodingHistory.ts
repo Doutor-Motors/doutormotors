@@ -30,9 +30,8 @@ export function useCodingHistory() {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Use 'as any' since table is new and not in types yet
       const { data, error } = await supabase
-        .from('coding_executions' as any)
+        .from('coding_executions')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -43,7 +42,7 @@ export function useCodingHistory() {
         throw error;
       }
 
-      return (data as unknown as CodingExecution[]) || [];
+      return (data as CodingExecution[]) || [];
     },
     enabled: !!user?.id,
   });
@@ -63,9 +62,8 @@ export function useCodingHistory() {
     }) => {
       if (!user?.id) throw new Error('User not authenticated');
 
-      // Use 'as any' since table is new and not in types yet
       const { error } = await supabase
-        .from('coding_executions' as any)
+        .from('coding_executions')
         .insert({
           user_id: user.id,
           vehicle_id: vehicleId || null,

@@ -104,7 +104,7 @@ export function useUsageTracking() {
       if (!user?.id) return null;
 
       const { data, error } = await supabase
-        .from('usage_tracking' as any)
+        .from('usage_tracking')
         .select('*')
         .eq('user_id', user.id)
         .eq('month_year', currentMonthYear)
@@ -115,7 +115,7 @@ export function useUsageTracking() {
         throw error;
       }
 
-      return data as unknown as UsageTracking | null;
+      return data as UsageTracking | null;
     },
     enabled: !!user?.id,
   });
@@ -173,8 +173,8 @@ export function useUsageTracking() {
 
       // Check if record exists for this month
       const { data: existing } = await supabase
-        .from('usage_tracking' as any)
-        .select('id, ' + column)
+        .from('usage_tracking')
+        .select('*')
         .eq('user_id', user.id)
         .eq('month_year', currentMonthYear)
         .maybeSingle();
@@ -183,19 +183,20 @@ export function useUsageTracking() {
 
       if (existing) {
         // Update existing record
-        const currentValue = (existing as any)[column] || 0;
+        const columnKey = column as keyof typeof existing;
+        const currentValue = (existing[columnKey] as number) || 0;
         newCount = currentValue + 1;
         const { error } = await supabase
-          .from('usage_tracking' as any)
+          .from('usage_tracking')
           .update({ [column]: newCount })
-          .eq('id', (existing as any).id);
+          .eq('id', existing.id);
 
         if (error) throw error;
       } else {
         // Insert new record
         newCount = 1;
         const { error } = await supabase
-          .from('usage_tracking' as any)
+          .from('usage_tracking')
           .insert({
             user_id: user.id,
             month_year: currentMonthYear,
