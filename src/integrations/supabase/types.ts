@@ -50,6 +50,62 @@ export type Database = {
         }
         Relationships: []
       }
+      data_recordings: {
+        Row: {
+          created_at: string
+          data_points_count: number | null
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          parameters_count: number | null
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_points_count?: number | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          parameters_count?: number | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          data_points_count?: number | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          parameters_count?: number | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_recordings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diagnostic_items: {
         Row: {
           can_diy: boolean
@@ -212,6 +268,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      recording_data_points: {
+        Row: {
+          created_at: string
+          id: string
+          parameters: Json
+          recording_id: string
+          timestamp: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          parameters?: Json
+          recording_id: string
+          timestamp?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          parameters?: Json
+          recording_id?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_data_points_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "data_recordings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_tickets: {
         Row: {
