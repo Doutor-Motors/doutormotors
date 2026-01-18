@@ -43,8 +43,20 @@ const AdminNotificationContext = createContext<AdminNotificationContextType | un
 
 export const useAdminNotification = () => {
   const context = useContext(AdminNotificationContext);
+  // Return safe defaults when used outside provider (e.g., during initial mount)
   if (!context) {
-    throw new Error('useAdminNotification must be used within an AdminNotificationProvider');
+    return {
+      notifications: [],
+      addNotification: () => "",
+      removeNotification: () => {},
+      clearAllNotifications: () => {},
+      unreadCount: 0,
+      notifyNewMessage: () => "",
+      notifyNewUser: () => "",
+      notifyNewVehicle: () => "",
+      notifyCriticalDiagnostic: () => "",
+      notifySystemAlert: () => "",
+    } as AdminNotificationContextType;
   }
   return context;
 };
