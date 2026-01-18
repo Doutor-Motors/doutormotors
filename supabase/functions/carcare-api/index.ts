@@ -1728,6 +1728,27 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'suspension spring': ['suspension spring', 'coil spring', 'spring', 'coil'],
           'front spring': ['front spring', 'coil spring', 'front coil spring', 'spring'],
           'rear spring': ['rear spring', 'coil spring', 'rear coil spring', 'spring'],
+          // Fuel pump - NEW
+          'fuel pump': ['fuel pump', 'fuel', 'pump', 'gas pump', 'fuel module', 'tank pump'],
+          'fuel': ['fuel pump', 'fuel', 'fuel filter', 'fuel line', 'fuel tank'],
+          'gas pump': ['fuel pump', 'gas pump', 'pump', 'fuel'],
+          'fuel module': ['fuel pump', 'fuel module', 'pump module', 'tank'],
+          // Oxygen sensor - NEW
+          'oxygen sensor': ['oxygen sensor', 'o2 sensor', 'lambda', 'exhaust sensor', 'o2', 'emissions sensor'],
+          'o2 sensor': ['oxygen sensor', 'o2 sensor', 'o2', 'lambda', 'exhaust sensor'],
+          'lambda': ['lambda', 'oxygen sensor', 'o2 sensor', 'lambda sensor'],
+          'exhaust sensor': ['oxygen sensor', 'exhaust sensor', 'o2 sensor', 'lambda'],
+          // Catalytic converter - NEW
+          'catalytic converter': ['catalytic converter', 'catalytic', 'converter', 'cat', 'catalyst', 'emission'],
+          'catalytic': ['catalytic converter', 'catalytic', 'cat', 'converter'],
+          'cat': ['catalytic converter', 'cat', 'catalyst', 'converter'],
+          'converter': ['catalytic converter', 'converter', 'cat'],
+          // Exhaust system - NEW
+          'exhaust': ['exhaust', 'exhaust system', 'muffler', 'exhaust pipe', 'tailpipe', 'silencer'],
+          'exhaust system': ['exhaust', 'exhaust system', 'muffler', 'pipe', 'silencer'],
+          'muffler': ['muffler', 'exhaust', 'silencer', 'exhaust muffler'],
+          'exhaust pipe': ['exhaust pipe', 'exhaust', 'pipe', 'tailpipe'],
+          'silencer': ['silencer', 'muffler', 'exhaust'],
         };
         
         // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
@@ -2505,6 +2526,59 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
       "🔟 **Liberar**: Solte lentamente o compressor. Verifique se a mola está corretamente assentada.",
       "⚠️ **CRÍTICO**: Se não tiver experiência e ferramentas adequadas, deixe para um profissional!",
     ],
+    // NOVAS CATEGORIAS: Combustível e Escapamento
+    "fuel_pump": [
+      "1️⃣ **PERIGO**: A bomba de combustível trabalha com gasolina/etanol. Risco de incêndio! Desconecte a bateria.",
+      "2️⃣ **Despressurizar**: Remova o fusível da bomba e ligue o motor até ele morrer (remove pressão do sistema).",
+      "3️⃣ **Localização**: A bomba geralmente fica dentro do tanque. Acesse pelo banco traseiro ou sob o veículo.",
+      "4️⃣ **Acesso interno**: Se acessar por dentro, remova o banco traseiro e a tampa de acesso ao tanque.",
+      "5️⃣ **Conexões**: Desconecte os conectores elétricos e as mangueiras de combustível (use panos para vazamentos).",
+      "6️⃣ **Anel de travamento**: Remova o anel que trava o módulo da bomba (ferramenta especial ou punção e martelo).",
+      "7️⃣ **Remoção**: Levante o módulo cuidadosamente. O filtro e boia ficam acoplados à bomba.",
+      "8️⃣ **Transferir componentes**: Se necessário, transfira o filtro, boia e suportes para a bomba nova.",
+      "9️⃣ **Instalação**: Insira o módulo novo alinhando corretamente. Não force! Encaixe o anel de travamento.",
+      "🔟 **Reconectar**: Conecte as mangueiras e o conector elétrico. Recoloque fusível e dê partida.",
+      "⚠️ **Importante**: Verifique vazamentos com o motor ligado. Não fume próximo ao veículo!",
+    ],
+    "oxygen_sensor": [
+      "1️⃣ **Localização**: A sonda lambda fica no escapamento. Há uma antes do catalisador (sensor 1) e outra após (sensor 2).",
+      "2️⃣ **Preparação**: Deixe o escapamento esfriar completamente. Desconecte a bateria.",
+      "3️⃣ **Conector**: Localize o conector elétrico da sonda (geralmente perto do túnel central ou cofre do motor).",
+      "4️⃣ **Desconectar**: Solte o conector elétrico. Alguns têm trava que precisa ser pressionada.",
+      "5️⃣ **Ferramenta**: Use uma chave soquete especial para sonda lambda (22mm com rasgo lateral).",
+      "6️⃣ **Remoção**: Desenrosque a sonda antiga. Se estiver travada, aplique penetrante e aguarde.",
+      "7️⃣ **Preparação nova**: Aplique anti-engripante nas roscas da sonda nova (evite o sensor na ponta!).",
+      "8️⃣ **Instalação**: Rosqueie a sonda nova à mão primeiro, depois aperte com a chave (40-60 Nm).",
+      "9️⃣ **Reconectar**: Conecte o conector elétrico. Certifique-se que está travado.",
+      "🔟 **Limpar código**: Reconecte a bateria e limpe o código de falha com um scanner OBD.",
+      "⚠️ **Dica**: Troque a sonda com o motor frio para evitar queimaduras e facilitar a remoção.",
+    ],
+    "catalytic_converter": [
+      "1️⃣ **Aviso**: A troca do catalisador é trabalho profissional. Requer soldagem ou conexões especiais.",
+      "2️⃣ **Diagnóstico**: Confirme que o catalisador está realmente ruim (código P0420/P0430, teste de eficiência).",
+      "3️⃣ **Esfriar**: Deixe o sistema de escapamento esfriar completamente antes de iniciar.",
+      "4️⃣ **Acesso**: Levante o veículo e apoie em cavaletes. Localize o catalisador no sistema de escapamento.",
+      "5️⃣ **Sondas**: Desconecte as sondas lambda (antes e depois do catalisador).",
+      "6️⃣ **Parafusos/flanges**: Remova os parafusos ou abraçadeiras que conectam o catalisador aos tubos.",
+      "7️⃣ **Remoção**: Com um ajudante, retire o catalisador antigo. É pesado!",
+      "8️⃣ **Juntas**: Substitua todas as juntas do sistema de escapamento. Nunca reutilize!",
+      "9️⃣ **Instalação**: Posicione o catalisador novo e instale as conexões (não aperte totalmente ainda).",
+      "🔟 **Finalizar**: Aperte todos os parafusos em cruz. Reconecte as sondas lambda.",
+      "⚠️ **Legal**: Use catalisador homologado. Catalisadores genéricos podem não passar na inspeção veicular.",
+    ],
+    "exhaust_system": [
+      "1️⃣ **Segurança**: Trabalhe com o escapamento frio. Use proteção para os olhos (ferrugem pode cair).",
+      "2️⃣ **Inspeção**: Localize a seção do escapamento que precisa ser substituída (coletor, tubo, silenciador).",
+      "3️⃣ **Levantar**: Levante o veículo e apoie em cavaletes seguros.",
+      "4️⃣ **Penetrante**: Aplique penetrante em todos os parafusos e abraçadeiras. Aguarde 15-30 minutos.",
+      "5️⃣ **Suportes de borracha**: Identifique todos os suportes de borracha (coxins) que seguram o escapamento.",
+      "6️⃣ **Conexões**: Remova abraçadeiras, parafusos de flange ou corte seções soldadas (se necessário).",
+      "7️⃣ **Suportes**: Desencaixe os suportes de borracha. Spray de silicone facilita.",
+      "8️⃣ **Remoção**: Com um ajudante, retire a seção antiga. Cuidado para não danificar sensores.",
+      "9️⃣ **Preparação**: Limpe as conexões que serão reutilizadas. Verifique os suportes de borracha.",
+      "🔟 **Instalação**: Instale a seção nova começando pela frente. Use braçadeiras ou juntas novas.",
+      "⚠️ **Importante**: Verifique vazamentos com o motor ligado (você vai ouvir). Aperte conexões se necessário.",
+    ],
   };
   
   // Determinar qual conjunto de passos usar - verificar tanto category quanto procedure
@@ -2573,6 +2647,14 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
     steps = categorySteps["strut"];
   } else if (searchTerm.includes("shock_absorber") || searchTerm.includes("shock absorber") || searchTerm.includes("damper") || (procedureLower.includes("shock") && !searchTerm.includes("strut"))) {
     steps = categorySteps["shock_absorber"];
+  } else if (searchTerm.includes("fuel_pump") || searchTerm.includes("fuel pump") || searchTerm.includes("gas pump") || (procedureLower.includes("fuel") && procedureLower.includes("pump"))) {
+    steps = categorySteps["fuel_pump"];
+  } else if (searchTerm.includes("oxygen_sensor") || searchTerm.includes("oxygen sensor") || searchTerm.includes("o2 sensor") || searchTerm.includes("lambda") || procedureLower.includes("o2_sensor")) {
+    steps = categorySteps["oxygen_sensor"];
+  } else if (searchTerm.includes("catalytic_converter") || searchTerm.includes("catalytic converter") || searchTerm.includes("catalytic") || procedureLower.includes("catalyst") || procedureLower.includes("cat_conv")) {
+    steps = categorySteps["catalytic_converter"];
+  } else if (searchTerm.includes("exhaust_system") || searchTerm.includes("exhaust system") || searchTerm.includes("muffler") || searchTerm.includes("exhaust pipe") || procedureLower.includes("silencer")) {
+    steps = categorySteps["exhaust_system"];
   } else {
     // Passos genéricos
     steps = [
@@ -2659,6 +2741,21 @@ function formatProcedureTitle(procedure: string, vehicleContext?: string): strin
     "suspension": "Suspensão",
     // Novas traduções - amortecedores e molas
     "sway": "Barra Estabilizadora",
+    // Novas traduções - combustível e escapamento
+    "fuel": "Combustível",
+    "oxygen": "Sonda Lambda",
+    "sensor": "Sensor",
+    "o2": "Sonda Lambda",
+    "lambda": "Lambda",
+    "catalytic": "Catalisador",
+    "converter": "Conversor",
+    "cat": "Catalisador",
+    "exhaust": "Escapamento",
+    "muffler": "Silenciador",
+    "pipe": "Tubo",
+    "silencer": "Silenciador",
+    "tailpipe": "Ponteira",
+    "emission": "Emissões",
     "stabilizer": "Estabilizador",
     "link": "Bieleta",
     "strut": "Amortecedor Dianteiro",
