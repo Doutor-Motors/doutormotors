@@ -392,6 +392,7 @@ const SystemScanReportPage = () => {
               onClick={handleExportRealtimeReport}
               disabled={isExportingRealtime}
               className="bg-primary hover:bg-primary/90"
+              title="Gera PDF com todos os dados atuais do banco: usuários, veículos, diagnósticos, assinaturas"
             >
               {isExportingRealtime ? (
                 <>
@@ -400,8 +401,8 @@ const SystemScanReportPage = () => {
                 </>
               ) : (
                 <>
-                  <Play className="w-4 h-4 mr-2" />
-                  📊 PDF Tempo Real
+                  <Activity className="w-4 h-4 mr-2" />
+                  📊 Diagnóstico Completo (Dados Reais)
                 </>
               )}
             </Button>
@@ -410,6 +411,7 @@ const SystemScanReportPage = () => {
               disabled={isExportingFull}
               variant="outline"
               className="border-green-500 text-green-600 hover:bg-green-50"
+              title="Documentação técnica fixa sobre a arquitetura do sistema"
             >
               {isExportingFull ? (
                 <>
@@ -419,7 +421,7 @@ const SystemScanReportPage = () => {
               ) : (
                 <>
                   <BookOpen className="w-4 h-4 mr-2" />
-                  Relatório Técnico
+                  📖 Manual do Sistema (Estático)
                 </>
               )}
             </Button>
@@ -427,6 +429,7 @@ const SystemScanReportPage = () => {
               onClick={handleExportPDF}
               disabled={isExporting}
               variant="outline"
+              title="Relatório de análise de segurança, RLS e correções aplicadas"
             >
               {isExporting ? (
                 <>
@@ -435,8 +438,8 @@ const SystemScanReportPage = () => {
                 </>
               ) : (
                 <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Varredura
+                  <Shield className="w-4 h-4 mr-2" />
+                  🔒 Segurança e Correções
                 </>
               )}
             </Button>
