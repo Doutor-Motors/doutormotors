@@ -466,6 +466,102 @@ FORMATO DE SAÍDA: JSON com as mesmas chaves e textos traduzidos para português
   }
 }
 
+// Gerar passos com IA baseado no título e contexto
+async function generateStepsWithAI(
+  title: string,
+  description: string,
+  vehicleContext?: string
+): Promise<string[]> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  
+  if (!LOVABLE_API_KEY) {
+    console.log("LOVABLE_API_KEY not configured, skipping AI step generation");
+    return [];
+  }
+
+  try {
+    console.log("Generating steps with AI for:", title);
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `Você é um mecânico experiente brasileiro que cria tutoriais de manutenção automotiva detalhados.
+
+Sua tarefa é criar um passo a passo DETALHADO e PROFISSIONAL em português brasileiro para o procedimento solicitado.
+
+REGRAS IMPORTANTES:
+1. Crie entre 6 a 10 passos claros e detalhados
+2. Cada passo deve começar com um número e emoji (1️⃣, 2️⃣, etc.)
+3. Inclua **texto em negrito** para ações importantes
+4. Adicione dicas de segurança com ⚠️ quando necessário
+5. Mencione ferramentas específicas quando relevante
+6. Use linguagem técnica mas acessível
+7. Seja específico para o veículo mencionado quando possível
+
+FORMATO DE SAÍDA: JSON array de strings, cada string é um passo completo.
+Exemplo: ["1️⃣ **Preparação**: Primeiro passo...", "2️⃣ **Execução**: Segundo passo..."]
+
+RETORNE APENAS O JSON, sem explicações adicionais.`
+          },
+          {
+            role: "user",
+            content: `PROCEDIMENTO: ${title}
+${description ? `DESCRIÇÃO: ${description}` : ''}
+${vehicleContext ? `VEÍCULO: ${vehicleContext}` : ''}
+
+Crie o passo a passo detalhado em português brasileiro:`
+          }
+        ],
+        temperature: 0.4,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI step generation error:", response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      console.error("No content received from AI");
+      return [];
+    }
+
+    // Parse the JSON response
+    let cleanedContent = content.trim();
+    if (cleanedContent.startsWith("```json")) {
+      cleanedContent = cleanedContent.slice(7);
+    } else if (cleanedContent.startsWith("```")) {
+      cleanedContent = cleanedContent.slice(3);
+    }
+    if (cleanedContent.endsWith("```")) {
+      cleanedContent = cleanedContent.slice(0, -3);
+    }
+
+    const steps = JSON.parse(cleanedContent.trim());
+    
+    if (Array.isArray(steps)) {
+      console.log(`Generated ${steps.length} steps with AI`);
+      return steps;
+    }
+
+    return [];
+  } catch (error) {
+    console.error("AI step generation error:", error);
+    return [];
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -874,66 +970,138 @@ async function fetchVideosFromCarCareKiosk(
     
     const categories: any[] = [];
     const seen = new Set();
+    const proceduresSeen = new Set();
 
-    // Padrão 1: Links de categorias no novo formato /videos/Brand/Model/Year/Category
-    const newCategoryRegex = /href="(\/videos\/[^"]+\/[^"]+\/\d{4}\/([^"]+))"[^>]*>([^<]*)</gi;
+    // O CarCareKiosk usa um layout de cards onde cada card é uma categoria com procedimentos
+    // Estrutura: <div class="card">...<a href="#collapse-categoryname">Category Name</a>...<li><a href="/video/...">Procedure</a></li>...</div>
+    
+    // Padrão 1: Extrair categorias dos cards (collapse headers)
+    const categoryHeaderRegex = /<a[^>]*data-toggle="collapse"[^>]*href="[^"]*#collapse-([^"]+)"[^>]*>([^<]+)<\/a>/gi;
     let match;
-    while ((match = newCategoryRegex.exec(html)) !== null) {
-      const [, path, categorySlug, title] = match;
-      const cleanTitle = (title || categorySlug).trim().replace(/\s+/g, ' ');
+    const categoryMap = new Map<string, { id: string; name: string; thumbnail: string; procedures: any[] }>();
+    
+    while ((match = categoryHeaderRegex.exec(html)) !== null) {
+      const [, categoryId, categoryName] = match;
+      const cleanName = categoryName.trim();
       
-      if (cleanTitle && !seen.has(cleanTitle.toLowerCase()) && cleanTitle.length > 2) {
-        seen.add(cleanTitle.toLowerCase());
-        categories.push({
-          id: categorySlug || cleanTitle.toLowerCase().replace(/\s+/g, '-'),
-          name: translateCategoryName(cleanTitle),
-          nameEn: cleanTitle,
-          icon: getCategoryIcon(cleanTitle),
-          url: `https://www.carcarekiosk.com${path}`,
-          vehicleContext: `${brand} ${model} ${yearStr}`,
+      if (cleanName && !categoryMap.has(categoryId.toLowerCase())) {
+        categoryMap.set(categoryId.toLowerCase(), {
+          id: categoryId,
+          name: cleanName,
+          thumbnail: "",
+          procedures: [],
         });
       }
     }
-
-    // Padrão 2: Links de categorias no formato antigo /video/Year_Brand_Model/category
-    const oldCategoryRegex = /<a[^>]*href="(\/video\/[^"]+\/([^"]+))"[^>]*>[\s\S]*?([^<]+)<\/a>/gi;
-    while ((match = oldCategoryRegex.exec(html)) !== null) {
-      const [, path, categorySlug, title] = match;
-      const cleanTitle = (title || categorySlug).trim().replace(/\s+/g, ' ');
+    
+    // Padrão 2: Extrair thumbnails das categorias
+    const thumbnailRegex = /<img[^>]*src="([^"]+)"[^>]*alt="[^"]*([^"]+)"[^>]*class="card-img-top"/gi;
+    while ((match = thumbnailRegex.exec(html)) !== null) {
+      const [, imgUrl, altText] = match;
+      // Tentar encontrar qual categoria corresponde
+      for (const [catId, catData] of categoryMap.entries()) {
+        if (altText.toLowerCase().includes(catData.name.toLowerCase().split(' ')[0])) {
+          catData.thumbnail = imgUrl;
+          break;
+        }
+      }
+    }
+    
+    // Padrão 3: Extrair procedimentos (links para vídeos específicos)
+    // Links no formato: /video/2019_Honda_Civic_Type_R_2.0L_4_Cyl._Turbo/category/procedure
+    const procedureRegex = /<a[^>]*href="(https?:\/\/www\.carcarekiosk\.com\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*class="[^"]*functions[^"]*"[^>]*>([^<]+)<\/a>/gi;
+    
+    while ((match = procedureRegex.exec(html)) !== null) {
+      const [, fullUrl, categorySlug, procedureSlug, procedureName] = match;
+      const cleanProcedureName = procedureName.trim();
+      const procKey = `${categorySlug}_${procedureSlug}`;
       
-      if (cleanTitle && !seen.has(cleanTitle.toLowerCase()) && cleanTitle.length > 2 && !path.includes('/video/' + yearStr + '_' + brandSlug)) {
-        seen.add(cleanTitle.toLowerCase());
-        categories.push({
-          id: categorySlug || cleanTitle.toLowerCase().replace(/\s+/g, '-'),
-          name: translateCategoryName(cleanTitle),
-          nameEn: cleanTitle,
-          icon: getCategoryIcon(cleanTitle),
-          url: `https://www.carcarekiosk.com${path}`,
-          vehicleContext: `${brand} ${model} ${yearStr}`,
+      if (!proceduresSeen.has(procKey)) {
+        proceduresSeen.add(procKey);
+        
+        // Encontrar ou criar a categoria
+        const categoryId = categorySlug.toLowerCase().replace(/_/g, '');
+        let category = categoryMap.get(categoryId);
+        
+        if (!category) {
+          // Criar categoria se não existir
+          category = {
+            id: categorySlug,
+            name: translateCategoryName(categorySlug.replace(/_/g, ' ')),
+            thumbnail: "",
+            procedures: [],
+          };
+          categoryMap.set(categoryId, category);
+        }
+        
+        category.procedures.push({
+          id: procedureSlug,
+          name: translateCategoryName(cleanProcedureName),
+          nameEn: cleanProcedureName,
+          url: fullUrl,
         });
       }
     }
-
-    // Padrão 3: Links em markdown
-    const markdownLinkRegex = /\[([^\]]+)\]\((\/(?:video|videos)\/[^\)]+)\)/gi;
-    while ((match = markdownLinkRegex.exec(markdown)) !== null) {
-      const [, title, path] = match;
-      const cleanTitle = title.trim();
+    
+    // Padrão alternativo: href sem protocolo
+    const procedureRegex2 = /href="(\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*>([^<]+)<\/a>/gi;
+    
+    while ((match = procedureRegex2.exec(html)) !== null) {
+      const [, path, categorySlug, procedureSlug, procedureName] = match;
+      const cleanProcedureName = procedureName.trim();
+      const procKey = `${categorySlug}_${procedureSlug}`;
       
-      if (cleanTitle && !seen.has(cleanTitle.toLowerCase()) && path.split('/').length > 4) {
-        seen.add(cleanTitle.toLowerCase());
-        categories.push({
-          id: path.split('/').pop() || cleanTitle.toLowerCase().replace(/\s+/g, '-'),
-          name: translateCategoryName(cleanTitle),
-          nameEn: cleanTitle,
-          icon: getCategoryIcon(cleanTitle),
+      // Ignorar links que não são procedimentos válidos
+      if (procedureName.includes('svg') || procedureName.includes('img') || procedureName.length < 3) {
+        continue;
+      }
+      
+      if (!proceduresSeen.has(procKey)) {
+        proceduresSeen.add(procKey);
+        
+        const categoryId = categorySlug.toLowerCase().replace(/_/g, '');
+        let category = categoryMap.get(categoryId);
+        
+        if (!category) {
+          category = {
+            id: categorySlug,
+            name: translateCategoryName(categorySlug.replace(/_/g, ' ')),
+            thumbnail: "",
+            procedures: [],
+          };
+          categoryMap.set(categoryId, category);
+        }
+        
+        category.procedures.push({
+          id: procedureSlug,
+          name: translateCategoryName(cleanProcedureName),
+          nameEn: cleanProcedureName,
           url: `https://www.carcarekiosk.com${path}`,
-          vehicleContext: `${brand} ${model} ${yearStr}`,
         });
       }
     }
+    
+    // Converter mapa para array de categorias
+    for (const [, catData] of categoryMap) {
+      if (catData.procedures.length > 0 && !seen.has(catData.name.toLowerCase())) {
+        seen.add(catData.name.toLowerCase());
+        categories.push({
+          id: catData.id.toLowerCase().replace(/_/g, '-'),
+          name: translateCategoryName(catData.name),
+          nameEn: catData.name,
+          icon: getCategoryIcon(catData.name),
+          thumbnail: catData.thumbnail || undefined,
+          url: successfulUrl,
+          vehicleContext: `${brand} ${model} ${yearStr}`,
+          procedures: catData.procedures,
+        });
+      }
+    }
+    
+    // Ordenar categorias por nome
+    categories.sort((a, b) => a.name.localeCompare(b.name));
 
-    console.log(`Found ${categories.length} video categories for ${brand} ${model}`);
+    console.log(`Found ${categories.length} video categories with ${proceduresSeen.size} procedures for ${brand} ${model}`);
     
     if (categories.length === 0) {
       console.log(`No categories found for ${brand} ${model}, using static data`);
@@ -1250,12 +1418,41 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
 
     const { html, markdown, metadata } = validData;
     
-    let videoEmbedUrl = null;
+    // ========== EXTRAIR VÍDEO ==========
+    // O CarCareKiosk usa vídeos MP4 hospedados no CloudFront (não YouTube!)
+    // Formato: <video><source src="https://d2n97g4vasjwsk.cloudfront.net/...mp4" type="video/mp4"></source></video>
+    
+    let videoEmbedUrl: string | null = null;
+    let videoSource: "cloudfront" | "youtube" | null = null;
     let youtubeVideoId: string | null = null;
-    const iframeMatch = html.match(/src="(https:\/\/www\.youtube\.com\/embed\/([^"?]+))"/);
-    if (iframeMatch) {
-      videoEmbedUrl = iframeMatch[1];
-      youtubeVideoId = iframeMatch[2];
+    
+    // Prioridade 1: Vídeo MP4 do CloudFront
+    const mp4Match = html.match(/<source[^>]*src="(https:\/\/d2n97g4vasjwsk\.cloudfront\.net\/[^"]+\.mp4)"[^>]*type="video\/mp4"/i);
+    if (mp4Match) {
+      videoEmbedUrl = mp4Match[1];
+      videoSource = "cloudfront";
+      console.log("Found CloudFront video:", videoEmbedUrl);
+    }
+    
+    // Alternativa: Procurar no atributo src do <video> diretamente
+    if (!videoEmbedUrl) {
+      const videoSrcMatch = html.match(/<source[^>]*src="([^"]+\.mp4)"[^>]*/i);
+      if (videoSrcMatch && videoSrcMatch[1].includes('cloudfront')) {
+        videoEmbedUrl = videoSrcMatch[1];
+        videoSource = "cloudfront";
+        console.log("Found CloudFront video (alt):", videoEmbedUrl);
+      }
+    }
+    
+    // Fallback para YouTube (caso o CarCareKiosk mude de estratégia)
+    if (!videoEmbedUrl) {
+      const iframeMatch = html.match(/src="(https:\/\/www\.youtube\.com\/embed\/([^"?]+))"/);
+      if (iframeMatch) {
+        videoEmbedUrl = iframeMatch[1];
+        youtubeVideoId = iframeMatch[2];
+        videoSource = "youtube";
+        console.log("Found YouTube video:", videoEmbedUrl);
+      }
     }
     
     if (!videoEmbedUrl) {
@@ -1263,11 +1460,38 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       if (youtubeMatch) {
         youtubeVideoId = youtubeMatch[1];
         videoEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}`;
+        videoSource = "youtube";
       }
     }
-
+    
+    console.log(`Video extraction result: ${videoSource || 'none'}, URL: ${videoEmbedUrl?.slice(0, 80)}...`);
+    
+    // ========== EXTRAIR TÍTULO ==========
     const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
     const title = titleMatch ? titleMatch[1].trim() : metadata.title || "Tutorial";
+    
+    // ========== EXTRAIR THUMBNAIL/POSTER ==========
+    let thumbnailUrl: string | null = null;
+    const posterMatch = html.match(/<video[^>]*poster="([^"]+)"/i);
+    if (posterMatch) {
+      thumbnailUrl = posterMatch[1];
+    }
+
+    // ========== EXTRAIR DESCRIÇÃO DO PROCEDIMENTO ==========
+    // O CarCareKiosk tem a descrição em um <p> logo após o <h2> ou diretamente no conteúdo
+    let procedureDescription = "";
+    const descParagraphMatch = html.match(/<p[^>]*class="[^"]*mb-2[^"]*"[^>]*>(?:<span[^>]*>)?([^<]+)/i);
+    if (descParagraphMatch) {
+      procedureDescription = descParagraphMatch[1].trim();
+    }
+    
+    // Fallback: primeira linha significativa após h1
+    if (!procedureDescription) {
+      const firstParagraphMatch = html.match(/<h1[^>]*>[^<]+<\/h1>[\s\S]*?<h2[^>]*>([^<]+)<\/h2>/i);
+      if (firstParagraphMatch) {
+        procedureDescription = firstParagraphMatch[1].trim();
+      }
+    }
 
     // Extract basic steps from HTML as fallback
     const htmlSteps: string[] = [];
@@ -1323,58 +1547,80 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
 
     console.log(`Extracted video description: ${videoDescription.slice(0, 100)}...`);
 
-    // ========== PASSO A PASSO ELABORADO VIA TRANSCRIÇÃO ==========
+    // ========== GERAR PASSO A PASSO ELABORADO ==========
     let elaboratedSteps: string[] = [];
     let transcriptionUsed = false;
     let originalTranscription: string | null = null;
 
-    // Tentar transcrever o vídeo do YouTube
-    if (videoEmbedUrl) {
-      console.log("Attempting to transcribe YouTube video...");
-      const transcription = await transcribeYouTubeVideo(videoEmbedUrl);
-      
-      if (transcription && transcription.length > 100) {
-        console.log("Transcription successful, generating elaborated steps...");
-        originalTranscription = transcription;
-        elaboratedSteps = await generateElaboratedSteps(transcription, title, vehicleContext);
-        transcriptionUsed = elaboratedSteps.length > 0;
-      }
-    }
-
-    // Se não conseguiu transcrição, traduzir passos do HTML
-    let finalSteps = elaboratedSteps;
+    // O CarCareKiosk usa vídeos próprios (não YouTube), então não podemos transcrever
+    // Em vez disso, vamos gerar passos com IA baseados no título e contexto
     
-    if (!transcriptionUsed && htmlSteps.length > 0) {
-      console.log("Using HTML steps with translation...");
+    // Primeiro, tentar extrair passos do próprio HTML/Markdown
+    // O CarCareKiosk tem descrições curtas, então precisamos gerar passos detalhados
+    
+    if (htmlSteps.length === 0 && videoEmbedUrl) {
+      // Gerar passos detalhados usando IA baseado no título e contexto
+      console.log("No steps found in HTML, generating steps with AI...");
+      
+      const procedureSlug = videoUrl.split('/').pop() || "";
+      const categorySlug = videoUrl.split('/').slice(-2, -1)[0] || "";
+      
+      // Usar os passos estáticos de fallback como base, mas traduzir e adaptar
+      const staticSteps = generateStaticFallbackSteps(procedureSlug, categorySlug, vehicleContext);
+      
+      if (staticSteps.length > 0) {
+        elaboratedSteps = staticSteps;
+        console.log(`Using ${staticSteps.length} static fallback steps`);
+      } else {
+        // Gerar passos genéricos personalizados
+        elaboratedSteps = await generateStepsWithAI(title, procedureDescription, vehicleContext);
+      }
+    } else if (htmlSteps.length > 0) {
+      // Traduzir passos do HTML para português
+      console.log(`Translating ${htmlSteps.length} HTML steps...`);
       const translatedContent = await translateToPortuguese({
         steps: htmlSteps,
       });
-      finalSteps = translatedContent.steps || htmlSteps;
+      elaboratedSteps = translatedContent.steps || htmlSteps;
+    }
+
+    // Garantir que sempre temos passos
+    if (elaboratedSteps.length === 0) {
+      const procedureSlug = videoUrl.split('/').pop() || "";
+      const categorySlug = videoUrl.split('/').slice(-2, -1)[0] || "";
+      elaboratedSteps = generateStaticFallbackSteps(procedureSlug, categorySlug, vehicleContext);
     }
 
     // Traduzir título e descrição
     const translatedMeta = await translateToPortuguese({
       title,
-      description: metadata.description || "",
-      videoDescription: videoDescription || undefined,
+      description: metadata.description || procedureDescription || "",
+      videoDescription: videoDescription || procedureDescription || undefined,
     });
 
     const result = {
       title: translatedMeta.title || title,
-      description: translatedMeta.description || metadata.description || "",
-      videoDescription: translatedMeta.videoDescription || videoDescription || undefined,
+      description: translatedMeta.description || metadata.description || procedureDescription || "",
+      videoDescription: translatedMeta.videoDescription || videoDescription || procedureDescription || undefined,
       videoUrl: videoEmbedUrl,
+      videoSource: videoSource,
+      thumbnailUrl: thumbnailUrl,
       sourceUrl: successfulUrl,
-      steps: finalSteps.length > 0 ? finalSteps : htmlSteps,
+      steps: elaboratedSteps,
       transcriptionUsed,
       fromCache: false,
       markdown: markdown.slice(0, 5000),
     };
 
     // ========== SALVAR NO CACHE ==========
+    // Para vídeos CloudFront, usamos a URL do vídeo como identificador
+    const cacheVideoId = videoSource === "cloudfront" 
+      ? videoEmbedUrl?.split('/').pop()?.replace('.mp4', '') || null
+      : youtubeVideoId;
+    
     await saveToCache({
       video_url: successfulUrl,
-      youtube_video_id: youtubeVideoId || undefined,
+      youtube_video_id: cacheVideoId || undefined,
       original_transcription: originalTranscription || undefined,
       elaborated_steps: result.steps,
       translated_title: result.title,
