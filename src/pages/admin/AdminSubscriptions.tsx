@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -81,35 +81,78 @@ export default function AdminSubscriptions() {
   const [newStatus, setNewStatus] = useState<string>('');
   const [cancelingSubscription, setCancelingSubscription] = useState<SubscriptionWithProfile | null>(null);
 
-  // Fetch all subscriptions with profiles
-  const { data: subscriptions, isLoading } = useQuery({
+  // Fetch all subscriptions with profiles - include users without subscriptions (Basic)
+  const { data: subscriptions, isLoading, refetch } = useQuery({
     queryKey: ['admin-subscriptions'],
     queryFn: async () => {
-      // First get all subscriptions
-      const { data: subs, error: subsError } = await supabase
-        .from('user_subscriptions')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (subsError) throw subsError;
-
-      // Then get profiles for each user
-      const userIds = subs.map(s => s.user_id);
+      // Fetch all profiles first (all users)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, name, email')
-        .in('user_id', userIds);
+        .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
 
-      // Merge data
-      const profileMap = new Map(profiles.map(p => [p.user_id, p]));
-      return subs.map(sub => ({
-        ...sub,
-        profile: profileMap.get(sub.user_id),
-      })) as SubscriptionWithProfile[];
+      // Then get all subscriptions
+      const { data: subs, error: subsError } = await supabase
+        .from('user_subscriptions')
+        .select('*');
+
+      if (subsError) throw subsError;
+
+      // Create subscription map
+      const subMap = new Map(subs.map(s => [s.user_id, s]));
+
+      // Merge: show all users, with their subscription or default Basic
+      const result: SubscriptionWithProfile[] = (profiles || []).map(profile => {
+        const existingSub = subMap.get(profile.user_id);
+        if (existingSub) {
+          return {
+            ...existingSub,
+            profile: { name: profile.name, email: profile.email },
+          };
+        }
+        // User without subscription = Basic
+        return {
+          id: `virtual-${profile.user_id}`,
+          user_id: profile.user_id,
+          plan_type: 'basic',
+          status: 'active',
+          started_at: new Date().toISOString(),
+          expires_at: null,
+          stripe_customer_id: null,
+          stripe_subscription_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          profile: { name: profile.name, email: profile.email },
+        };
+      });
+
+      return result;
     },
   });
+
+  // Realtime subscription for profiles and user_subscriptions
+  useEffect(() => {
+    const profilesChannel = supabase
+      .channel("admin-subs-profiles")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
+        refetch();
+      })
+      .subscribe();
+
+    const subsChannel = supabase
+      .channel("admin-subs-subscriptions")
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_subscriptions" }, () => {
+        refetch();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(subsChannel);
+    };
+  }, [refetch]);
 
   // Update subscription mutation
   const updateMutation = useMutation({
