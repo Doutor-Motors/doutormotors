@@ -900,7 +900,209 @@ async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promi
   }
 }
 
+// ============================================================================
+// NOVA FUNÇÃO: Buscar página de "todos os vídeos" do modelo
+// Esta página contém TODOS os procedimentos disponíveis para um modelo específico
+// URL: https://www.carcarekiosk.com/video/{Year}_{Brand}_{Model} ou /videos/{Brand}/{Model}/{Year}
+// ============================================================================
+interface ModelVideosIndex {
+  procedures: Array<{
+    category: string;
+    categorySlug: string;
+    procedure: string;
+    procedureSlug: string;
+    url: string;
+    thumbnail?: string;
+  }>;
+  vehicleUrl: string;
+  totalCount: number;
+}
+
+async function fetchAllVideosFromModelPage(
+  apiKey: string,
+  brand: string,
+  model: string,
+  year: string
+): Promise<ModelVideosIndex | null> {
+  try {
+    const brandSlug = brand.replace(/\s+/g, "_");
+    const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
+    
+    // A página de "todos os vídeos" do modelo - formato mais comum
+    // Ex: https://www.carcarekiosk.com/video/2019_Honda_Civic
+    // Ou: https://www.carcarekiosk.com/videos/Honda/Civic/2019
+    const urlFormats = [
+      `https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}`,
+      `https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}`,
+      `https://www.carcarekiosk.com/videos/${brand.replace(/\s+/g, "-")}/${model.replace(/\s+/g, "-")}/${year}`,
+    ];
+    
+    console.log(`[ModelVideosIndex] Fetching all videos index for ${year} ${brand} ${model}...`);
+    
+    let html = "";
+    let successfulUrl = "";
+    
+    for (const url of urlFormats) {
+      try {
+        const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url,
+            formats: ["html", "markdown"],
+            waitFor: 3000,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const fetchedHtml = data.data?.html || "";
+          const fetchedMarkdown = data.data?.markdown || "";
+          
+          if (isValidPage(fetchedMarkdown, fetchedHtml) && fetchedHtml.length > 1000) {
+            html = fetchedHtml;
+            successfulUrl = url;
+            console.log(`[ModelVideosIndex] Successfully fetched from ${url} (${html.length} chars)`);
+            break;
+          }
+        }
+      } catch (e) {
+        console.log(`[ModelVideosIndex] Failed to fetch from ${url}:`, e);
+      }
+    }
+    
+    if (!html) {
+      console.log("[ModelVideosIndex] Could not fetch model videos page");
+      return null;
+    }
+    
+    // Extrair TODOS os procedimentos da página
+    const procedures: ModelVideosIndex["procedures"] = [];
+    const seen = new Set<string>();
+    
+    // Padrão 1: Links de procedimentos no formato /video/Vehicle/Category/Procedure
+    // Ex: /video/2019_Honda_Civic_2.0L_4_Cyl./oil/change
+    const procedurePattern1 = /href="((?:https?:\/\/www\.carcarekiosk\.com)?\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"/gi;
+    let match;
+    
+    while ((match = procedurePattern1.exec(html)) !== null) {
+      const [, urlPath, categorySlug, procedureSlug] = match;
+      const key = `${categorySlug}_${procedureSlug}`.toLowerCase();
+      
+      if (!seen.has(key) && procedureSlug && categorySlug) {
+        seen.add(key);
+        
+        const fullUrl = urlPath.startsWith("http") 
+          ? urlPath 
+          : `https://www.carcarekiosk.com${urlPath}`;
+        
+        procedures.push({
+          category: translateCategoryName(categorySlug.replace(/_/g, " ")),
+          categorySlug,
+          procedure: procedureSlug.replace(/_/g, " "),
+          procedureSlug,
+          url: fullUrl,
+        });
+      }
+    }
+    
+    // Padrão 2: Links com thumbnails do CloudFront (contêm informação sobre o procedimento)
+    // Ex: https://d2n97g4vasjwsk.cloudfront.net/2019_Honda_Civic/Oil+Change+-+480p.webp
+    const thumbnailPattern = /https:\/\/d2n97g4vasjwsk\.cloudfront\.net\/[^"'\s]+\.(?:webp|jpg|png)/gi;
+    const thumbnails: string[] = [];
+    
+    while ((match = thumbnailPattern.exec(html)) !== null) {
+      thumbnails.push(match[0]);
+    }
+    
+    // Associar thumbnails com procedimentos baseado no nome
+    for (const thumb of thumbnails) {
+      const decodedThumb = decodeURIComponent(thumb.replace(/\+/g, " ")).toLowerCase();
+      
+      for (const proc of procedures) {
+        const procName = proc.procedureSlug.replace(/_/g, " ").toLowerCase();
+        if (decodedThumb.includes(procName) && !proc.thumbnail) {
+          proc.thumbnail = thumb;
+          break;
+        }
+      }
+    }
+    
+    console.log(`[ModelVideosIndex] Found ${procedures.length} procedures from model page`);
+    
+    return {
+      procedures,
+      vehicleUrl: successfulUrl,
+      totalCount: procedures.length,
+    };
+  } catch (error) {
+    console.error("[ModelVideosIndex] Error:", error);
+    return null;
+  }
+}
+
+// Converter o índice de vídeos do modelo para o formato de categorias
+function convertVideosIndexToCategories(
+  index: ModelVideosIndex,
+  brand: string,
+  model: string,
+  year: string
+): any[] {
+  const categoryMap = new Map<string, {
+    id: string;
+    name: string;
+    nameEn: string;
+    icon: string;
+    url: string;
+    vehicleContext: string;
+    procedures: any[];
+  }>();
+  
+  const vehicleContext = `${brand} ${model} ${year}`;
+  
+  for (const proc of index.procedures) {
+    const catKey = proc.categorySlug.toLowerCase();
+    
+    if (!categoryMap.has(catKey)) {
+      categoryMap.set(catKey, {
+        id: proc.categorySlug.toLowerCase().replace(/_/g, "-"),
+        name: translateCategoryName(proc.category),
+        nameEn: proc.category,
+        icon: getCategoryIcon(proc.category),
+        url: index.vehicleUrl,
+        vehicleContext,
+        procedures: [],
+      });
+    }
+    
+    const cat = categoryMap.get(catKey)!;
+    
+    // Evitar procedimentos duplicados
+    if (!cat.procedures.some(p => p.id === proc.procedureSlug)) {
+      cat.procedures.push({
+        id: proc.procedureSlug,
+        name: translateCategoryName(proc.procedure),
+        nameEn: proc.procedure,
+        url: proc.url,
+        thumbnail: proc.thumbnail,
+      });
+    }
+  }
+  
+  // Converter para array e ordenar
+  const categories = Array.from(categoryMap.values());
+  categories.sort((a, b) => a.name.localeCompare(b.name));
+  
+  console.log(`[ConvertIndex] Created ${categories.length} categories from ${index.totalCount} procedures`);
+  
+  return categories;
+}
+
 // Buscar vídeos de um modelo específico - SUPORTA AMBOS FORMATOS DE URL
+// MELHORADO: Agora também busca a página de "todos os vídeos" do modelo
 async function fetchVideosFromCarCareKiosk(
   apiKey: string, 
   brand: string, 
@@ -912,7 +1114,20 @@ async function fetchVideosFromCarCareKiosk(
     const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
     const yearStr = year || new Date().getFullYear().toString();
     
-    // Tentar múltiplos formatos de URL
+    // NOVO: Primeiro, buscar a página de "todos os vídeos" do modelo
+    // Isso nos dá uma visão completa de todos os procedimentos disponíveis
+    const modelVideosIndex = await fetchAllVideosFromModelPage(apiKey, brand, model, yearStr);
+    
+    if (modelVideosIndex && modelVideosIndex.totalCount > 0) {
+      console.log(`[Videos] Using model videos index with ${modelVideosIndex.totalCount} procedures`);
+      
+      // Converter o índice de vídeos para o formato de categorias
+      return convertVideosIndexToCategories(modelVideosIndex, brand, model, yearStr);
+    }
+    
+    console.log("[Videos] Model videos index empty or failed, falling back to category scraping...");
+    
+    // Fallback: Tentar múltiplos formatos de URL
     const urlFormats = [
       // Novo formato: /videos/Brand/Model/Year
       `https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${yearStr}`,
