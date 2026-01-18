@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { 
   Search, Loader2, Car, ChevronRight, ArrowLeft, Play, 
   BookOpen, Video, ExternalLink, Home, Filter, RefreshCw, Sparkles, Bot, Database, Clock
@@ -79,13 +80,15 @@ interface VideoDetails {
   title: string;
   description?: string;
   videoDescription?: string;
-  videoUrl?: string;
+  videoUrl?: string | null;
   sourceUrl?: string;
   steps?: string[];
   markdown?: string;
   transcriptionUsed?: boolean;
   fromCache?: boolean;
-  cacheExpiresAt?: string; // ISO date string for cache expiration
+  cacheExpiresAt?: string;
+  error?: boolean;
+  errorMessage?: string;
 }
 
 type ViewState = "brands" | "models" | "categories" | "procedures" | "video";
@@ -93,11 +96,13 @@ type ViewState = "brands" | "models" | "categories" | "procedures" | "video";
 const StudyCarPage = () => {
   const { user } = useAuth();
   const { notifyError } = useNotifications();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Navigation state
   const [currentView, setCurrentView] = useState<ViewState>("brands");
   const [isLoading, setIsLoading] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [deepLinkProcessed, setDeepLinkProcessed] = useState(false);
   
   // Data state
   const [brands, setBrands] = useState<CarBrand[]>([]);
@@ -991,10 +996,11 @@ const StudyCarPage = () => {
 
                   <div className="grid lg:grid-cols-3 gap-8">
                     {/* Main Video */}
-                    <div className="lg:col-span-2">
-                      <Card className="overflow-hidden">
+                    <div className="lg:col-span-2 space-y-6">
+                      {/* Video Player Card - Small & Transparent */}
+                      <Card className="overflow-hidden bg-card/80 backdrop-blur-sm border-2 border-primary/20">
                         {isLoading && !videoDetails ? (
-                          <div className="aspect-video bg-muted flex flex-col items-center justify-center p-8 text-center">
+                          <div className="aspect-video bg-muted/50 flex flex-col items-center justify-center p-8 text-center">
                             <div className="relative mb-6">
                               <Loader2 className="w-12 h-12 animate-spin text-primary" />
                               {isTranscribing && (
@@ -1016,87 +1022,89 @@ const StudyCarPage = () => {
                             )}
                           </div>
                         ) : videoDetails?.videoUrl ? (
-                          <AspectRatio ratio={16 / 9}>
-                            <iframe
-                              src={getYouTubeEmbedUrl(videoDetails.videoUrl) || videoDetails.videoUrl}
-                              title={videoDetails.title || selectedCategory.name}
-                              className="w-full h-full"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                            />
-                          </AspectRatio>
+                          <>
+                            <AspectRatio ratio={16 / 9}>
+                              <iframe
+                                src={getYouTubeEmbedUrl(videoDetails.videoUrl) || videoDetails.videoUrl}
+                                title={videoDetails.title || selectedCategory.name}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            </AspectRatio>
+                            <div className="p-4 bg-gradient-to-r from-primary/5 to-transparent">
+                              <h2 className="font-chakra font-bold text-lg">
+                                {videoDetails?.title || `${selectedProcedure?.name || selectedCategory.name}`}
+                              </h2>
+                              {videoDetails?.description && (
+                                <p className="text-sm text-muted-foreground mt-1">{videoDetails.description}</p>
+                              )}
+                            </div>
+                          </>
                         ) : (
-                          <div className="aspect-video bg-muted flex flex-col items-center justify-center p-8 text-center">
+                          <div className="aspect-video bg-muted/50 flex flex-col items-center justify-center p-8 text-center">
                             <Video className="w-16 h-16 text-muted-foreground mb-4" />
-                            <p className="text-lg font-medium mb-2">Vídeo em carregamento...</p>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              Clique abaixo para assistir no CarCareKiosk
+                            <p className="text-lg font-medium mb-2">
+                              {videoDetails?.error ? "Vídeo indisponível agora" : "Vídeo em carregamento..."}
                             </p>
-                            {(selectedProcedure?.url || selectedCategory.url) && (
-                              <Button asChild>
-                                <a 
-                                  href={selectedProcedure?.url || selectedCategory.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                >
-                                  <ExternalLink className="w-4 h-4 mr-2" />
-                                  Abrir no CarCareKiosk
-                                </a>
-                              </Button>
+                            {videoDetails?.errorMessage && (
+                              <p className="text-sm text-muted-foreground mb-4">
+                                {videoDetails.errorMessage}
+                              </p>
                             )}
-                          </div>
-                        )}
-                        
-                        <CardContent className="p-6">
-                          <h2 className="font-chakra font-bold text-xl mb-2">
-                            {videoDetails?.title || `${selectedProcedure?.name || selectedCategory.name} - ${selectedBrand.name} ${selectedModel.name}`}
-                          </h2>
-                          {videoDetails?.description && !videoDetails?.videoDescription && (
-                            <p className="text-muted-foreground">{videoDetails.description}</p>
-                          )}
-                          
-                          {(selectedProcedure?.url || selectedCategory.url) && (
-                            <Button variant="outline" asChild className="mt-4">
-                              <a 
-                                href={selectedProcedure?.url || selectedCategory.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
+                            <div className="flex flex-wrap gap-3 justify-center">
+                              <Button 
+                                variant="default"
+                                onClick={() => selectedProcedure && handleProcedureSelect(selectedProcedure, true)}
+                                disabled={isLoading}
                               >
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Ver tutorial completo no CarCareKiosk
-                              </a>
-                            </Button>
-                          )}
-                        </CardContent>
-                        
-                        {/* Video Description Section */}
-                        {videoDetails?.videoDescription && (
-                          <div className="border-t">
-                            <CardContent className="p-6">
-                              <h3 className="font-chakra font-bold text-lg mb-4 flex items-center gap-2">
-                                <BookOpen className="w-5 h-5 text-primary" />
-                                Video Description
-                              </h3>
-                              <div className="prose prose-sm max-w-none text-muted-foreground">
-                                {videoDetails.videoDescription.split('\n\n').map((paragraph, idx) => (
-                                  <p key={idx} className="mb-4 last:mb-0 leading-relaxed">
-                                    {paragraph}
-                                  </p>
-                                ))}
-                              </div>
-                            </CardContent>
+                                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                                Tentar novamente
+                              </Button>
+                              {(selectedProcedure?.url || selectedCategory.url || videoDetails?.sourceUrl) && (
+                                <Button variant="outline" asChild>
+                                  <a 
+                                    href={selectedProcedure?.url || selectedCategory.url || videoDetails?.sourceUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                  >
+                                    <ExternalLink className="w-4 h-4 mr-2" />
+                                    Abrir na fonte
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </Card>
 
-                      {/* Steps */}
+                      {/* Video Description */}
+                      {videoDetails?.videoDescription && (
+                        <Card className="bg-card/80 backdrop-blur-sm">
+                          <CardContent className="p-6">
+                            <h3 className="font-chakra font-bold text-lg mb-4 flex items-center gap-2">
+                              <BookOpen className="w-5 h-5 text-primary" />
+                              Descrição do Vídeo
+                            </h3>
+                            <div className="prose prose-sm max-w-none text-muted-foreground">
+                              {videoDetails.videoDescription.split('\n\n').map((paragraph, idx) => (
+                                <p key={idx} className="mb-4 last:mb-0 leading-relaxed">
+                                  {paragraph}
+                                </p>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Steps - Passo a Passo Guiado */}
                       {videoDetails?.steps && videoDetails.steps.length > 0 && (
-                        <Card className="mt-6">
+                        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
                           <CardHeader>
                             <CardTitle className="flex items-center justify-between flex-wrap gap-2">
                               <div className="flex items-center gap-2">
                                 <BookOpen className="w-5 h-5 text-primary" />
-                                Passo a Passo
+                                Passo a Passo Guiado
                               </div>
                               <div className="flex items-center gap-2">
                                 <TooltipProvider>
@@ -1122,7 +1130,7 @@ const StudyCarPage = () => {
                                       <TooltipTrigger asChild>
                                         <Badge variant="secondary" className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary border-primary/30 cursor-help">
                                           <Sparkles className="w-3 h-3 mr-1" />
-                                          Transcrição IA
+                                          IA
                                         </Badge>
                                       </TooltipTrigger>
                                       <TooltipContent>
@@ -1185,9 +1193,9 @@ const StudyCarPage = () => {
                           <CardContent>
                             <ol className="space-y-4">
                               {videoDetails.steps.map((step, index) => (
-                                <li key={index} className="flex gap-3">
+                                <li key={index} className="flex gap-3 p-3 rounded-lg bg-background/50 hover:bg-background transition-colors">
                                   {!videoDetails.transcriptionUsed && (
-                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-sm">
                                       {index + 1}
                                     </span>
                                   )}
@@ -1199,6 +1207,55 @@ const StudyCarPage = () => {
                             </ol>
                           </CardContent>
                         </Card>
+                      )}
+
+                      {/* No Steps - Show Retry */}
+                      {videoDetails && (!videoDetails.steps || videoDetails.steps.length === 0) && !isLoading && (
+                        <Card className="border-dashed">
+                          <CardContent className="p-8 text-center">
+                            <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                            <h3 className="font-bold text-lg mb-2">Passo a passo não disponível</h3>
+                            <p className="text-muted-foreground mb-4">
+                              Não foi possível gerar o tutorial escrito para este vídeo.
+                            </p>
+                            <div className="flex flex-wrap gap-3 justify-center">
+                              <Button 
+                                onClick={() => selectedProcedure && handleProcedureSelect(selectedProcedure, true)}
+                                disabled={isLoading}
+                              >
+                                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                                Tentar novamente
+                              </Button>
+                              {videoDetails?.sourceUrl && (
+                                <Button variant="outline" asChild>
+                                  <a 
+                                    href={videoDetails.sourceUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                  >
+                                    <ExternalLink className="w-4 h-4 mr-2" />
+                                    Abrir na fonte
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Source Link */}
+                      {videoDetails?.sourceUrl && (
+                        <div className="text-center">
+                          <a 
+                            href={videoDetails.sourceUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+                          >
+                            Ver tutorial completo no CarCareKiosk
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
                       )}
                     </div>
 

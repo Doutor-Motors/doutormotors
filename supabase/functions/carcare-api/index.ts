@@ -36,7 +36,7 @@ function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-// Verificar cache de transcrição
+// Verificar cache de transcrição - só retorna cache válido (com videoUrl ou steps válidos)
 async function getCachedTranscription(videoUrl: string): Promise<CachedTranscription | null> {
   try {
     const supabase = getSupabaseClient();
@@ -52,8 +52,22 @@ async function getCachedTranscription(videoUrl: string): Promise<CachedTranscrip
       return null;
     }
 
+    // VALIDAÇÃO: Não retornar cache inválido (sem vídeo E sem steps)
     if (data) {
-      console.log("Cache hit for video:", videoUrl);
+      const hasValidVideo = data.youtube_video_id && data.youtube_video_id.length === 11;
+      const hasValidSteps = data.elaborated_steps && Array.isArray(data.elaborated_steps) && data.elaborated_steps.length > 0;
+      
+      if (!hasValidVideo && !hasValidSteps) {
+        console.log("Cache exists but is invalid (no video and no steps), ignoring:", videoUrl);
+        // Deletar cache inválido para evitar reutilização
+        await supabase
+          .from("video_transcription_cache")
+          .delete()
+          .eq("video_url", videoUrl);
+        return null;
+      }
+      
+      console.log("Cache hit for video:", videoUrl, { hasValidVideo, hasValidSteps });
     }
 
     return data;
@@ -63,7 +77,7 @@ async function getCachedTranscription(videoUrl: string): Promise<CachedTranscrip
   }
 }
 
-// Salvar transcrição no cache
+// Salvar transcrição no cache - só salva se tiver conteúdo válido
 async function saveToCache(cacheData: {
   video_url: string;
   youtube_video_id?: string;
@@ -76,6 +90,15 @@ async function saveToCache(cacheData: {
   vehicle_context?: string;
 }): Promise<void> {
   try {
+    // VALIDAÇÃO: Não salvar cache se não tiver vídeo válido E não tiver steps válidos
+    const hasValidVideo = cacheData.youtube_video_id && cacheData.youtube_video_id.length === 11;
+    const hasValidSteps = cacheData.elaborated_steps && cacheData.elaborated_steps.length > 0;
+    
+    if (!hasValidVideo && !hasValidSteps) {
+      console.log("Not caching invalid data (no video and no steps):", cacheData.video_url);
+      return;
+    }
+
     const supabase = getSupabaseClient();
     const { error } = await supabase
       .from("video_transcription_cache")
@@ -89,7 +112,7 @@ async function saveToCache(cacheData: {
     if (error) {
       console.error("Error saving to cache:", error);
     } else {
-      console.log("Saved to cache:", cacheData.video_url);
+      console.log("Saved to cache:", cacheData.video_url, { hasValidVideo, hasValidSteps });
     }
   } catch (err) {
     console.error("Cache save error:", err);
@@ -899,7 +922,18 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
 
     if (!response.ok) {
       console.error("Firecrawl error fetching video details:", response.status);
-      return null;
+      // Retornar objeto com erro mas com sourceUrl para fallback
+      return {
+        title: "Vídeo Indisponível",
+        description: "Não foi possível carregar os detalhes do vídeo.",
+        videoUrl: null,
+        sourceUrl: url,
+        steps: [],
+        transcriptionUsed: false,
+        fromCache: false,
+        error: true,
+        errorMessage: `Erro ao buscar conteúdo (HTTP ${response.status})`
+      };
     }
 
     const data = await response.json();
@@ -1044,7 +1078,18 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
     return result;
   } catch (error) {
     console.error("Error fetching video details:", error);
-    return null;
+    // Retornar objeto com erro mas com sourceUrl para fallback
+    return {
+      title: "Erro ao Carregar",
+      description: "Ocorreu um erro ao processar o tutorial.",
+      videoUrl: null,
+      sourceUrl: videoUrl.startsWith('http') ? videoUrl : `https://www.carcarekiosk.com${videoUrl}`,
+      steps: [],
+      transcriptionUsed: false,
+      fromCache: false,
+      error: true,
+      errorMessage: error instanceof Error ? error.message : "Erro desconhecido"
+    };
   }
 }
 
