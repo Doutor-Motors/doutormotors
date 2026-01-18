@@ -18,6 +18,7 @@ import {
   Ticket,
   ArrowLeft,
   CreditCard,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,6 +40,7 @@ const menuItems = [
   { icon: Bell, label: "Alertas", path: "/admin/alerts" },
   { icon: BarChart3, label: "Relatórios", path: "/admin/reports" },
   { icon: FileText, label: "Logs", path: "/admin/logs" },
+  { icon: BookOpen, label: "Guia Monetização", path: "/admin/monetization-guide" },
   { icon: Settings, label: "Configurações", path: "/admin/settings" },
 ];
 
