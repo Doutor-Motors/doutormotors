@@ -22,6 +22,7 @@ import {
   FileSearch,
   Map,
   KeyRound,
+  Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +45,7 @@ const menuItems = [
   { icon: Bell, label: "Alertas", path: "/admin/alerts" },
   { icon: BarChart3, label: "Relatórios", path: "/admin/reports" },
   { icon: FileText, label: "Logs", path: "/admin/logs" },
+  { icon: Database, label: "CarCare Data", path: "/admin/carcare-data" },
   { icon: BookOpen, label: "Guia Monetização", path: "/admin/monetization-guide" },
   { icon: FileSearch, label: "Varredura Sistema", path: "/admin/system-scan" },
   { icon: Map, label: "Guia Implementação", path: "/admin/implementation-guide" },
