@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -7,11 +8,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { UserBadge, ProBadge, AdminBadge } from "@/components/subscription/UserBadge";
-import { Check, X, AlertTriangle, Loader2, Shield, Crown, User, RefreshCw } from "lucide-react";
+import { Check, X, AlertTriangle, Loader2, Shield, Crown, User, RefreshCw, ChevronUp, ChevronDown, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminPermissions() {
   const { user, loading: authLoading } = useAuth();
@@ -30,6 +42,14 @@ export default function AdminPermissions() {
     isProFeature,
     isFeatureLocked,
   } = useUserTier();
+
+  const queryClient = useQueryClient();
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    userId: string;
+    userName: string;
+    action: "promote" | "demote";
+  } | null>(null);
 
   // Buscar todos os usuários com roles e subscriptions
   const { data: allUsers, isLoading: usersLoading, refetch } = useQuery({
@@ -64,6 +84,71 @@ export default function AdminPermissions() {
     },
     enabled: isAdmin,
   });
+
+  // Mutation para promover usuário a admin
+  const promoteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Verificar se já existe role
+      const { data: existingRole } = await supabase
+        .from("user_roles")
+        .select("id, role")
+        .eq("user_id", userId)
+        .single();
+
+      if (existingRole) {
+        // Atualizar role existente
+        const { error } = await supabase
+          .from("user_roles")
+          .update({ role: "admin" })
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        // Inserir novo role
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: "admin" });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Usuário promovido a Admin com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["admin-permissions-users"] });
+    },
+    onError: (error) => {
+      toast.error("Erro ao promover usuário: " + (error as Error).message);
+    },
+  });
+
+  // Mutation para rebaixar admin para user
+  const demoteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ role: "user" })
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Usuário rebaixado para User com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["admin-permissions-users"] });
+    },
+    onError: (error) => {
+      toast.error("Erro ao rebaixar usuário: " + (error as Error).message);
+    },
+  });
+
+  const handleConfirmAction = () => {
+    if (!confirmDialog) return;
+    
+    if (confirmDialog.action === "promote") {
+      promoteMutation.mutate(confirmDialog.userId);
+    } else {
+      demoteMutation.mutate(confirmDialog.userId);
+    }
+    setConfirmDialog(null);
+  };
+
+  const isProcessing = promoteMutation.isPending || demoteMutation.isPending;
 
   const isLoading = authLoading || adminLoading || subscriptionLoading || tierLoading;
 
@@ -234,21 +319,32 @@ export default function AdminPermissions() {
                       <th className="text-center p-3 font-medium">Plano</th>
                       <th className="text-center p-3 font-medium">Status</th>
                       <th className="text-center p-3 font-medium">Tier Calculado</th>
+                      <th className="text-center p-3 font-medium">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {allUsers?.map((u) => {
                       const calculatedTier = u.role === "admin" ? "admin" : u.plan_type === "pro" ? "pro" : "basic";
+                      const isCurrentUser = u.user_id === user?.id;
+                      const isUserAdmin = u.role === "admin";
+                      
                       return (
-                        <tr key={u.user_id} className="hover:bg-muted/30">
+                        <tr key={u.user_id} className={cn("hover:bg-muted/30", isCurrentUser && "bg-primary/5")}>
                           <td className="p-3">
-                            <div>
-                              <p className="font-medium">{u.name}</p>
-                              <p className="text-xs text-muted-foreground">{u.email}</p>
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <p className="font-medium flex items-center gap-1">
+                                  {u.name}
+                                  {isCurrentUser && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0">você</Badge>
+                                  )}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{u.email}</p>
+                              </div>
                             </div>
                           </td>
                           <td className="p-3 text-center">
-                            <Badge variant={u.role === "admin" ? "default" : "secondary"}>
+                            <Badge variant={isUserAdmin ? "default" : "secondary"}>
                               {u.role}
                             </Badge>
                           </td>
@@ -276,6 +372,43 @@ export default function AdminPermissions() {
                           <td className="p-3 text-center">
                             <UserBadge size="sm" overrideTier={calculatedTier} />
                           </td>
+                          <td className="p-3 text-center">
+                            {isCurrentUser ? (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            ) : isUserAdmin ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                                disabled={isProcessing}
+                                onClick={() => setConfirmDialog({
+                                  open: true,
+                                  userId: u.user_id,
+                                  userName: u.name,
+                                  action: "demote",
+                                })}
+                              >
+                                <ChevronDown className="w-3 h-3" />
+                                Rebaixar
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                                disabled={isProcessing}
+                                onClick={() => setConfirmDialog({
+                                  open: true,
+                                  userId: u.user_id,
+                                  userName: u.name,
+                                  action: "promote",
+                                })}
+                              >
+                                <ChevronUp className="w-3 h-3" />
+                                Promover
+                              </Button>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -298,6 +431,61 @@ export default function AdminPermissions() {
           </Alert>
         )}
       </div>
+
+      {/* Dialog de Confirmação */}
+      <AlertDialog open={confirmDialog?.open} onOpenChange={(open) => !open && setConfirmDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserCog className="w-5 h-5" />
+              {confirmDialog?.action === "promote" ? "Promover a Admin" : "Rebaixar para User"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDialog?.action === "promote" ? (
+                <>
+                  Você está prestes a promover <strong>{confirmDialog?.userName}</strong> para <strong>Admin</strong>.
+                  <br /><br />
+                  Esta ação dará acesso total ao sistema, incluindo:
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Painel administrativo completo</li>
+                    <li>Gerenciamento de usuários</li>
+                    <li>Acesso a todas as funcionalidades PRO</li>
+                    <li>Visualização de dados sensíveis</li>
+                  </ul>
+                </>
+              ) : (
+                <>
+                  Você está prestes a rebaixar <strong>{confirmDialog?.userName}</strong> para <strong>User</strong>.
+                  <br /><br />
+                  Esta ação removerá o acesso administrativo. O usuário manterá apenas as permissões
+                  do seu plano de assinatura atual.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmAction}
+              disabled={isProcessing}
+              className={cn(
+                confirmDialog?.action === "promote" 
+                  ? "bg-emerald-600 hover:bg-emerald-700" 
+                  : "bg-orange-600 hover:bg-orange-700"
+              )}
+            >
+              {isProcessing ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : confirmDialog?.action === "promote" ? (
+                <ChevronUp className="w-4 h-4 mr-2" />
+              ) : (
+                <ChevronDown className="w-4 h-4 mr-2" />
+              )}
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
