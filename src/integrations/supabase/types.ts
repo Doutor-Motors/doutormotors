@@ -793,6 +793,53 @@ export type Database = {
           },
         ]
       }
+      tutorial_progress: {
+        Row: {
+          completed_at: string | null
+          completed_steps: number[]
+          created_at: string
+          id: string
+          last_step: number
+          started_at: string
+          tutorial_id: string
+          updated_at: string
+          user_id: string
+          watch_time_seconds: number
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_steps?: number[]
+          created_at?: string
+          id?: string
+          last_step?: number
+          started_at?: string
+          tutorial_id: string
+          updated_at?: string
+          user_id: string
+          watch_time_seconds?: number
+        }
+        Update: {
+          completed_at?: string | null
+          completed_steps?: number[]
+          created_at?: string
+          id?: string
+          last_step?: number
+          started_at?: string
+          tutorial_id?: string
+          updated_at?: string
+          user_id?: string
+          watch_time_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutorial_progress_tutorial_id_fkey"
+            columns: ["tutorial_id"]
+            isOneToOne: false
+            referencedRelation: "tutorial_cache"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_tracking: {
         Row: {
           ai_queries_count: number

@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import type { Tutorial, SearchResult } from '@/types/tutorials';
 import TutorialCard from './TutorialCard';
@@ -18,17 +20,32 @@ const TutorialGrid = ({
   onPreview,
   showPreviewButton = true
 }: TutorialGridProps) => {
+  const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useTutorialFavorites();
 
   // Usar tutorials ou converter searchResults
   const items = tutorials || searchResults?.map((r) => ({
     id: r.url,
-    slug: r.url,
+    slug: encodeURIComponent(r.url),
     source_url: r.url,
     title_pt: r.title,
     description_pt: r.description,
     thumbnail_url: r.thumbnail,
   })) || [];
+
+  const handleCardClick = useCallback((item: Partial<Tutorial>) => {
+    // Se tiver slug real, navegar para página de detalhes
+    if (item.slug && !item.slug.startsWith('http')) {
+      navigate(`/estude-seu-carro/${item.slug}`);
+    } else if (item.source_url) {
+      // Para resultados de busca, usar callback ou navegar com URL como param
+      if (onTutorialClick) {
+        onTutorialClick(item.source_url);
+      } else {
+        navigate(`/estude-seu-carro/${encodeURIComponent(item.id || 'tutorial')}?url=${encodeURIComponent(item.source_url)}`);
+      }
+    }
+  }, [navigate, onTutorialClick]);
 
   const container = {
     hidden: { opacity: 0 },
@@ -61,7 +78,7 @@ const TutorialGrid = ({
           <TutorialCard 
             tutorial={item} 
             isFavorite={item.id ? isFavorite(item.id) : false}
-            onClick={() => onTutorialClick?.(item.source_url)}
+            onClick={() => handleCardClick(item)}
             onPreview={onPreview}
             onFavoriteToggle={toggleFavorite}
             showPreviewButton={showPreviewButton}
