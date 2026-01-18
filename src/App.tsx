@@ -53,6 +53,7 @@ import CodingFunctionsPage from "./pages/dashboard/CodingFunctionsPage";
 import CodingHistoryPage from "./pages/dashboard/CodingHistoryPage";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import MonetizationGuidePage from "./pages/admin/MonetizationGuidePage";
+import SystemScanReportPage from "./pages/admin/SystemScanReportPage";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +116,7 @@ const App = () => (
                 <Route path="/admin/alerts" element={<ProtectedRoute><AdminProtectedRoute><AdminAlerts /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/subscriptions" element={<ProtectedRoute><AdminProtectedRoute><AdminSubscriptions /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/monetization-guide" element={<ProtectedRoute><AdminProtectedRoute><MonetizationGuidePage /></AdminProtectedRoute></ProtectedRoute>} />
+                <Route path="/admin/system-scan" element={<ProtectedRoute><AdminProtectedRoute><SystemScanReportPage /></AdminProtectedRoute></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
