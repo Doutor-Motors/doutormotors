@@ -96,7 +96,12 @@ export default function CodingFunctionsPage() {
     setIsExecuting(true);
     setProgress({ step: 0, total: selectedFunction.commands.length, message: 'Iniciando...' });
     
+    const startTime = Date.now();
+    
     try {
+      // Increment usage before execution
+      await incrementUsage('coding_executions');
+      
       const executionResult = await codingManager.executeFunction(
         selectedFunction,
         (step, total, message) => {
@@ -106,6 +111,18 @@ export default function CodingFunctionsPage() {
       
       setResult(executionResult);
       
+      // Save execution to history
+      try {
+        await saveExecution({
+          func: selectedFunction,
+          result: executionResult,
+          vehicleId: undefined, // TODO: get from context if available
+          isSimulated: connectionInfo.isSimulated,
+        });
+      } catch (saveError) {
+        console.error('Failed to save coding execution:', saveError);
+      }
+      
       if (executionResult.success) {
         toast.success('Função executada com sucesso!');
       } else {
@@ -113,20 +130,33 @@ export default function CodingFunctionsPage() {
       }
     } catch (error: any) {
       toast.error('Erro durante execução');
-      setResult({
+      const errorResult = {
         success: false,
         functionId: selectedFunction.id,
         message: 'Erro inesperado',
         details: error.message,
         rawResponses: [],
         timestamp: new Date(),
-        duration: 0,
-      });
+        duration: Date.now() - startTime,
+      };
+      setResult(errorResult);
+      
+      // Save failed execution
+      try {
+        await saveExecution({
+          func: selectedFunction,
+          result: errorResult,
+          vehicleId: undefined,
+          isSimulated: connectionInfo.isSimulated,
+        });
+      } catch (saveError) {
+        console.error('Failed to save failed coding execution:', saveError);
+      }
     } finally {
       setIsExecuting(false);
       setProgress({ step: 0, total: 0, message: '' });
     }
-  }, [selectedFunction, codingManager]);
+  }, [selectedFunction, codingManager, connectionInfo.isSimulated, saveExecution, incrementUsage]);
 
   const handleStartExecution = useCallback(() => {
     if (!selectedFunction) return;
