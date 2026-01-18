@@ -197,181 +197,174 @@ const VideoView = ({
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Video */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Video Player Card - Small & Transparent */}
-              <Card className="overflow-hidden bg-card/80 backdrop-blur-sm border-2 border-primary/20">
+              {/* Mini Video Card - Compact & Native */}
+              <div className="rounded-xl overflow-hidden bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-md border border-border/50 shadow-lg">
                 {isLoading && !videoDetails ? (
-                  <div className="aspect-video bg-muted/50 flex flex-col items-center justify-center p-8 text-center">
-                    <div className="relative mb-6">
-                      <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                  <div className="aspect-video bg-muted/30 flex flex-col items-center justify-center p-8 text-center">
+                    <div className="relative mb-4">
+                      <Loader2 className="w-10 h-10 animate-spin text-primary" />
                       {isTranscribing && (
-                        <Sparkles className="w-5 h-5 text-primary absolute -top-1 -right-1 animate-pulse" />
+                        <Sparkles className="w-4 h-4 text-primary absolute -top-1 -right-1 animate-pulse" />
                       )}
                     </div>
                     {isTranscribing ? (
                       <>
-                        <p className="text-lg font-medium mb-2 flex items-center gap-2">
-                          <Bot className="w-5 h-5 text-primary" />
-                          Transcrevendo e traduzindo vídeo...
+                        <p className="text-base font-medium mb-1 flex items-center gap-2">
+                          <Bot className="w-4 h-4 text-primary" />
+                          Transcrevendo vídeo...
                         </p>
-                        <p className="text-sm text-muted-foreground max-w-md">
-                          Estamos usando IA para transcrever o áudio do vídeo e
-                          gerar um passo a passo detalhado em português para você.
+                        <p className="text-xs text-muted-foreground max-w-sm">
+                          Gerando passo a passo detalhado em português
                         </p>
                       </>
                     ) : (
-                      <p className="text-lg font-medium">Carregando vídeo...</p>
+                      <p className="text-base font-medium">Carregando...</p>
                     )}
                   </div>
                 ) : currentVideoUrl ? (
                   <>
-                    <AspectRatio ratio={16 / 9}>
-                      {isMP4Video(currentVideoUrl) ? (
-                        // Player nativo para vídeos MP4 (CloudFront)
-                        <video
-                          key={currentVideoUrl} // Force re-render when URL changes
-                          src={currentVideoUrl}
-                          title={videoDetails?.title || selectedCategory.name}
-                          className="w-full h-full bg-black"
-                          controls
-                          preload="metadata"
-                          playsInline
-                        >
-                          Seu navegador não suporta vídeos HTML5.
-                        </video>
-                      ) : (
-                        // Iframe para YouTube
-                        <iframe
-                          src={
-                            getYouTubeEmbedUrl(currentVideoUrl) ||
-                            currentVideoUrl
-                          }
-                          title={videoDetails?.title || selectedCategory.name}
-                          className="w-full h-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                      )}
-                    </AspectRatio>
-                    <div className="p-4 bg-gradient-to-r from-primary/5 to-transparent">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="font-chakra font-bold text-lg">
+                    {/* Video Player - Clean & Immersive */}
+                    <div className="relative">
+                      <AspectRatio ratio={16 / 9}>
+                        {isMP4Video(currentVideoUrl) ? (
+                          <video
+                            key={currentVideoUrl}
+                            src={currentVideoUrl}
+                            title={videoDetails?.title || selectedCategory.name}
+                            className="w-full h-full bg-black rounded-t-xl"
+                            controls
+                            preload="metadata"
+                            playsInline
+                          >
+                            Seu navegador não suporta vídeos HTML5.
+                          </video>
+                        ) : (
+                          <iframe
+                            src={
+                              getYouTubeEmbedUrl(currentVideoUrl) ||
+                              currentVideoUrl
+                            }
+                            title={videoDetails?.title || selectedCategory.name}
+                            className="w-full h-full rounded-t-xl"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        )}
+                      </AspectRatio>
+                    </div>
+                    
+                    {/* Video Info - Compact */}
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h2 className="font-chakra font-bold text-base leading-tight truncate">
                             {videoDetails?.title ||
                               `${selectedProcedure?.name || selectedCategory.name}`}
                           </h2>
                           {videoDetails?.description && (
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                               {videoDetails.description}
                             </p>
                           )}
                         </div>
-                        {videoDetails?.relatedVideos && videoDetails.relatedVideos.length > 0 && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <List className="w-3 h-3" />
-                            {videoDetails.relatedVideos.length + 1} vídeos
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {videoDetails?.relatedVideos && videoDetails.relatedVideos.length > 0 && (
+                            <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                              <List className="w-3 h-3 mr-1" />
+                              {videoDetails.relatedVideos.length + 1}
+                            </Badge>
+                          )}
+                          {videoDetails?.sourceUrl && (
+                            <a
+                              href={videoDetails.sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
                       </div>
                       
-                      {/* Lista de vídeos relacionados quando há múltiplos */}
+                      {/* Related Videos - Compact Tabs */}
                       {videoDetails?.relatedVideos && videoDetails.relatedVideos.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-border/50">
-                          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                            <Play className="w-3 h-3" />
-                            Vídeos relacionados nesta categoria:
-                          </p>
-                          <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/30">
+                          <Button
+                            size="sm"
+                            variant={selectedVideoIndex === 0 ? "default" : "ghost"}
+                            onClick={() => setSelectedVideoIndex(0)}
+                            className="text-xs h-6 px-2"
+                          >
+                            <Play className="w-3 h-3 mr-1" />
+                            Principal
+                          </Button>
+                          {videoDetails.relatedVideos.slice(0, 4).map((video, idx) => (
                             <Button
+                              key={idx}
                               size="sm"
-                              variant={selectedVideoIndex === 0 ? "default" : "outline"}
-                              onClick={() => setSelectedVideoIndex(0)}
-                              className="text-xs h-7"
+                              variant={selectedVideoIndex === idx + 1 ? "default" : "ghost"}
+                              onClick={() => setSelectedVideoIndex(idx + 1)}
+                              className="text-xs h-6 px-2"
                             >
-                              Principal
+                              {video.name?.substring(0, 15) || `Vídeo ${idx + 2}`}
                             </Button>
-                            {videoDetails.relatedVideos.map((video, idx) => (
-                              <Button
-                                key={idx}
-                                size="sm"
-                                variant={selectedVideoIndex === idx + 1 ? "default" : "outline"}
-                                onClick={() => setSelectedVideoIndex(idx + 1)}
-                                className="text-xs h-7"
-                              >
-                                {video.name || `Vídeo ${idx + 2}`}
-                              </Button>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Video Description - Collapsible */}
+                      {videoDetails?.videoDescription && (
+                        <details className="pt-2 border-t border-border/30">
+                          <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors flex items-center gap-1">
+                            <BookOpen className="w-3 h-3" />
+                            Descrição do vídeo
+                          </summary>
+                          <div className="mt-2 text-xs text-muted-foreground leading-relaxed max-h-32 overflow-y-auto pr-2">
+                            {videoDetails.videoDescription.split("\n\n").slice(0, 2).map((p, i) => (
+                              <p key={i} className="mb-2 last:mb-0">{p}</p>
                             ))}
                           </div>
-                        </div>
+                        </details>
                       )}
                     </div>
                   </>
                 ) : (
-                  <div className="aspect-video bg-muted/50 flex flex-col items-center justify-center p-8 text-center">
-                    <Video className="w-16 h-16 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium mb-2">
-                      {videoDetails?.error
-                        ? "Vídeo indisponível agora"
-                        : "Vídeo em carregamento..."}
+                  <div className="aspect-video bg-muted/30 flex flex-col items-center justify-center p-6 text-center">
+                    <Video className="w-12 h-12 text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium mb-1">
+                      {videoDetails?.error ? "Vídeo indisponível" : "Carregando..."}
                     </p>
                     {videoDetails?.errorMessage && (
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <p className="text-xs text-muted-foreground mb-3 max-w-xs">
                         {videoDetails.errorMessage}
                       </p>
                     )}
-                    <div className="flex flex-wrap gap-3 justify-center">
+                    <div className="flex gap-2">
                       <Button
-                        variant="default"
+                        size="sm"
                         onClick={() => onProcedureRetry(true)}
                         disabled={isLoading}
                       >
-                        <RefreshCw
-                          className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-                        />
-                        Tentar novamente
+                        <RefreshCw className={`w-3 h-3 mr-1 ${isLoading ? "animate-spin" : ""}`} />
+                        Tentar
                       </Button>
-                      {(selectedProcedure?.url ||
-                        selectedCategory.url ||
-                        videoDetails?.sourceUrl) && (
-                        <Button variant="outline" asChild>
+                      {(selectedProcedure?.url || selectedCategory.url || videoDetails?.sourceUrl) && (
+                        <Button variant="outline" size="sm" asChild>
                           <a
-                            href={
-                              selectedProcedure?.url ||
-                              selectedCategory.url ||
-                              videoDetails?.sourceUrl
-                            }
+                            href={selectedProcedure?.url || selectedCategory.url || videoDetails?.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            Abrir na fonte
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            Fonte
                           </a>
                         </Button>
                       )}
                     </div>
                   </div>
                 )}
-              </Card>
-
-              {/* Video Description */}
-              {videoDetails?.videoDescription && (
-                <Card className="bg-card/80 backdrop-blur-sm">
-                  <CardContent className="p-6">
-                    <h3 className="font-chakra font-bold text-lg mb-4 flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-primary" />
-                      Descrição do Vídeo
-                    </h3>
-                    <div className="prose prose-sm max-w-none text-muted-foreground">
-                      {videoDetails.videoDescription
-                        .split("\n\n")
-                        .map((paragraph, idx) => (
-                          <p key={idx} className="mb-4 last:mb-0 leading-relaxed">
-                            {paragraph}
-                          </p>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              </div>
 
               {/* Steps - Passo a Passo Guiado */}
               {videoDetails?.steps && videoDetails.steps.length > 0 && (
@@ -553,17 +546,17 @@ const VideoView = ({
                   </Card>
                 )}
 
-              {/* Source Link */}
+              {/* Link discreto para fonte */}
               {videoDetails?.sourceUrl && (
-                <div className="text-center">
+                <div className="flex justify-center">
                   <a
                     href={videoDetails.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+                    className="text-xs text-muted-foreground/60 hover:text-muted-foreground inline-flex items-center gap-1 transition-colors"
                   >
-                    Ver tutorial completo no CarCareKiosk
-                    <ExternalLink className="w-3 h-3" />
+                    Fonte: CarCareKiosk
+                    <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 </div>
               )}
