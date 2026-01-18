@@ -121,6 +121,9 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
     this.addPageHeader("Relatório Técnico - Doutor Motors");
     this.addExecutiveSummary();
 
+    // MARCA D'ÁGUA
+    this.addWatermark();
+
     // RODAPÉS
     this.addFooters("Relatório Técnico Completo");
 
