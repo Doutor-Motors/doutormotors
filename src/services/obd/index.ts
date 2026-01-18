@@ -6,3 +6,4 @@
 
 export * from './elm327Protocol';
 export * from './OBDConnectionManager';
+export * from './codingFunctions';

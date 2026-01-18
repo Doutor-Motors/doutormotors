@@ -17,6 +17,7 @@ import {
   Database,
   Settings2,
   Crown,
+  Code2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ const baseMenuItems: MenuItem[] = [
   { icon: Activity, label: "Diagnósticos", path: "/dashboard/diagnostics" },
   { icon: History, label: "Histórico", path: "/dashboard/history" },
   { icon: Database, label: "Gravação de Dados", path: "/dashboard/data-recording", isPro: true },
+  { icon: Code2, label: "Funções Coding", path: "/dashboard/coding", isPro: true },
   { icon: Settings2, label: "Config. OBD", path: "/dashboard/obd-settings", isPro: true },
   { icon: GraduationCap, label: "Estude seu Carro", path: "/estude-seu-carro" },
   { icon: User, label: "Perfil", path: "/profile" },

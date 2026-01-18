@@ -49,7 +49,7 @@ import NativeAppGuide from "./pages/NativeAppGuide";
 import UpgradePage from "./pages/dashboard/UpgradePage";
 import DataRecordingPage from "./pages/dashboard/DataRecordingPage";
 import OBDSettingsPage from "./pages/dashboard/OBDSettingsPage";
-
+import CodingFunctionsPage from "./pages/dashboard/CodingFunctionsPage";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -93,6 +93,7 @@ const App = () => (
                 <Route path="/dashboard/upgrade" element={<ProtectedRoute><UpgradePage /></ProtectedRoute>} />
                 <Route path="/dashboard/data-recording" element={<ProtectedRoute><DataRecordingPage /></ProtectedRoute>} />
                 <Route path="/dashboard/obd-settings" element={<ProtectedRoute><OBDSettingsPage /></ProtectedRoute>} />
+                <Route path="/dashboard/coding" element={<ProtectedRoute><CodingFunctionsPage /></ProtectedRoute>} />
                 <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
                 
