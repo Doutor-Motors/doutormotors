@@ -80,7 +80,7 @@ function saveAlertToStorage(userId: string, monthYear: string, alertKey: string)
 
 export function useUsageTracking() {
   const { user } = useAuth();
-  const { currentPlan } = useSubscription();
+  const { currentPlan, isAdmin } = useSubscription();
   const queryClient = useQueryClient();
   const currentMonthYear = getCurrentMonthYear();
   const alertsSentRef = useRef<Set<string>>(new Set());
@@ -92,10 +92,11 @@ export function useUsageTracking() {
     }
   }, [user?.id, currentMonthYear]);
 
-  // Get limit for a type based on current plan
+  // Get limit for a type based on current plan (admin = unlimited)
   const getLimit = useCallback((type: UsageType): number => {
+    if (isAdmin) return -1; // Admin sempre ilimitado
     return getLimitForPlan(type, currentPlan || 'basic');
-  }, [currentPlan]);
+  }, [currentPlan, isAdmin]);
 
   // Fetch current usage
   const { data: usage, isLoading } = useQuery({
@@ -124,8 +125,8 @@ export function useUsageTracking() {
   const sendUsageAlert = useCallback(async (type: UsageType, count: number, limit: number, percentage: number) => {
     if (!user?.id) return;
     
-    // Don't send for Pro users (unlimited)
-    if (currentPlan === 'pro') return;
+    // Don't send for Pro users or Admins (unlimited)
+    if (currentPlan === 'pro' || isAdmin) return;
     
     // Only send once per type per month
     const alertKey = `${type}_${ALERT_THRESHOLD}`;
@@ -155,7 +156,7 @@ export function useUsageTracking() {
     } catch (err) {
       console.error('Failed to send usage alert:', err);
     }
-  }, [user?.id, currentPlan, currentMonthYear]);
+  }, [user?.id, currentPlan, isAdmin, currentMonthYear]);
 
   // Increment usage mutation
   const incrementUsageMutation = useMutation({
@@ -238,12 +239,14 @@ export function useUsageTracking() {
 
   // Check if user can use a feature (hasn't hit limit)
   const canUse = useCallback((type: UsageType): boolean => {
+    // Admin sempre pode usar
+    if (isAdmin) return true;
     const limit = getLimit(type);
     if (limit === -1) return true; // Unlimited
     
     const currentCount = getUsageCount(type);
     return currentCount < limit;
-  }, [getLimit, getUsageCount]);
+  }, [getLimit, getUsageCount, isAdmin]);
 
   // Get remaining uses
   const getRemainingUses = useCallback((type: UsageType): number | 'unlimited' => {
