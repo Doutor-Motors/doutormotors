@@ -344,7 +344,7 @@ export default function UpgradePage() {
             Tem dúvidas? Confira nossa{" "}
             <a href="/faq" className="text-primary hover:underline">página de FAQ</a>
             {" "}ou{" "}
-            <a href="/contact" className="text-primary hover:underline">entre em contato</a>.
+            <a href="/contato" className="text-primary hover:underline">entre em contato</a>.
           </p>
         </div>
       </div>
