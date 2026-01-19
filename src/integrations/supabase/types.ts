@@ -173,6 +173,62 @@ export type Database = {
         }
         Relationships: []
       }
+      checkout_sessions: {
+        Row: {
+          abandoned_at: string | null
+          amount_cents: number
+          completed_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          payment_id: string | null
+          plan_type: string
+          recovery_email_sent: boolean | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          abandoned_at?: string | null
+          amount_cents?: number
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_id?: string | null
+          plan_type?: string
+          recovery_email_sent?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          abandoned_at?: string | null
+          amount_cents?: number
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_id?: string | null
+          plan_type?: string
+          recovery_email_sent?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkout_sessions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coding_executions: {
         Row: {
           category: string
@@ -574,9 +630,78 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount_cents: number
+          copy_paste_code: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          method: string | null
+          paid_at: string | null
+          picpay_charge_id: string | null
+          picpay_end_to_end_id: string | null
+          picpay_transaction_id: string | null
+          qr_code: string | null
+          qr_code_base64: string | null
+          status: string | null
+          subscription_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          copy_paste_code?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          method?: string | null
+          paid_at?: string | null
+          picpay_charge_id?: string | null
+          picpay_end_to_end_id?: string | null
+          picpay_transaction_id?: string | null
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string | null
+          subscription_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          copy_paste_code?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          method?: string | null
+          paid_at?: string | null
+          picpay_charge_id?: string | null
+          picpay_end_to_end_id?: string | null
+          picpay_transaction_id?: string | null
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string | null
+          subscription_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          cpf: string | null
           created_at: string
           email: string
           id: string
@@ -587,6 +712,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          cpf?: string | null
           created_at?: string
           email: string
           id?: string
@@ -597,6 +723,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -1124,6 +1251,10 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
+          next_billing_at: string | null
+          payment_method: string | null
+          picpay_customer_id: string | null
+          picpay_subscription_id: string | null
           plan_type: string
           started_at: string
           status: string
@@ -1136,6 +1267,10 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          next_billing_at?: string | null
+          payment_method?: string | null
+          picpay_customer_id?: string | null
+          picpay_subscription_id?: string | null
           plan_type?: string
           started_at?: string
           status?: string
@@ -1148,6 +1283,10 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          next_billing_at?: string | null
+          payment_method?: string | null
+          picpay_customer_id?: string | null
+          picpay_subscription_id?: string | null
           plan_type?: string
           started_at?: string
           status?: string
@@ -1242,6 +1381,45 @@ export type Database = {
           vehicle_context?: string | null
           video_url?: string
           youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          event_type: string | null
+          id: string
+          ip_address: string | null
+          payload: Json | null
+          processed: boolean | null
+          provider: string
+          signature_valid: boolean | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string | null
+          id?: string
+          ip_address?: string | null
+          payload?: Json | null
+          processed?: boolean | null
+          provider: string
+          signature_valid?: boolean | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string | null
+          id?: string
+          ip_address?: string | null
+          payload?: Json | null
+          processed?: boolean | null
+          provider?: string
+          signature_valid?: boolean | null
+          user_agent?: string | null
         }
         Relationships: []
       }
