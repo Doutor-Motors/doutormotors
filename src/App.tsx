@@ -49,6 +49,7 @@ import SupportCenter from "./pages/dashboard/SupportCenter";
 import TicketDetail from "./pages/dashboard/TicketDetail";
 import AdminTickets from "./pages/admin/AdminTickets";
 import NativeAppGuide from "./pages/NativeAppGuide";
+import InstallAppPage from "./pages/InstallAppPage";
 import UpgradePage from "./pages/dashboard/UpgradePage";
 import DataRecordingPage from "./pages/dashboard/DataRecordingPage";
 import OBDSettingsPage from "./pages/dashboard/OBDSettingsPage";
@@ -94,6 +95,7 @@ const App = () => (
                 <Route path="/como-diagnosticar" element={<HowDiagnosticWorksPage />} />
                 <Route path="/como-funciona-sistema" element={<HowSystemWorksPage />} />
                 <Route path="/use-de-qualquer-lugar" element={<UseFromAnywherePage />} />
+                <Route path="/instalar" element={<InstallAppPage />} />
                 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
