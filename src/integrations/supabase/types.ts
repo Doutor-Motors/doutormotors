@@ -1155,6 +1155,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_obd_command: { Args: { command: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
