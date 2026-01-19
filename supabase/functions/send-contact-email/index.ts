@@ -154,6 +154,36 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { name, email, phone, subject, message, turnstileToken, _hp }: ContactEmailRequest = await req.json();
 
+    // Check if IP is manually blocked
+    const { data: blockedIP } = await supabase
+      .from("blocked_ips")
+      .select("id, reason")
+      .eq("ip_address", clientIP)
+      .eq("is_active", true)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+      .maybeSingle();
+
+    if (blockedIP) {
+      console.log("Blocked IP detected:", clientIP, "Reason:", blockedIP.reason);
+      
+      await logAnalytics(supabase, "ip_blocked", {
+        ip_address: clientIP,
+        email,
+        subject,
+        blocked_reason: `Manually blocked: ${blockedIP.reason || "No reason specified"}`,
+        user_agent: userAgent,
+      });
+
+      // Return success to not reveal the block
+      return new Response(
+        JSON.stringify({ success: true, message: "Message sent" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     // Check honeypot - if filled, it's a bot
     if (_hp) {
       console.log("Honeypot triggered, blocking submission from:", clientIP);

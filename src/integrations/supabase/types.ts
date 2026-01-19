@@ -56,6 +56,42 @@ export type Database = {
         }
         Relationships: []
       }
+      blocked_ips: {
+        Row: {
+          blocked_at: string
+          blocked_by: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          ip_address: string
+          is_active: boolean
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocked_at?: string
+          blocked_by: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          ip_address: string
+          is_active?: boolean
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocked_at?: string
+          blocked_by?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          ip_address?: string
+          is_active?: boolean
+          reason?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       carcare_categories: {
         Row: {
           category_id: string
