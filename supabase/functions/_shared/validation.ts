@@ -146,6 +146,56 @@ export const systemAlertSchema = z.object({
 export type SystemAlertInput = z.infer<typeof systemAlertSchema>;
 
 // =============================================================================
+// TUTORIAL FETCH VALIDATION
+// =============================================================================
+
+export const tutorialFetchSchema = z.object({
+  url: z
+    .string()
+    .url("URL inválida")
+    .max(2000, "URL muito longa")
+    .refine(
+      (url) => {
+        // Only allow specific trusted domains
+        const trustedDomains = [
+          "carcarekiosk.com",
+          "youtube.com",
+          "youtu.be",
+          "www.youtube.com",
+          "www.carcarekiosk.com",
+        ];
+        try {
+          const urlObj = new URL(url);
+          return trustedDomains.some((d) => urlObj.hostname === d || urlObj.hostname.endsWith(`.${d}`));
+        } catch {
+          return false;
+        }
+      },
+      { message: "URL não permitida - use apenas fontes confiáveis" }
+    ),
+  vehicleBrand: z.string().max(50).optional(),
+  vehicleModel: z.string().max(50).optional(),
+  vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 2).optional(),
+});
+
+export type TutorialFetchInput = z.infer<typeof tutorialFetchSchema>;
+
+// =============================================================================
+// TUTORIAL SEARCH EXTENDED VALIDATION (for search-tutorials function)
+// =============================================================================
+
+export const tutorialSearchExtendedSchema = z.object({
+  query: z.string().max(200, "Query muito longa").optional().transform((v) => v ? escapeHtml(v) : undefined),
+  category: z.string().max(100).optional(),
+  vehicleBrand: z.string().max(50).optional(),
+  vehicleModel: z.string().max(50).optional(),
+  vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 2).optional(),
+  limit: z.number().int().min(1).max(50).optional().default(12),
+});
+
+export type TutorialSearchExtendedInput = z.infer<typeof tutorialSearchExtendedSchema>;
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 

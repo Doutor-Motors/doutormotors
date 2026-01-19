@@ -1,14 +1,9 @@
+import { tutorialFetchSchema, validateRequest, errorResponse } from "../_shared/validation.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface TutorialFetchRequest {
-  url: string;
-  vehicleBrand?: string;
-  vehicleModel?: string;
-  vehicleYear?: number;
-}
 
 interface TutorialContent {
   title: string;
@@ -34,23 +29,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { url, vehicleBrand, vehicleModel, vehicleYear } = await req.json() as TutorialFetchRequest;
-
-    if (!url) {
-      return new Response(
-        JSON.stringify({ success: false, error: "URL is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Validate input with Zod - includes URL whitelist validation
+    const validation = await validateRequest(req, tutorialFetchSchema);
+    if (validation.error) {
+      console.error("Validation error:", validation.error);
+      return errorResponse(validation.error, 400, corsHeaders);
     }
+
+    const { url, vehicleBrand, vehicleModel, vehicleYear } = validation.data!;
 
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!FIRECRAWL_API_KEY) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Firecrawl not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("Firecrawl not configured", 500, corsHeaders);
     }
 
     console.log("Fetching tutorial from:", url);

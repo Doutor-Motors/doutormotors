@@ -1,16 +1,9 @@
+import { tutorialSearchExtendedSchema, validateRequest, errorResponse } from "../_shared/validation.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface TutorialSearchRequest {
-  query?: string;
-  category?: string;
-  vehicleBrand?: string;
-  vehicleModel?: string;
-  vehicleYear?: number;
-  limit?: number;
-}
 
 interface Tutorial {
   id: string;
@@ -30,16 +23,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { query, category, vehicleBrand, vehicleModel, vehicleYear, limit = 12 } = 
-      await req.json() as TutorialSearchRequest;
+    // Validate input with Zod
+    const validation = await validateRequest(req, tutorialSearchExtendedSchema);
+    if (validation.error) {
+      console.error("Validation error:", validation.error);
+      return errorResponse(validation.error, 400, corsHeaders);
+    }
+
+    const { query, category, vehicleBrand, vehicleModel, vehicleYear, limit } = validation.data!;
 
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     if (!FIRECRAWL_API_KEY) {
       console.error("FIRECRAWL_API_KEY not configured");
-      return new Response(
-        JSON.stringify({ success: false, error: "Firecrawl not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("Firecrawl not configured", 500, corsHeaders);
     }
 
     // Build search query
