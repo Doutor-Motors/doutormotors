@@ -105,13 +105,13 @@ const ImplementationGuidePage = () => {
     {
       id: "native-app",
       module: "App Mobile",
-      title: "Build nativo não gerado",
-      description: "Capacitor está configurado mas APK/IPA não foram compilados.",
-      impact: "App não disponível nas lojas de aplicativos.",
+      title: "PWA atual tem limitações de conectividade",
+      description: "Sistema está como PWA (app web instalável). Web Bluetooth funciona apenas no Chrome Android e Desktop. WiFi OBD não funciona em navegadores. Safari/iOS não suporta Web Bluetooth.",
+      impact: "Usuários iPhone não podem usar Bluetooth. Nenhum usuário pode usar adaptadores WiFi pelo navegador.",
       risk: "high",
-      affectedFeature: "Distribuição mobile, conexão Bluetooth em iOS",
-      userImpact: "Usuários iOS não podem usar Bluetooth (Safari não suporta)",
-      technicalRisk: "Médio - Requer ambiente de build nativo",
+      affectedFeature: "Conexão OBD via Bluetooth em iOS, Conexão WiFi em todos dispositivos",
+      userImpact: "Usuários iOS ficam limitados ao modo demonstração. Usuários com adaptador WiFi não conseguem conectar.",
+      technicalRisk: "Médio - Solução é criar app nativo com Capacitor (já configurado no projeto)",
     },
     {
       id: "push-native",
@@ -220,15 +220,17 @@ const ImplementationGuidePage = () => {
     },
     {
       order: 3,
-      title: "Build App Nativo",
-      justification: "Necessário para suportar iOS (Safari não tem Web Bluetooth) e distribuição em lojas.",
+      title: "Build App Nativo (LEMBRETE FUTURO)",
+      justification: "DECISÃO: Por enquanto, manter como PWA. Quando quiser suporte completo a iPhone + WiFi, criar app nativo. Atualmente: Chrome Android e Desktop com Bluetooth funcionam. Safari/iOS e WiFi não funcionam.",
       tasks: [
-        "Configurar ambiente de build Android",
-        "Gerar APK/AAB de produção",
-        "Configurar ambiente Xcode para iOS",
-        "Gerar IPA e submeter para TestFlight",
+        "⏳ FUTURO: Configurar ambiente de build Android (Android Studio)",
+        "⏳ FUTURO: Gerar APK/AAB de produção para Google Play",
+        "⏳ FUTURO: Configurar ambiente Xcode para iOS (requer Mac)",
+        "⏳ FUTURO: Gerar IPA e submeter para App Store",
+        "✅ ATUAL: Capacitor já está configurado no projeto",
+        "✅ ATUAL: Código de conexão Bluetooth/WiFi nativo já existe",
       ],
-      estimatedEffort: "2-4 dias",
+      estimatedEffort: "2-4 dias quando decidir implementar",
     },
     {
       order: 4,
@@ -415,6 +417,37 @@ const ImplementationGuidePage = () => {
             Última atualização: {format(new Date(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
           </p>
         </div>
+
+        {/* Important Reminder Card */}
+        <Card className="border-2 border-amber-500/50 bg-amber-500/10">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-amber-500/20 rounded-full">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-amber-300 mb-1">📱 LEMBRETE: App Nativo Pendente</h3>
+                <p className="text-sm text-foreground/80 mb-2">
+                  <strong>Decisão atual:</strong> Sistema funcionando como PWA (app web instalável).
+                </p>
+                <div className="grid sm:grid-cols-2 gap-2 text-xs">
+                  <div className="p-2 bg-green-500/20 rounded border border-green-500/30">
+                    <span className="text-green-300 font-medium">✅ Funciona agora:</span>
+                    <p className="text-foreground/70 mt-1">Chrome Android + Desktop com Bluetooth</p>
+                  </div>
+                  <div className="p-2 bg-red-500/20 rounded border border-red-500/30">
+                    <span className="text-red-300 font-medium">❌ Não funciona:</span>
+                    <p className="text-foreground/70 mt-1">iPhone/Safari (Bluetooth), WiFi (todos)</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  <strong>Quando precisar suporte completo:</strong> Criar app nativo com Capacitor (já configurado no projeto).
+                  Veja detalhes na aba "Prioridades" → item #3.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
