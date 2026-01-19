@@ -64,6 +64,7 @@ import MonetizationGuidePage from "./pages/admin/MonetizationGuidePage";
 import SystemScanReportPage from "./pages/admin/SystemScanReportPage";
 import ImplementationGuidePage from "./pages/admin/ImplementationGuidePage";
 import AdminCarCareData from "./pages/admin/AdminCarCareData";
+import ContactAnalytics from "./pages/admin/ContactAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -137,6 +138,7 @@ const App = () => (
                 <Route path="/admin/system-scan" element={<ProtectedRoute><AdminProtectedRoute><SystemScanReportPage /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/implementation-guide" element={<ProtectedRoute><AdminProtectedRoute><ImplementationGuidePage /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/carcare-data" element={<ProtectedRoute><AdminProtectedRoute><AdminCarCareData /></AdminProtectedRoute></ProtectedRoute>} />
+                <Route path="/admin/contact-analytics" element={<ProtectedRoute><AdminProtectedRoute><ContactAnalytics /></AdminProtectedRoute></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
