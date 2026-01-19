@@ -87,12 +87,12 @@ const HowDiagnosticWorksPage = () => {
                       🎯 O Segredo: Seu Carro NÃO Precisa de Bluetooth ou WiFi!
                     </h2>
                     <p className="text-foreground">
-                      Muita gente acha que o carro precisa ter Bluetooth ou WiFi. <strong className="text-green-400">Isso NÃO é verdade!</strong>
+                      Muita gente acha que o carro precisa ter Bluetooth ou WiFi. <strong className="text-green-300">Isso NÃO é verdade!</strong>
                     </p>
-                    <p className="text-muted-foreground mt-2">
-                      Quem tem o Bluetooth/WiFi é o <strong>adaptador OBD2</strong> que você compra separadamente. 
+                    <p className="text-foreground/80 mt-2">
+                      Quem tem o Bluetooth/WiFi é o <strong className="text-foreground">adaptador OBD2</strong> que você compra separadamente. 
                       Ele é como um "tradutor" que conecta seu carro ao celular. Seu carro só precisa ter a 
-                      <strong> porta OBD2</strong> (obrigatória desde 1996 nos EUA e 2001 no Brasil/Europa).
+                      <strong className="text-foreground"> porta OBD2</strong> (obrigatória desde 1996 nos EUA e 2001 no Brasil/Europa).
                     </p>
                   </div>
                 </div>
@@ -238,9 +238,9 @@ const HowDiagnosticWorksPage = () => {
                           <span><strong>Embaixo do porta-luvas</strong> (carros europeus antigos)</span>
                         </div>
                       </div>
-                      <div className="mt-4 p-3 bg-blue-500/10 rounded-lg">
-                        <p className="text-sm text-blue-300">
-                          💡 <strong>Dica:</strong> Se não encontrar, procure no Google: "porta OBD2 [marca] [modelo] [ano]"
+                      <div className="mt-4 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                        <p className="text-sm text-foreground">
+                          💡 <strong className="text-blue-300">Dica:</strong> Se não encontrar, procure no Google: "porta OBD2 [marca] [modelo] [ano]"
                         </p>
                       </div>
                     </div>
@@ -264,32 +264,32 @@ const HowDiagnosticWorksPage = () => {
                         Existem dois tipos principais:
                       </p>
                       <div className="grid sm:grid-cols-2 gap-4 mb-4">
-                        <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                        <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
-                            <Bluetooth className="w-5 h-5 text-blue-400" />
-                            <h4 className="font-bold text-blue-400">Bluetooth</h4>
+                            <Bluetooth className="w-5 h-5 text-blue-300" />
+                            <h4 className="font-bold text-blue-300">Bluetooth</h4>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-foreground/80">
                             Mais barato (R$30-80). Funciona bem com Android. 
                             No iPhone, só funciona com nosso app nativo.
                           </p>
                         </div>
-                        <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                        <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
-                            <Wifi className="w-5 h-5 text-green-400" />
-                            <h4 className="font-bold text-green-400">WiFi</h4>
+                            <Wifi className="w-5 h-5 text-green-300" />
+                            <h4 className="font-bold text-green-300">WiFi</h4>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-foreground/80">
                             Um pouco mais caro (R$50-150). Funciona perfeitamente 
                             com iPhone e Android usando nosso app nativo.
                           </p>
                         </div>
                       </div>
-                      <div className="p-3 bg-amber-500/10 rounded-lg">
-                        <p className="text-sm">
-                          <strong className="text-amber-400">Marcas recomendadas:</strong> ELM327 v2.1 ou superior, OBDLink, Veepeak, V-Link, BAFX.
+                      <div className="p-3 bg-amber-500/20 rounded-lg border border-amber-500/30">
+                        <p className="text-sm text-foreground">
+                          <strong className="text-amber-300">Marcas recomendadas:</strong> ELM327 v2.1 ou superior, OBDLink, Veepeak, V-Link, BAFX.
                           <br />
-                          <span className="text-muted-foreground">⚠️ Evite adaptadores muito baratos (menos de R$25) pois podem ter firmware defeituoso.</span>
+                          <span className="text-foreground/70">⚠️ Evite adaptadores muito baratos (menos de R$25) pois podem ter firmware defeituoso.</span>
                         </p>
                       </div>
                     </div>
@@ -326,9 +326,9 @@ const HowDiagnosticWorksPage = () => {
                           <span>A luz do adaptador pode piscar, indicando que está pronto</span>
                         </div>
                       </div>
-                      <div className="mt-4 p-3 bg-green-500/10 rounded-lg">
-                        <p className="text-sm text-green-300">
-                          ✅ <strong>Pronto!</strong> O adaptador agora está lendo os dados do computador do seu carro.
+                      <div className="mt-4 p-3 bg-green-500/20 rounded-lg border border-green-500/30">
+                        <p className="text-sm text-foreground">
+                          ✅ <strong className="text-green-300">Pronto!</strong> O adaptador agora está lendo os dados do computador do seu carro.
                         </p>
                       </div>
                     </div>
@@ -411,8 +411,8 @@ const HowDiagnosticWorksPage = () => {
                                 <span>Abra nosso <strong>app nativo</strong> e vá para Diagnóstico → WiFi Nativo</span>
                               </li>
                             </ol>
-                            <div className="mt-3 p-2 bg-amber-500/10 rounded text-xs text-amber-400">
-                              ⚠️ WiFi só funciona no app nativo! No navegador, só modo demonstração.
+                            <div className="mt-3 p-2 bg-amber-500/20 rounded border border-amber-500/30 text-xs text-foreground">
+                              <span className="text-amber-300">⚠️</span> WiFi só funciona no app nativo! No navegador, só modo demonstração.
                             </div>
                           </AccordionContent>
                         </AccordionItem>
@@ -523,12 +523,12 @@ const HowDiagnosticWorksPage = () => {
                   </div>
                 </div>
 
-                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                  <h4 className="font-bold text-amber-400 flex items-center gap-2 mb-2">
+                <div className="p-4 bg-amber-500/20 border border-amber-500/30 rounded-lg">
+                  <h4 className="font-bold text-amber-300 flex items-center gap-2 mb-2">
                     <AlertTriangle className="w-4 h-4" />
                     E se meu carro for mais antigo?
                   </h4>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-foreground/80">
                     Carros fabricados antes dessas datas podem ter portas de diagnóstico diferentes 
                     (OBD-I) que não são compatíveis com adaptadores ELM327 padrão. Nesses casos, 
                     você precisaria de um scanner específico para a marca do seu veículo, 
