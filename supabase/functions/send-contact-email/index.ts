@@ -18,7 +18,7 @@ interface ContactEmailRequest {
   phone?: string;
   subject: string;
   message: string;
-  _hp?: string; // Honeypot field
+  _hp?: string;
   turnstileToken?: string;
 }
 
@@ -27,6 +27,34 @@ interface TurnstileVerifyResponse {
   "error-codes"?: string[];
   challenge_ts?: string;
   hostname?: string;
+}
+
+// Analytics helper function
+async function logAnalytics(
+  supabase: any,
+  eventType: string,
+  data: {
+    ip_address?: string;
+    email?: string;
+    subject?: string;
+    blocked_reason?: string;
+    user_agent?: string;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  try {
+    await supabase.from("contact_form_analytics").insert({
+      event_type: eventType,
+      ip_address: data.ip_address || null,
+      email: data.email || null,
+      subject: data.subject || null,
+      blocked_reason: data.blocked_reason || null,
+      user_agent: data.user_agent || null,
+      metadata: data.metadata || {},
+    });
+  } catch (error) {
+    console.error("Failed to log analytics:", error);
+  }
 }
 
 async function verifyTurnstileToken(token: string, ip: string): Promise<boolean> {
@@ -88,17 +116,30 @@ async function sendEmail(payload: {
   return response.json();
 }
 
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
+}
+
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Initialize Supabase client early for analytics
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
   try {
-    // Get client IP
     const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
                      req.headers.get("cf-connecting-ip") || 
                      "unknown";
+    const userAgent = req.headers.get("user-agent") || "unknown";
 
     if (!RESEND_API_KEY) {
       console.error("RESEND_API_KEY not configured");
@@ -116,7 +157,17 @@ const handler = async (req: Request): Promise<Response> => {
     // Check honeypot - if filled, it's a bot
     if (_hp) {
       console.log("Honeypot triggered, blocking submission from:", clientIP);
-      // Return success to not alert the bot
+      
+      // Log honeypot block
+      await logAnalytics(supabase, "honeypot_blocked", {
+        ip_address: clientIP,
+        email,
+        subject,
+        blocked_reason: "Honeypot field filled",
+        user_agent: userAgent,
+        metadata: { honeypot_value: _hp.substring(0, 50) },
+      });
+
       return new Response(
         JSON.stringify({ success: true, message: "Message sent" }),
         {
@@ -128,7 +179,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate required fields
     if (!name || !email || !subject || !message) {
-      console.error("Missing required fields:", { name, email, subject, message });
+      await logAnalytics(supabase, "validation_error", {
+        ip_address: clientIP,
+        email,
+        blocked_reason: "Missing required fields",
+        user_agent: userAgent,
+      });
+
       return new Response(
         JSON.stringify({ error: "Campos obrigatórios não preenchidos" }),
         {
@@ -140,6 +197,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate field lengths
     if (name.length > 100 || email.length > 255 || subject.length > 200 || message.length > 5000) {
+      await logAnalytics(supabase, "validation_error", {
+        ip_address: clientIP,
+        email,
+        subject,
+        blocked_reason: "Field length exceeded",
+        user_agent: userAgent,
+      });
+
       return new Response(
         JSON.stringify({ error: "Campos excedem o tamanho máximo permitido" }),
         {
@@ -152,7 +217,13 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      console.error("Invalid email format:", email);
+      await logAnalytics(supabase, "validation_error", {
+        ip_address: clientIP,
+        email,
+        blocked_reason: "Invalid email format",
+        user_agent: userAgent,
+      });
+
       return new Response(
         JSON.stringify({ error: "Formato de email inválido" }),
         {
@@ -162,10 +233,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Initialize Supabase client with service role
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // Check rate limit BEFORE captcha verification
+    // Check rate limit
     const { data: rateLimitData, error: rateLimitError } = await supabase.rpc(
       "check_contact_rate_limit",
       { p_email: email, p_ip_address: clientIP }
@@ -173,14 +241,22 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (rateLimitError) {
       console.error("Error checking rate limit:", rateLimitError);
-      // Continue without rate limiting if there's an error
     } else if (rateLimitData && !rateLimitData.allowed) {
       console.warn("Rate limit exceeded for:", { email, ip: clientIP });
       
+      await logAnalytics(supabase, "rate_limited", {
+        ip_address: clientIP,
+        email,
+        subject,
+        blocked_reason: rateLimitData.reason || "Rate limit exceeded",
+        user_agent: userAgent,
+        metadata: { minutes_remaining: rateLimitData.minutes_remaining },
+      });
+
       const minutesRemaining = rateLimitData.minutes_remaining || 120;
       return new Response(
         JSON.stringify({ 
-          error: `Você atingiu o limite de mensagens. Tente novamente em ${minutesRemaining} minutos.`,
+          error: `Você atingiu o limite de mensagens. Tente novamente em ${Math.ceil(minutesRemaining)} minutos.`,
           rateLimited: true,
           minutesRemaining
         }),
@@ -193,6 +269,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Verify Turnstile CAPTCHA
     if (!turnstileToken) {
+      await logAnalytics(supabase, "captcha_failed", {
+        ip_address: clientIP,
+        email,
+        subject,
+        blocked_reason: "No CAPTCHA token provided",
+        user_agent: userAgent,
+      });
+
       return new Response(
         JSON.stringify({ error: "Verificação de segurança não completada" }),
         {
@@ -204,6 +288,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     const isCaptchaValid = await verifyTurnstileToken(turnstileToken, clientIP);
     if (!isCaptchaValid) {
+      await logAnalytics(supabase, "captcha_failed", {
+        ip_address: clientIP,
+        email,
+        subject,
+        blocked_reason: "CAPTCHA verification failed",
+        user_agent: userAgent,
+      });
+
       return new Response(
         JSON.stringify({ error: "Falha na verificação de segurança. Tente novamente." }),
         {
@@ -231,7 +323,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (dbError) {
       console.error("Error saving to database:", dbError);
-      // Continue with email sending even if DB save fails
     } else {
       console.log("Message saved to database:", savedMessage.id);
     }
@@ -314,6 +405,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("User confirmation sent:", userEmailResponse);
 
+    // Log successful submission
+    await logAnalytics(supabase, "submission", {
+      ip_address: clientIP,
+      email,
+      subject,
+      user_agent: userAgent,
+      metadata: { message_id: savedMessage?.id },
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -336,17 +436,5 @@ const handler = async (req: Request): Promise<Response> => {
     );
   }
 };
-
-// Helper function to escape HTML and prevent XSS
-function escapeHtml(text: string): string {
-  const htmlEntities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  };
-  return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
-}
 
 serve(handler);

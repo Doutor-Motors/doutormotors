@@ -196,6 +196,42 @@ export type Database = {
           },
         ]
       }
+      contact_form_analytics: {
+        Row: {
+          blocked_reason: string | null
+          created_at: string
+          email: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          subject: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          blocked_reason?: string | null
+          created_at?: string
+          email?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          subject?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          blocked_reason?: string | null
+          created_at?: string
+          email?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          subject?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           created_at: string
@@ -1175,7 +1211,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      contact_analytics_summary: {
+        Row: {
+          count: number | null
+          date: string | null
+          event_type: string | null
+          unique_ips: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_contact_rate_limit: {
