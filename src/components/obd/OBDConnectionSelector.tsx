@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Bluetooth, Wifi, Loader2, WifiOff, AlertCircle, Settings, Smartphone, Search } from 'lucide-react';
+import { Bluetooth, Wifi, Loader2, WifiOff, AlertCircle, Settings, Smartphone, Search, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -168,8 +169,21 @@ export const OBDConnectionSelector = ({
               </div>
             </div>
 
-            {/* Help Button */}
-            <ConnectionMethodGuide isNativePlatform={isNativePlatform} />
+            {/* Help Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <ConnectionMethodGuide isNativePlatform={isNativePlatform} />
+              <Button 
+                asChild 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+              >
+                <Link to="/como-diagnosticar">
+                  <HelpCircle className="w-4 h-4" />
+                  Como Funciona?
+                </Link>
+              </Button>
+            </div>
           </div>
 
           {/* Connection Actions */}
