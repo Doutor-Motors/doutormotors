@@ -84,9 +84,9 @@ const LoginPage = () => {
     >
       {/* Botão Voltar Fixo */}
       <Button
-        variant="ghost"
+        variant="ghost-light"
         onClick={handleBack}
-        className="fixed top-4 left-4 z-50 text-primary-foreground hover:bg-primary-foreground/10 gap-2 font-chakra uppercase text-sm"
+        className="fixed top-4 left-4 z-50 gap-2 font-chakra uppercase text-sm"
       >
         <ArrowLeft className="w-4 h-4" />
         <span className="hidden sm:inline">Voltar</span>

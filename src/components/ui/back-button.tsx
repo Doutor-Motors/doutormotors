@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 
 interface BackButtonProps {
   className?: string;
-  variant?: "default" | "ghost" | "outline" | "secondary" | "destructive" | "link";
+  variant?: "default" | "ghost" | "ghost-light" | "outline" | "secondary" | "destructive" | "link";
   label?: string;
   showLabel?: boolean;
+  darkBackground?: boolean;
 }
 
 const BackButton = ({ 
   className = "", 
-  variant = "ghost",
+  variant,
   label = "Voltar",
-  showLabel = true
+  showLabel = true,
+  darkBackground = false
 }: BackButtonProps) => {
   const navigate = useNavigate();
 
@@ -25,9 +27,12 @@ const BackButton = ({
     }
   };
 
+  // Usar ghost-light automaticamente em fundos escuros
+  const resolvedVariant = variant || (darkBackground ? "ghost-light" : "ghost");
+
   return (
     <Button
-      variant={variant}
+      variant={resolvedVariant}
       onClick={handleBack}
       className={`gap-2 font-chakra uppercase text-sm ${className}`}
     >

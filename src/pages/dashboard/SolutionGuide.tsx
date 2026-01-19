@@ -325,7 +325,7 @@ const SolutionGuide = () => {
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex items-center gap-4">
             <Link to={`/dashboard/diagnostics/${item.diagnostic_id}`}>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="hover:bg-muted hover:text-foreground">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>

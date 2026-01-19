@@ -193,7 +193,7 @@ const DiagnosticHistory = () => {
                       </div>
 
                       <Link to={`/dashboard/diagnostics/${item.id}`}>
-                        <Button variant="ghost" className="text-primary font-chakra uppercase">
+                        <Button variant="ghost" className="text-primary font-chakra uppercase hover:bg-muted hover:text-primary">
                           Ver Detalhes
                           <ChevronRight className="w-4 h-4 ml-1" />
                         </Button>

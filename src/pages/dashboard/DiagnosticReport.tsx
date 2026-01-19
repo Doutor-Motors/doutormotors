@@ -272,7 +272,7 @@ const DiagnosticReport = () => {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to="/dashboard/history">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="hover:bg-muted hover:text-foreground">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
