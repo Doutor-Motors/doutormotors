@@ -157,11 +157,13 @@ export const OBDConnectionSelector = ({
                 <p className="text-dm-cadet">
                   {device ? device.name : 'Selecione um método de conexão'}
                 </p>
-                {isSimulated && connectionStatus === 'connected' && (
-                  <p className="text-yellow-400 text-sm flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-4 h-4" />
-                    Modo demonstração ativo
-                  </p>
+              {isSimulated && connectionStatus === 'connected' && (
+                  <div className="mt-2">
+                    <p className="text-amber-400 text-sm flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      Modo demonstração - Dados simulados
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -230,8 +232,37 @@ export const OBDConnectionSelector = ({
               {/* WiFi Tab */}
               <TabsContent value="wifi" className="mt-4">
                 <div className="space-y-3">
+                  {/* Browser Limitation Warning */}
+                  {!isNativePlatform && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="font-semibold text-amber-300">Modo Demonstração no Navegador</h4>
+                          <p className="text-sm text-dm-cadet mt-1">
+                            Navegadores não conseguem se comunicar diretamente com adaptadores WiFi OBD2 
+                            por limitações técnicas (conexões TCP raw não são suportadas).
+                          </p>
+                          <p className="text-sm text-amber-200/80 mt-2">
+                            <strong>Para conexão WiFi real:</strong> baixe o app nativo na Play Store ou App Store.
+                          </p>
+                          <Button 
+                            onClick={() => window.open('/native-app-guide', '_blank')}
+                            className="mt-3 bg-amber-600 hover:bg-amber-700 text-white" 
+                            size="sm"
+                          >
+                            <Smartphone className="w-4 h-4 mr-2" />
+                            Baixar App Nativo
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <p className="text-sm text-dm-cadet">
-                    Conecte via WiFi. Configure o IP do seu adaptador ELM327 WiFi.
+                    {isNativePlatform 
+                      ? 'Conecte via WiFi. Configure o IP do seu adaptador ELM327 WiFi.'
+                      : 'Teste o sistema em modo demonstração com dados simulados.'}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -239,7 +270,7 @@ export const OBDConnectionSelector = ({
                       className="bg-green-600 hover:bg-green-700 text-white font-chakra uppercase flex items-center gap-2"
                     >
                       <Wifi className="w-5 h-5" />
-                      Conectar WiFi
+                      {isNativePlatform ? 'Conectar WiFi' : 'Testar Demo WiFi'}
                     </Button>
                     
                     <Dialog open={showWifiSettings} onOpenChange={setShowWifiSettings}>
@@ -380,6 +411,32 @@ export const OBDConnectionSelector = ({
             </Tabs>
           )}
         </div>
+
+        {/* Simulation Warning Banner */}
+        {isSimulated && connectionStatus === 'connected' && (
+          <div className="mt-4 bg-amber-500/20 border border-amber-500/40 rounded-lg px-4 py-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-400" />
+                <div>
+                  <span className="text-amber-200 font-medium">Dados Simulados - Modo Demonstração</span>
+                  <p className="text-amber-200/70 text-xs mt-0.5">
+                    Os valores exibidos são para demonstração. Para diagnóstico real, use o app nativo.
+                  </p>
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="border-amber-400 text-amber-300 hover:bg-amber-500/20"
+                onClick={() => window.open('/native-app-guide', '_blank')}
+              >
+                <Smartphone className="w-4 h-4 mr-2" />
+                Obter App Real
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Connection Info */}
         {connectionStatus === 'connected' && device && (

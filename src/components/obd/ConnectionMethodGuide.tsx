@@ -81,15 +81,21 @@ export const ConnectionMethodGuide = ({ isNativePlatform = false }: ConnectionMe
       recommended: false,
       description: 'Conexão via rede WiFi local do adaptador',
       compatibility: 'Adaptadores ELM327 WiFi, BAFX, OBDLink',
+      browserLimitation: {
+        title: 'Limitação do Navegador',
+        text: 'Conexões WiFi diretas com adaptadores OBD2 não são possíveis em navegadores devido a limitações de segurança (TCP raw não é suportado). Use o app nativo para conexão WiFi real.',
+      },
       pros: [
         'Maior velocidade de dados',
         'Compatível com iOS sem limitações',
         'Ideal para diagnósticos longos',
+        'Requer app nativo para funcionar (não funciona em navegador)',
       ],
       cons: [
         'Requer configurar IP manualmente em alguns casos',
         'Desconecta da internet durante uso',
         'Alcance limitado ao veículo',
+        'Não funciona em navegadores - apenas app nativo',
       ],
       steps: [
         'Plugue o adaptador OBD2 WiFi na porta de diagnóstico',
@@ -212,6 +218,23 @@ export const ConnectionMethodGuide = ({ isNativePlatform = false }: ConnectionMe
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4">
                   <div className="space-y-4 pt-2">
+                    {/* Browser Limitation Warning for WiFi */}
+                    {'browserLimitation' in method && method.browserLimitation && (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                              {(method.browserLimitation as { title: string; text: string }).title}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {(method.browserLimitation as { title: string; text: string }).text}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Compatibility */}
                     <div>
                       <h5 className="font-semibold text-foreground mb-1 flex items-center gap-2">
