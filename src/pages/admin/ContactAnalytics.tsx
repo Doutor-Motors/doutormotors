@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -8,9 +8,10 @@ import {
 } from "recharts";
 import { 
   Mail, Shield, AlertTriangle, CheckCircle, Clock, 
-  TrendingUp, Filter, RefreshCw, Download, Globe
+  TrendingUp, Filter, RefreshCw, Download, Globe, Ban, Unlock, Plus
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const EVENT_COLORS: Record<string, string> = {
   submission: "#22c55e",
@@ -25,6 +30,7 @@ const EVENT_COLORS: Record<string, string> = {
   captcha_failed: "#f97316",
   rate_limited: "#eab308",
   validation_error: "#3b82f6",
+  ip_blocked: "#7c3aed",
 };
 
 const EVENT_LABELS: Record<string, string> = {
@@ -33,10 +39,17 @@ const EVENT_LABELS: Record<string, string> = {
   captcha_failed: "CAPTCHA Falhou",
   rate_limited: "Rate Limited",
   validation_error: "Validação",
+  ip_blocked: "IP Bloqueado",
 };
 
 const ContactAnalytics = () => {
   const [dateRange, setDateRange] = useState("7");
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [newBlockIP, setNewBlockIP] = useState("");
+  const [newBlockReason, setNewBlockReason] = useState("");
+  const [newBlockExpires, setNewBlockExpires] = useState("");
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const startDate = startOfDay(subDays(new Date(), parseInt(dateRange)));
   const endDate = endOfDay(new Date());
@@ -116,6 +129,87 @@ const ContactAnalytics = () => {
     },
   });
 
+  // Fetch blocked IPs
+  const { data: blockedIPs, refetch: refetchBlockedIPs } = useQuery({
+    queryKey: ["blocked-ips"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("blocked_ips")
+        .select("*")
+        .eq("is_active", true)
+        .order("blocked_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Block IP mutation
+  const blockIPMutation = useMutation({
+    mutationFn: async ({ ip, reason, expiresAt }: { ip: string; reason: string; expiresAt?: string }) => {
+      const { error } = await supabase.from("blocked_ips").insert({
+        ip_address: ip,
+        reason: reason || null,
+        blocked_by: user?.id,
+        expires_at: expiresAt || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("IP bloqueado com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["blocked-ips"] });
+      setBlockDialogOpen(false);
+      setNewBlockIP("");
+      setNewBlockReason("");
+      setNewBlockExpires("");
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("duplicate")) {
+        toast.error("Este IP já está bloqueado");
+      } else {
+        toast.error("Erro ao bloquear IP");
+      }
+    },
+  });
+
+  // Unblock IP mutation
+  const unblockIPMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("blocked_ips")
+        .update({ is_active: false })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("IP desbloqueado com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["blocked-ips"] });
+    },
+    onError: () => {
+      toast.error("Erro ao desbloquear IP");
+    },
+  });
+
+  // Quick block from suspicious list
+  const quickBlockIP = (ip: string) => {
+    setNewBlockIP(ip);
+    setNewBlockReason("Atividade suspeita detectada automaticamente");
+    setBlockDialogOpen(true);
+  };
+
+  // Handle block form submit
+  const handleBlockSubmit = () => {
+    if (!newBlockIP) {
+      toast.error("IP é obrigatório");
+      return;
+    }
+    blockIPMutation.mutate({
+      ip: newBlockIP,
+      reason: newBlockReason,
+      expiresAt: newBlockExpires || undefined,
+    });
+  };
+
   // Prepare chart data
   const pieData = summaryData?.byType
     ? Object.entries(summaryData.byType).map(([name, value]) => ({
@@ -142,6 +236,7 @@ const ContactAnalytics = () => {
 
   const handleRefresh = () => {
     refetchSummary();
+    refetchBlockedIPs();
   };
 
   const handleExport = () => {
@@ -354,35 +449,57 @@ const ContactAnalytics = () => {
                     <TableHead>IP</TableHead>
                     <TableHead>Tentativas</TableHead>
                     <TableHead>Tipos</TableHead>
+                    <TableHead className="w-[80px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {topIPs?.map((ip) => (
-                    <TableRow key={ip.ip}>
-                      <TableCell className="font-mono text-sm">{ip.ip}</TableCell>
-                      <TableCell>
-                        <Badge variant={ip.total >= 10 ? "destructive" : "secondary"}>
-                          {ip.total}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1 flex-wrap">
-                          {Object.entries(ip.types).map(([type, count]) => (
-                            <Badge 
-                              key={type} 
-                              variant="outline"
-                              style={{ borderColor: EVENT_COLORS[type] }}
-                            >
-                              {EVENT_LABELS[type]}: {count}
+                  {topIPs?.map((ip) => {
+                    const isBlocked = blockedIPs?.some(b => b.ip_address === ip.ip);
+                    return (
+                      <TableRow key={ip.ip}>
+                        <TableCell className="font-mono text-sm">{ip.ip}</TableCell>
+                        <TableCell>
+                          <Badge variant={ip.total >= 10 ? "destructive" : "secondary"}>
+                            {ip.total}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1 flex-wrap">
+                            {Object.entries(ip.types).map(([type, count]) => (
+                              <Badge 
+                                key={type} 
+                                variant="outline"
+                                style={{ borderColor: EVENT_COLORS[type] }}
+                              >
+                                {EVENT_LABELS[type]}: {count}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {isBlocked ? (
+                            <Badge variant="destructive" className="text-xs">
+                              <Ban className="w-3 h-3 mr-1" />
+                              Bloqueado
                             </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs text-destructive hover:text-destructive"
+                              onClick={() => quickBlockIP(ip.ip)}
+                            >
+                              <Ban className="w-3 h-3 mr-1" />
+                              Bloquear
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {(!topIPs || topIPs.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
                         Nenhum IP suspeito detectado
                       </TableCell>
                     </TableRow>
@@ -447,6 +564,126 @@ const ContactAnalytics = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Blocked IPs Section */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Ban className="w-5 h-5 text-destructive" />
+                IPs Bloqueados Manualmente
+              </CardTitle>
+              <CardDescription>Gerenciar IPs bloqueados permanentemente ou temporariamente</CardDescription>
+            </div>
+            <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Bloquear IP
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bloquear IP</DialogTitle>
+                  <DialogDescription>
+                    Adicione um IP à lista de bloqueios. Submissões desse IP serão rejeitadas silenciosamente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ip">Endereço IP *</Label>
+                    <Input
+                      id="ip"
+                      placeholder="192.168.1.1"
+                      value={newBlockIP}
+                      onChange={(e) => setNewBlockIP(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reason">Motivo</Label>
+                    <Input
+                      id="reason"
+                      placeholder="Spam repetitivo"
+                      value={newBlockReason}
+                      onChange={(e) => setNewBlockReason(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="expires">Expira em (opcional)</Label>
+                    <Input
+                      id="expires"
+                      type="datetime-local"
+                      value={newBlockExpires}
+                      onChange={(e) => setNewBlockExpires(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Deixe vazio para bloqueio permanente</p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setBlockDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleBlockSubmit}
+                    disabled={blockIPMutation.isPending}
+                  >
+                    {blockIPMutation.isPending ? "Bloqueando..." : "Bloquear IP"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>IP</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead>Bloqueado em</TableHead>
+                  <TableHead>Expira em</TableHead>
+                  <TableHead className="w-[100px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {blockedIPs?.map((blocked) => (
+                  <TableRow key={blocked.id}>
+                    <TableCell className="font-mono text-sm">{blocked.ip_address}</TableCell>
+                    <TableCell className="text-sm">{blocked.reason || "-"}</TableCell>
+                    <TableCell className="text-sm">
+                      {format(new Date(blocked.blocked_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {blocked.expires_at 
+                        ? format(new Date(blocked.expires_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+                        : <Badge variant="secondary">Permanente</Badge>
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs text-green-600 hover:text-green-700"
+                        onClick={() => unblockIPMutation.mutate(blocked.id)}
+                        disabled={unblockIPMutation.isPending}
+                      >
+                        <Unlock className="w-3 h-3 mr-1" />
+                        Desbloquear
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!blockedIPs || blockedIPs.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      Nenhum IP bloqueado manualmente
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );
