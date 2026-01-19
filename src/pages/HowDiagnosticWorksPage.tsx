@@ -636,7 +636,7 @@ const HowDiagnosticWorksPage = () => {
                 </p>
                 <div className="flex flex-wrap justify-center gap-4">
                   <Button asChild size="lg" className="font-chakra uppercase">
-                    <Link to="/dashboard/diagnostic">
+                    <Link to="/dashboard/diagnostics">
                       <Zap className="w-5 h-5 mr-2" />
                       Ir para Diagnóstico
                     </Link>
