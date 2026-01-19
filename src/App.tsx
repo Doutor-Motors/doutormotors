@@ -9,6 +9,7 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { AdminNotificationProvider } from "@/contexts/AdminNotificationContext";
 import NotificationContainer from "@/components/notifications/NotificationContainer";
 import AdminNotificationContainer from "@/components/notifications/AdminNotificationContainer";
+import InstallBanner from "@/components/pwa/InstallBanner";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminProtectedRoute from "@/components/admin/AdminProtectedRoute";
 import LandingPage from "./pages/LandingPage";
@@ -77,6 +78,7 @@ const App = () => (
             <AdminNotificationProvider>
               <NotificationContainer />
               <AdminNotificationContainer />
+              <InstallBanner />
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<LandingPage />} />
