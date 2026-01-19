@@ -475,7 +475,7 @@ const InstallAppPage = () => {
               Já instalou? Comece a diagnosticar seu veículo agora!
             </p>
             <Button asChild size="lg" className="font-chakra uppercase">
-              <Link to="/dashboard/diagnostic">
+              <Link to="/dashboard/diagnostics">
                 <Zap className="w-5 h-5 mr-2" />
                 Ir para Diagnóstico
               </Link>
