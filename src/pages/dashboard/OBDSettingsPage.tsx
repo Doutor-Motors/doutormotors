@@ -86,7 +86,7 @@ export default function OBDSettingsPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-muted hover:text-foreground">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <h1 className="text-2xl font-bold">Configurações OBD Avançadas</h1>
@@ -118,7 +118,7 @@ export default function OBDSettingsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-muted hover:text-foreground">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>

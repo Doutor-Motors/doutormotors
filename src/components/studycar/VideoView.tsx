@@ -140,7 +140,7 @@ const VideoView = ({
       <section className="bg-muted/50 py-4 border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-2 text-sm flex-wrap">
-            <Button variant="ghost" size="sm" onClick={onHome}>
+            <Button variant="ghost" size="sm" onClick={onHome} className="hover:bg-muted hover:text-foreground">
               <Home className="w-4 h-4" />
             </Button>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -180,7 +180,7 @@ const VideoView = ({
       <section className="py-8">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-4 mb-6">
-            <Button variant="outline" size="icon" onClick={onBack}>
+            <Button variant="outline" size="icon" onClick={onBack} className="hover:bg-muted hover:text-foreground">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>

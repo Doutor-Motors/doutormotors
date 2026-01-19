@@ -295,7 +295,7 @@ export default function CodingHistoryPage() {
                 Filtros
               </CardTitle>
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 hover:bg-muted hover:text-foreground">
                   <RefreshCw className="h-3 w-3" />
                   Limpar
                 </Button>

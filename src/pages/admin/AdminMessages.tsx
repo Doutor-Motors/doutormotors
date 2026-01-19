@@ -321,6 +321,7 @@ const AdminMessages = () => {
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="hover:bg-muted hover:text-foreground"
                             onClick={() => {
                               setSelectedMessage(msg);
                               setShowViewDialog(true);
@@ -340,7 +341,7 @@ const AdminMessages = () => {
                               setShowDeleteDialog(true);
                             }}
                             title="Remover mensagem"
-                            className="text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

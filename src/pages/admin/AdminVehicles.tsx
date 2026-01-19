@@ -190,6 +190,7 @@ const AdminVehicles = () => {
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="hover:bg-muted hover:text-foreground"
                             onClick={() => {
                               setSelectedVehicle(vehicle);
                               setShowDetailsDialog(true);
@@ -206,7 +207,7 @@ const AdminVehicles = () => {
                               setShowDeleteDialog(true);
                             }}
                             title="Remover veículo"
-                            className="text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

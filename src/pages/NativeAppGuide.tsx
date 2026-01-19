@@ -322,8 +322,8 @@ const NativeAppGuide = () => {
                       </code>
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="absolute top-2 right-2 text-white hover:bg-white/10"
+                        variant="ghost-light"
+                        className="absolute top-2 right-2"
                         onClick={() => copyToClipboard('git clone https://github.com/seu-usuario/doutor-motors.git && cd doutor-motors && npm install', 'clone')}
                       >
                         {copiedCommand === 'clone' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -345,8 +345,8 @@ const NativeAppGuide = () => {
                     </code>
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="absolute top-2 right-2 text-white hover:bg-white/10"
+                      variant="ghost-light"
+                      className="absolute top-2 right-2"
                       onClick={() => copyToClipboard('npm install @nicklason/capacitor-bluetooth-serial capacitor-tcp-socket', 'plugins')}
                     >
                       {copiedCommand === 'plugins' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -369,8 +369,8 @@ const NativeAppGuide = () => {
                     </code>
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="absolute top-2 right-2 text-white hover:bg-white/10"
+                      variant="ghost-light"
+                      className="absolute top-2 right-2"
                       onClick={() => copyToClipboard('npm run build && npx cap add android && npx cap sync && npx cap run android', 'build')}
                     >
                       {copiedCommand === 'build' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}

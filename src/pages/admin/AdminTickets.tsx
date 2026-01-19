@@ -374,7 +374,7 @@ const AdminTickets = () => {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="hover:bg-muted hover:text-foreground">
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>

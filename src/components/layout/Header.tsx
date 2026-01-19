@@ -50,9 +50,9 @@ const Header = () => {
           {/* Botão Voltar - aparece em todas as páginas exceto landing */}
           {!isLandingPage && (
             <Button
-              variant="ghost"
+              variant="ghost-light"
               onClick={handleBack}
-              className="text-primary-foreground hover:bg-primary-foreground/10 gap-2 font-chakra uppercase text-sm mr-auto"
+              className="gap-2 font-chakra uppercase text-sm mr-auto"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Voltar</span>
@@ -80,7 +80,7 @@ const Header = () => {
 
         <div className="hidden lg:flex items-center gap-4">
           <Link to="/login">
-            <Button variant="ghost" className="text-primary-foreground hover:text-primary hover:bg-primary-foreground font-chakra uppercase">
+            <Button variant="ghost-light" className="font-chakra uppercase">
               Entrar
             </Button>
           </Link>
