@@ -13,6 +13,7 @@ import {
   WifiOff,
   Bluetooth,
   BluetoothOff,
+  AlertCircle,
 } from 'lucide-react';
 import { OBDConnectionInfo } from '@/services/obd/OBDConnectionManager';
 
@@ -122,9 +123,26 @@ export const VehicleDataDisplay: React.FC<VehicleDataDisplayProps> = ({
             </div>
           )}
           {connectionInfo?.isSimulated && (
-            <Badge variant="outline" className="w-full justify-center mt-2 text-xs">
-              Modo Simulado - Execute no app nativo para dados reais
-            </Badge>
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mt-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                    Modo Demonstração Ativo
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Os dados exibidos são simulados para demonstrar o funcionamento do sistema.
+                    Para diagnóstico real do seu veículo, use o aplicativo nativo.
+                  </p>
+                  <button 
+                    onClick={() => window.open('/native-app-guide', '_blank')}
+                    className="text-xs text-amber-500 hover:text-amber-400 underline mt-2 inline-flex items-center gap-1"
+                  >
+                    Saiba como baixar o app nativo →
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -52,7 +52,8 @@ export const useWiFiConnection = (): UseWiFiConnectionReturn => {
           
           toast({
             title: "Modo Demonstração WiFi",
-            description: `Conectado em modo simulação (${ip}:${port})`,
+            description: "Navegadores não suportam conexão WiFi direta. Use o app nativo para dados reais.",
+            variant: "default",
           });
           
           resolve(true);
@@ -78,10 +79,11 @@ export const useWiFiConnection = (): UseWiFiConnectionReturn => {
             });
             setIsSimulated(true); // In browser, we always simulate WiFi
             
-            toast({
-              title: "WiFi Conectado!",
-              description: `Conectado ao adaptador em ${ip}:${port}`,
-            });
+          toast({
+            title: "Modo Demonstração WiFi",
+            description: "Dados simulados. Para conexão real, use o app nativo.",
+            variant: "default",
+          });
             
             resolve(true);
           }, 2000);
