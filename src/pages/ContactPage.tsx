@@ -87,6 +87,7 @@ const ContactPage = () => {
     subject: "",
     message: "",
   });
+  const [honeypot, setHoneypot] = useState(""); // Honeypot anti-spam field
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileError, setTurnstileError] = useState(false);
@@ -166,11 +167,24 @@ const ContactPage = () => {
 
     setIsSubmitting(true);
 
+    // Check honeypot - if filled, it's likely a bot
+    if (honeypot) {
+      // Silently "succeed" to not alert bots
+      toast({
+        title: "Mensagem enviada!",
+        description: "Recebemos sua mensagem e você receberá uma confirmação por email.",
+      });
+      setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('send-contact-email', {
         body: {
           ...formData,
           turnstileToken,
+          _hp: honeypot, // Send honeypot for server-side validation too
         }
       });
 
@@ -362,6 +376,24 @@ const ContactPage = () => {
                     maxLength={5000}
                     rows={5}
                     className="bg-card border-border resize-none"
+                  />
+                </div>
+
+                {/* Honeypot field - hidden from real users, visible to bots */}
+                <div 
+                  className="absolute -left-[9999px] opacity-0 h-0 overflow-hidden"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
+                  <label htmlFor="website">Website</label>
+                  <input
+                    type="text"
+                    id="website"
+                    name="website"
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                    tabIndex={-1}
                   />
                 </div>
 

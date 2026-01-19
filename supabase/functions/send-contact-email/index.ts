@@ -18,6 +18,7 @@ interface ContactEmailRequest {
   phone?: string;
   subject: string;
   message: string;
+  _hp?: string; // Honeypot field
   turnstileToken?: string;
 }
 
@@ -110,7 +111,20 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { name, email, phone, subject, message, turnstileToken }: ContactEmailRequest = await req.json();
+    const { name, email, phone, subject, message, turnstileToken, _hp }: ContactEmailRequest = await req.json();
+
+    // Check honeypot - if filled, it's a bot
+    if (_hp) {
+      console.log("Honeypot triggered, blocking submission from:", clientIP);
+      // Return success to not alert the bot
+      return new Response(
+        JSON.stringify({ success: true, message: "Message sent" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
 
     // Validate required fields
     if (!name || !email || !subject || !message) {
