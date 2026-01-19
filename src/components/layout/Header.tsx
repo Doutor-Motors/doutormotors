@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, ArrowRight, ArrowLeft } from "lucide-react";
+import { Menu, X, ArrowRight, ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/images/logo-new-car.png";
 
@@ -15,6 +15,7 @@ const Header = () => {
     { name: "Serviços", path: "/servicos" },
     { name: "Como Funciona", path: "/como-funciona" },
     { name: "Contato", path: "/contato" },
+    { name: "Instalar App", path: "/instalar", icon: Download },
   ];
 
   const isLandingPage = location.pathname === "/";
@@ -71,8 +72,11 @@ const Header = () => {
             <Link
               key={link.name}
               to={link.path}
-              className="font-chakra text-sm uppercase text-primary-foreground hover:text-primary transition-colors"
+              className={`font-chakra text-sm uppercase text-primary-foreground hover:text-primary transition-colors flex items-center gap-1.5 ${
+                link.icon ? "text-primary" : ""
+              }`}
             >
+              {link.icon && <link.icon className="w-4 h-4" />}
               {link.name}
             </Link>
           ))}
@@ -110,8 +114,11 @@ const Header = () => {
                   key={link.name}
                   to={link.path}
                   onClick={() => setIsMenuOpen(false)}
-                  className="font-chakra text-base uppercase text-primary-foreground py-3 px-4 hover:bg-primary-foreground hover:text-primary transition-colors"
+                  className={`font-chakra text-base uppercase text-primary-foreground py-3 px-4 hover:bg-primary-foreground hover:text-primary transition-colors flex items-center gap-2 ${
+                    link.icon ? "text-primary" : ""
+                  }`}
                 >
+                  {link.icon && <link.icon className="w-5 h-5" />}
                   {link.name}
                 </Link>
               ))}
