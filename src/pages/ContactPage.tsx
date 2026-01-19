@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Phone, Mail, MapPin, Send, MessageCircle, Clock, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowRight, Phone, Mail, MapPin, Send, MessageCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,26 @@ import Footer from "@/components/layout/Footer";
 import heroBg from "@/assets/images/hero-bg.jpg";
 import textBarsLight from "@/assets/images/text-bars-light.png";
 import textBarsDark from "@/assets/images/text-bars-dark.png";
+
+// Cloudflare Turnstile Site Key
+const TURNSTILE_SITE_KEY = "0x4AAAAAACNUOQK41DJ3NPJV";
+
+declare global {
+  interface Window {
+    turnstile: {
+      render: (container: string | HTMLElement, options: {
+        sitekey: string;
+        callback?: (token: string) => void;
+        'expired-callback'?: () => void;
+        'error-callback'?: () => void;
+        theme?: 'light' | 'dark' | 'auto';
+        language?: string;
+      }) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
 
 const contactInfo = [
   {
@@ -68,6 +88,64 @@ const ContactPage = () => {
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileError, setTurnstileError] = useState(false);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
+
+  const handleTurnstileCallback = useCallback((token: string) => {
+    setTurnstileToken(token);
+    setTurnstileError(false);
+  }, []);
+
+  const handleTurnstileExpired = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
+
+  const handleTurnstileError = useCallback(() => {
+    setTurnstileError(true);
+    setTurnstileToken(null);
+  }, []);
+
+  useEffect(() => {
+    // Load Turnstile script
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    script.async = true;
+    script.defer = true;
+    
+    script.onload = () => {
+      if (turnstileRef.current && window.turnstile) {
+        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: handleTurnstileCallback,
+          'expired-callback': handleTurnstileExpired,
+          'error-callback': handleTurnstileError,
+          theme: 'auto',
+          language: 'pt-br',
+        });
+      }
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.remove(widgetIdRef.current);
+      }
+      const existingScript = document.querySelector('script[src*="turnstile"]');
+      if (existingScript) {
+        existingScript.remove();
+      }
+    };
+  }, [handleTurnstileCallback, handleTurnstileExpired, handleTurnstileError]);
+
+  const resetTurnstile = () => {
+    if (widgetIdRef.current && window.turnstile) {
+      window.turnstile.reset(widgetIdRef.current);
+      setTurnstileToken(null);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -76,15 +154,43 @@ const ContactPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!turnstileToken) {
+      toast({
+        title: "Verificação necessária",
+        description: "Por favor, complete a verificação de segurança antes de enviar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const { data, error } = await supabase.functions.invoke('send-contact-email', {
-        body: formData
+        body: {
+          ...formData,
+          turnstileToken,
+        }
       });
 
       if (error) {
         throw error;
+      }
+
+      if (data?.error) {
+        // Handle rate limit or validation errors
+        if (data.error.includes('limite') || data.error.includes('bloqueado')) {
+          toast({
+            title: "Muitas tentativas",
+            description: data.error,
+            variant: "destructive",
+          });
+        } else {
+          throw new Error(data.error);
+        }
+        resetTurnstile();
+        return;
       }
 
       toast({
@@ -99,13 +205,23 @@ const ContactPage = () => {
         subject: "",
         message: "",
       });
+      resetTurnstile();
     } catch (error: any) {
       console.error("Error sending contact form:", error);
+      
+      let errorMessage = "Não foi possível enviar sua mensagem. Tente novamente.";
+      if (error.message?.includes('rate') || error.message?.includes('limit')) {
+        errorMessage = "Você atingiu o limite de mensagens. Tente novamente mais tarde.";
+      } else if (error.message?.includes('captcha') || error.message?.includes('verification')) {
+        errorMessage = "Falha na verificação de segurança. Atualize a página e tente novamente.";
+      }
+      
       toast({
         title: "Erro ao enviar",
-        description: error.message || "Não foi possível enviar sua mensagem. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
+      resetTurnstile();
     } finally {
       setIsSubmitting(false);
     }
@@ -194,6 +310,7 @@ const ContactPage = () => {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
+                      maxLength={100}
                       className="bg-card border-border"
                     />
                   </div>
@@ -205,6 +322,7 @@ const ContactPage = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
+                      maxLength={255}
                       className="bg-card border-border"
                     />
                   </div>
@@ -217,6 +335,7 @@ const ContactPage = () => {
                       placeholder="Telefone (opcional)"
                       value={formData.phone}
                       onChange={handleInputChange}
+                      maxLength={20}
                       className="bg-card border-border"
                     />
                   </div>
@@ -227,6 +346,7 @@ const ContactPage = () => {
                       value={formData.subject}
                       onChange={handleInputChange}
                       required
+                      maxLength={200}
                       className="bg-card border-border"
                     />
                   </div>
@@ -239,18 +359,31 @@ const ContactPage = () => {
                     value={formData.message}
                     onChange={handleInputChange}
                     required
+                    maxLength={5000}
                     rows={5}
                     className="bg-card border-border resize-none"
                   />
                 </div>
 
+                {/* Turnstile CAPTCHA Widget */}
+                <div className="flex flex-col items-start gap-2">
+                  <div ref={turnstileRef} className="min-h-[65px]" />
+                  {turnstileError && (
+                    <p className="text-destructive text-sm flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      Erro na verificação. Atualize a página.
+                    </p>
+                  )}
+                </div>
+
                 <Button 
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !turnstileToken}
                   className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 px-8"
                 >
                   {isSubmitting ? (
                     <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Enviando...</span>
                     </>
                   ) : (
