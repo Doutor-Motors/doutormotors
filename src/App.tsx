@@ -39,6 +39,7 @@ import AdminAlerts from "./pages/admin/AdminAlerts";
 import NotFound from "./pages/NotFound";
 import TechnicalReport from "./pages/TechnicalReport";
 import StudyCarPage from "./pages/StudyCarPage";
+import HowDiagnosticWorksPage from "./pages/HowDiagnosticWorksPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import FAQPage from "./pages/FAQPage";
@@ -88,6 +89,7 @@ const App = () => (
                 <Route path="/privacidade" element={<PrivacyPolicyPage />} />
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/app-nativo" element={<NativeAppGuide />} />
+                <Route path="/como-diagnosticar" element={<HowDiagnosticWorksPage />} />
                 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
