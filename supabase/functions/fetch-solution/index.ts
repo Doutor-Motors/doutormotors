@@ -1,17 +1,26 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface SolutionRequest {
-  dtcCode: string;
-  vehicleBrand: string;
-  vehicleModel: string;
-  vehicleYear: number;
-  problemDescription: string;
-}
+// Input validation schema
+const solutionRequestSchema = z.object({
+  dtcCode: z
+    .string()
+    .regex(/^[A-Z][0-9]{4}$/, "Código DTC inválido (formato: P0123)")
+    .max(10, "Código muito longo"),
+  vehicleBrand: z.string().min(1, "Marca é obrigatória").max(50, "Marca muito longa"),
+  vehicleModel: z.string().min(1, "Modelo é obrigatório").max(50, "Modelo muito longo"),
+  vehicleYear: z
+    .number()
+    .int("Ano deve ser um número inteiro")
+    .min(1900, "Ano inválido")
+    .max(new Date().getFullYear() + 2, "Ano inválido"),
+  problemDescription: z.string().max(1000, "Descrição muito longa").optional().default(""),
+});
 
 interface SolutionResponse {
   success: boolean;
@@ -38,18 +47,24 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { dtcCode, vehicleBrand, vehicleModel, vehicleYear, problemDescription } = 
-      await req.json() as SolutionRequest;
-
-    console.log(`Fetching solution for ${dtcCode} - ${vehicleBrand} ${vehicleModel} ${vehicleYear}`);
-
-    // Validate input
-    if (!dtcCode || !vehicleBrand || !vehicleModel || !vehicleYear) {
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = solutionRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join(", ");
+      console.error("Validation failed:", errors);
       return new Response(
-        JSON.stringify({ success: false, error: "Missing required fields" }),
+        JSON.stringify({ success: false, error: `Dados inválidos: ${errors}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const { dtcCode, vehicleBrand, vehicleModel, vehicleYear, problemDescription } = validationResult.data;
+
+    console.log(`Fetching solution for ${dtcCode} - ${vehicleBrand} ${vehicleModel} ${vehicleYear}`);
 
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     if (!FIRECRAWL_API_KEY) {
