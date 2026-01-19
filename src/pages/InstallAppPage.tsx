@@ -125,7 +125,7 @@ const InstallAppPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="pt-24 pb-16">
+      <main className="pt-32 pb-16">
         <div className="container mx-auto px-4 max-w-4xl">
           {/* Hero Section */}
           <motion.div 
