@@ -41,6 +41,7 @@ import TechnicalReport from "./pages/TechnicalReport";
 import StudyCarPage from "./pages/StudyCarPage";
 import HowDiagnosticWorksPage from "./pages/HowDiagnosticWorksPage";
 import HowSystemWorksPage from "./pages/HowSystemWorksPage";
+import UseFromAnywherePage from "./pages/UseFromAnywherePage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import FAQPage from "./pages/FAQPage";
@@ -92,6 +93,7 @@ const App = () => (
                 <Route path="/app-nativo" element={<NativeAppGuide />} />
                 <Route path="/como-diagnosticar" element={<HowDiagnosticWorksPage />} />
                 <Route path="/como-funciona-sistema" element={<HowSystemWorksPage />} />
+                <Route path="/use-de-qualquer-lugar" element={<UseFromAnywherePage />} />
                 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
