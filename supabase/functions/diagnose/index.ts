@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -9,15 +10,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface DiagnosticRequest {
-  dtcCodes: string[];
-  vehicleBrand: string;
-  vehicleModel: string;
-  vehicleYear: number;
-  diagnosticId?: string;
-  userId?: string;
-  vehicleId?: string;
-}
+// Input validation schema
+const diagnosticRequestSchema = z.object({
+  dtcCodes: z
+    .array(
+      z.string()
+        .regex(/^[A-Z][0-9]{4}$/, "Código DTC inválido (formato: P0123)")
+        .max(10, "Código muito longo")
+    )
+    .min(1, "Pelo menos um código DTC é necessário")
+    .max(20, "Máximo de 20 códigos por diagnóstico"),
+  vehicleBrand: z.string().min(1, "Marca é obrigatória").max(50, "Marca muito longa"),
+  vehicleModel: z.string().min(1, "Modelo é obrigatório").max(50, "Modelo muito longo"),
+  vehicleYear: z
+    .number()
+    .int("Ano deve ser um número inteiro")
+    .min(1900, "Ano inválido")
+    .max(new Date().getFullYear() + 2, "Ano inválido"),
+  diagnosticId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  vehicleId: z.string().uuid().optional(),
+});
 
 interface DiagnosticItem {
   dtc_code: string;
@@ -69,6 +82,21 @@ serve(async (req) => {
   }
 
   try {
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = diagnosticRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join(", ");
+      console.error("Validation failed:", errors);
+      return new Response(
+        JSON.stringify({ error: `Dados inválidos: ${errors}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { 
       dtcCodes, 
       vehicleBrand, 
@@ -77,7 +105,7 @@ serve(async (req) => {
       diagnosticId,
       userId,
       vehicleId
-    } = await req.json() as DiagnosticRequest;
+    } = validationResult.data;
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -11,17 +12,30 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface SystemAlertRequest {
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  priority: 'low' | 'normal' | 'high' | 'urgent';
-  targetType: 'all' | 'specific' | 'role';
-  targetUserIds?: string[];
-  targetRole?: 'user' | 'admin';
-  sendEmail: boolean;
-  expiresAt?: string;
+// HTML escape function for XSS protection
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
 }
+
+// Input validation schema
+const systemAlertSchema = z.object({
+  title: z.string().min(1, "Título é obrigatório").max(200, "Título muito longo").transform(escapeHtml),
+  message: z.string().min(1, "Mensagem é obrigatória").max(5000, "Mensagem muito longa").transform(escapeHtml),
+  type: z.enum(["info", "warning", "success", "error"]).optional().default("info"),
+  priority: z.enum(["low", "normal", "high", "urgent"]).optional().default("normal"),
+  targetType: z.enum(["all", "specific", "role"]).optional().default("all"),
+  targetUserIds: z.array(z.string().uuid()).optional(),
+  targetRole: z.enum(["user", "admin"]).optional(),
+  sendEmail: z.boolean().optional().default(false),
+  expiresAt: z.string().datetime().optional(),
+});
 
 async function sendEmail(to: string, subject: string, html: string) {
   if (!RESEND_API_KEY) {
@@ -154,16 +168,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const alertData: SystemAlertRequest = await req.json();
-    console.log("Creating system alert:", alertData);
-
-    // Validate required fields
-    if (!alertData.title || !alertData.message) {
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = systemAlertSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join(", ");
+      console.error("Validation failed:", errors);
       return new Response(
-        JSON.stringify({ error: "Title and message are required" }),
+        JSON.stringify({ error: `Dados inválidos: ${errors}` }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    const alertData = validationResult.data;
+    console.log("Creating system alert:", { title: alertData.title, type: alertData.type });
 
     // Create the alert in database
     const { data: alert, error: insertError } = await supabase

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -11,20 +12,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-type NotificationType = 
-  | 'critical_diagnostic'
-  | 'diagnostic_completed'
-  | 'ticket_created'
-  | 'ticket_updated'
-  | 'ticket_resolved'
-  | 'account_update'
-  | 'password_changed';
+// Validation schema for notification requests
+const notificationTypes = [
+  "critical_diagnostic",
+  "diagnostic_completed",
+  "ticket_created",
+  "ticket_updated",
+  "ticket_resolved",
+  "account_update",
+  "password_changed",
+] as const;
 
-interface NotificationRequest {
-  type: NotificationType;
-  userId: string;
-  data: Record<string, any>;
-}
+const notificationRequestSchema = z.object({
+  type: z.enum(notificationTypes, { 
+    errorMap: () => ({ message: "Tipo de notificação inválido" }) 
+  }),
+  userId: z.string().uuid("userId inválido"),
+  data: z.record(z.unknown()).optional().default({}),
+});
+
+type NotificationType = typeof notificationTypes[number];
 
 interface ResendEmailPayload {
   from: string;
@@ -355,21 +362,24 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { type, userId, data }: NotificationRequest = await req.json();
-
-    console.log("Processing notification:", { type, userId, data });
-
-    // Validate required fields
-    if (!type || !userId) {
-      console.error("Missing required fields:", { type, userId });
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = notificationRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join(", ");
+      console.error("Validation failed:", errors);
       return new Response(
-        JSON.stringify({ error: "Missing required fields: type and userId" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        JSON.stringify({ error: `Dados inválidos: ${errors}` }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    const { type, userId, data } = validationResult.data;
+
+    console.log("Processing notification:", { type, userId });
 
     // Initialize Supabase client with service role
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
