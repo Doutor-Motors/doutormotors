@@ -59,7 +59,7 @@ const TermsPage = () => {
           {/* Conteúdo dos Termos */}
           <div className="space-y-8">
             {/* 1. Aceitação dos Termos */}
-            <Card>
+            <Card id="aceitacao">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Scale className="w-5 h-5 text-primary" />
@@ -80,7 +80,7 @@ const TermsPage = () => {
             </Card>
 
             {/* 2. Natureza do Serviço */}
-            <Card>
+            <Card id="natureza">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Car className="w-5 h-5 text-primary" />
@@ -115,7 +115,7 @@ const TermsPage = () => {
             </Card>
 
             {/* 3. Isenção de Responsabilidade */}
-            <Card className="border-red-200 dark:border-red-800">
+            <Card id="isencao" className="border-red-200 dark:border-red-800 scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2 text-red-700 dark:text-red-400">
                   <AlertTriangle className="w-5 h-5" />
@@ -153,7 +153,7 @@ const TermsPage = () => {
             </Card>
 
             {/* 4. Sistemas Críticos de Segurança */}
-            <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
+            <Card id="seguranca" className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20 scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2 text-red-700 dark:text-red-400">
                   <Shield className="w-5 h-5" />
