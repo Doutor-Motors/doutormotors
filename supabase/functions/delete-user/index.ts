@@ -303,18 +303,38 @@ Deno.serve(async (req) => {
 
     // 16. Finally, delete the user from auth.users
     // This also invalidates ALL tokens/sessions for this user
-    const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId!);
+    console.log(`[CRITICAL] Attempting to delete user ${userId} from auth.users...`);
+    
+    const { data: deleteData, error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId!);
+
+    console.log(`[CRITICAL] deleteUser result - data:`, JSON.stringify(deleteData), `error:`, JSON.stringify(deleteAuthError));
 
     if (deleteAuthError) {
-      console.error("Error deleting auth user:", deleteAuthError);
+      console.error("[CRITICAL] Error deleting auth user:", deleteAuthError);
       return new Response(JSON.stringify({ 
         error: "Failed to delete auth user",
-        details: deleteAuthError.message 
+        details: deleteAuthError.message,
+        code: deleteAuthError.code || "unknown"
       }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Double-check: verify user was actually deleted
+    const { data: verifyUser, error: verifyError } = await supabaseAdmin.auth.admin.getUserById(userId!);
+    if (verifyUser?.user) {
+      console.error("[CRITICAL] User still exists after deleteUser call!", verifyUser.user.email);
+      return new Response(JSON.stringify({
+        error: "User deletion failed - user still exists",
+        details: "The deleteUser API returned success but user still exists in auth.users"
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`[CRITICAL] User ${userId} successfully verified as deleted from auth.users`);
 
     // Log the deletion in audit logs
     await supabaseAdmin
