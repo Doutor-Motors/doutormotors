@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription, PLAN_FEATURES } from "@/hooks/useSubscription";
+import { ProgressStepper } from "@/components/subscription/ProgressStepper";
 import logo from "@/assets/images/logo-new-car.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -650,44 +651,14 @@ export default function SubscriptionCheckoutPage() {
           </motion.div>
         )}
 
-        {/* Progress Indicator */}
+        {/* Progress Stepper */}
         <motion.div 
-          className="flex items-center justify-center gap-3 mb-6"
+          className="mb-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          {["Dados", "Pagamento", "Ativação"].map((label, index) => {
-            const stepNumber = index + 1;
-            // Map step state to numeric index: form=1, payment/expired=2, success=3
-            const currentStepNumber = step === "form" ? 1 : step === "payment" || step === "expired" ? 2 : 3;
-            const isActive = stepNumber === currentStepNumber;
-            const isCompleted = stepNumber < currentStepNumber;
-            // Line should be green if the NEXT step is active or completed
-            const lineCompleted = stepNumber < currentStepNumber;
-            
-            return (
-              <div key={label} className="flex items-center gap-3">
-                <div className="flex flex-col items-center gap-1">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                    isCompleted ? "bg-green-500 text-white" :
-                    isActive ? "bg-primary text-white ring-4 ring-primary/30" : 
-                    "bg-white/10 text-white/50"
-                  }`}>
-                    {isCompleted ? <Check className="w-5 h-5" /> : stepNumber}
-                  </div>
-                  <span className={`text-xs font-medium ${isActive || isCompleted ? "text-white" : "text-white/50"}`}>
-                    {label}
-                  </span>
-                </div>
-                {index < 2 && (
-                  <div className={`w-12 h-0.5 rounded mb-5 transition-all duration-300 ${
-                    lineCompleted ? "bg-green-500" : "bg-white/20"
-                  }`} />
-                )}
-              </div>
-            );
-          })}
+          <ProgressStepper currentStep={3} />
         </motion.div>
 
         <motion.div
