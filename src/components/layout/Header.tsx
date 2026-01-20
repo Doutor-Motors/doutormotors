@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, ArrowRight, ArrowLeft, Download, Smartphone } from "lucide-react";
+import { Menu, X, ArrowRight, ArrowLeft, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/images/logo-new-car.png";
 
@@ -15,8 +15,7 @@ const Header = () => {
     { name: "Serviços", path: "/servicos" },
     { name: "Como Funciona", path: "/como-funciona" },
     { name: "Contato", path: "/contato" },
-    { name: "Instalar App", path: "/instalar", icon: Download },
-    { name: "Baixar App Nativo", path: "/baixar-app", icon: Smartphone, highlight: true },
+    { name: "Baixar App", path: "/baixar-app", icon: Smartphone, highlight: true },
   ];
 
   const isLandingPage = location.pathname === "/";
