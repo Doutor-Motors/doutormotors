@@ -78,7 +78,15 @@ export default function SelectPlanPage() {
       return;
     }
     // Se já tem assinatura basic ativa, vai pro dashboard
-    if (subscription && subscription.status === "active" && subscription.plan_type === "basic") {
+    // IMPORTANTE: o hook pode retornar um "Basic ativo" de fallback com id vazio.
+    // Só consideramos assinatura válida quando existe um id.
+    if (
+      subscription &&
+      subscription.status === "active" &&
+      subscription.plan_type === "basic" &&
+      subscription.id &&
+      subscription.id !== ""
+    ) {
       navigate("/dashboard", { replace: true });
       return;
     }
