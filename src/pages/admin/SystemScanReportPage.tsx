@@ -233,7 +233,7 @@ const SystemScanReportPage = () => {
   const recommendations = [
     "Habilitar 'Leaked Password Protection' nas configurações de autenticação do Supabase.",
     "Mover extensões do schema 'public' para um schema dedicado como 'extensions'.",
-    "Implementar Stripe Webhooks para atualização automática de assinaturas.",
+    "✅ Webhooks AbacatePay já configurados para atualização automática de assinaturas.",
     "Configurar backups automáticos diários do banco de dados.",
     "Adicionar monitoramento de performance com métricas de tempo de resposta.",
     "Implementar rate limiting nas edge functions para evitar abuso.",

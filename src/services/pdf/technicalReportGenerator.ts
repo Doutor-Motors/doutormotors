@@ -677,7 +677,7 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
       title: "O QUE PRECISA DE ATENÇÃO",
       items: [
         "⚠ Conexão OBD no iOS não funciona (Safari não suporta Web Bluetooth)",
-        "⚠ Integração Stripe não está configurada ainda",
+        "✅ Integração AbacatePay PIX configurada - aguardando pagamento real",
         "⚠ Verificar se e-mails estão sendo enviados em produção",
         "⚠ Testar conexão OBD com hardware real",
       ],
@@ -690,7 +690,7 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
     this.addColorBox({
       title: "O QUE NÃO FUNCIONA AINDA",
       items: [
-        "✗ Pagamentos reais (Stripe não integrado)",
+        "⏳ Aguardando primeiro pagamento PIX real para validação completa",
         "✗ App nativo completo (Capacitor configurado mas não buildado)",
         "✗ Push notifications nativas no app móvel",
       ],
@@ -708,7 +708,7 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
       headers: ["Item", "Descrição"],
       headerColor: PDF_COLORS.danger,
       data: [
-        ["Integração Stripe", "Criar checkout session, webhooks, atualização automática de subscription"],
+        ["✅ Integração AbacatePay", "Edge functions create-pix-qrcode e webhook já implementados"],
         ["Build App Nativo", "Compilar para Android (APK/AAB) e iOS (IPA), publicar nas lojas"],
         ["Conexão OBD Real", "Testar com adaptadores ELM327 reais, validar protocolos CAN/ISO"],
       ],
@@ -802,8 +802,8 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
       title: "CONCLUSÃO",
       items: [
         "O sistema Doutor Motors está funcional e bem estruturado.",
-        "Com a implementação da integração Stripe e build do app nativo,",
-        "estará pronto para produção completa e lançamento.",
+        "Integração AbacatePay PIX configurada, aguardando primeiro pagamento real.",
+        "Com o build do app nativo, estará pronto para produção completa.",
       ],
       bgColor: [240, 249, 255],
       borderColor: PDF_COLORS.accent,

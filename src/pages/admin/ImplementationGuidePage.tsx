@@ -189,22 +189,28 @@ const ImplementationGuidePage = () => {
     return dynamicGaps;
   }, [features]);
 
-  // Immediate implementation priorities
-  const immediatePriorities = [
-    {
-      order: 1,
-      title: "Integração Stripe Completa",
-      justification: "Sem pagamentos, não há modelo de receita. É o bloqueador principal para monetização.",
-      tasks: [
-        "Criar edge function para checkout session",
-        "Implementar webhook para eventos Stripe",
-        "Atualizar user_subscriptions automaticamente",
-        "Testar fluxo completo de upgrade/downgrade",
-      ],
-      estimatedEffort: "2-3 dias",
-    },
-    {
-      order: 2,
+  // Immediate implementation priorities - DINÂMICO baseado no estado real
+  const immediatePriorities = useMemo(() => {
+    const priorities = [];
+    
+    // AbacatePay - Verificar se já está funcionando
+    if (!isFeatureComplete("abacatepay-integration")) {
+      priorities.push({
+        order: 1,
+        title: "Confirmar Pagamentos PIX AbacatePay",
+        justification: "Integração AbacatePay já configurada, aguardando primeiro pagamento confirmado.",
+        tasks: [
+          "✅ Edge function create-pix-qrcode já criada",
+          "✅ Webhook abacatepay-webhook já implementado",
+          "✅ Atualização de user_subscriptions configurada",
+          "Aguardando primeiro pagamento real para validação completa",
+        ],
+        estimatedEffort: "Aguardando pagamento real",
+      });
+    }
+    
+    priorities.push({
+      order: priorities.length + 1,
       title: "Validação OBD com Hardware Real",
       justification: "Core feature do sistema. Precisa funcionar com adaptadores ELM327 reais.",
       tasks: [
@@ -214,9 +220,10 @@ const ImplementationGuidePage = () => {
         "Documentar compatibilidade",
       ],
       estimatedEffort: "3-5 dias",
-    },
-    {
-      order: 3,
+    });
+    
+    priorities.push({
+      order: priorities.length + 1,
       title: "Build App Nativo (LEMBRETE FUTURO)",
       justification: "DECISÃO: Por enquanto, manter como PWA. Quando quiser suporte completo a iPhone + WiFi, criar app nativo. Atualmente: Chrome Android e Desktop com Bluetooth funcionam. Safari/iOS e WiFi não funcionam.",
       tasks: [
@@ -228,9 +235,10 @@ const ImplementationGuidePage = () => {
         "✅ ATUAL: Código de conexão Bluetooth/WiFi nativo já existe",
       ],
       estimatedEffort: "2-4 dias quando decidir implementar",
-    },
-    {
-      order: 4,
+    });
+    
+    priorities.push({
+      order: priorities.length + 1,
       title: "Rate Limiting nas Edge Functions",
       justification: "Proteção crítica contra abusos e ataques antes de ir para produção.",
       tasks: [
@@ -240,9 +248,10 @@ const ImplementationGuidePage = () => {
         "Monitorar e ajustar limites",
       ],
       estimatedEffort: "1 dia",
-    },
-    {
-      order: 5,
+    });
+    
+    priorities.push({
+      order: priorities.length + 1,
       title: "Habilitar Leaked Password Protection",
       justification: "Configuração simples que aumenta significativamente a segurança.",
       tasks: [
@@ -251,8 +260,10 @@ const ImplementationGuidePage = () => {
         "Testar cadastro com senha vazada conhecida",
       ],
       estimatedEffort: "15 minutos",
-    },
-  ];
+    });
+    
+    return priorities;
+  }, [features]);
 
   // Evolution Roadmap
   const roadmap: RoadmapItem[] = [
@@ -585,11 +596,11 @@ const ImplementationGuidePage = () => {
                   </li>
                 </ul>
 
-                <h4 className="text-lg font-semibold mt-4">O que ainda não existe:</h4>
+                <h4 className="text-lg font-semibold mt-4">O que ainda precisa de validação:</h4>
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 list-none p-0">
                   <li className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                    Pagamentos via Stripe (checkout, webhooks)
+                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    Pagamentos PIX via AbacatePay (configurado, aguardando pagamento real)
                   </li>
                   <li className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
