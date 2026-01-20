@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { 
@@ -144,6 +145,7 @@ const PRO_BENEFITS = [
 export default function SubscriptionCheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
   const { subscription, isLoading: subLoading, isPro, isAdmin } = useSubscription();
   
@@ -371,6 +373,8 @@ export default function SubscriptionCheckoutPage() {
             setWebhookStatus("processed");
             setStep("success");
             triggerConfetti();
+            // Invalida cache de subscription para garantir que ProtectedRoute permita acesso
+            queryClient.invalidateQueries({ queryKey: ["subscription"] });
             toast.success(`Pagamento confirmado! Sua assinatura ${PLAN_FEATURES[paidPlan].name} está ativa.`);
           }
         }
@@ -517,7 +521,9 @@ export default function SubscriptionCheckoutPage() {
     }
   };
 
-  const handleGoToDashboard = () => {
+  const handleGoToDashboard = async () => {
+    // Força invalidação do cache antes de navegar para garantir dados frescos
+    await queryClient.invalidateQueries({ queryKey: ["subscription"] });
     navigate("/dashboard");
   };
 
