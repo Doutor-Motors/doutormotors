@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,7 +25,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, UserCog, Shield, User, Trash2, RefreshCw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Search, UserCog, Shield, User, Trash2, RefreshCw, AlertTriangle, Users } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -44,6 +46,13 @@ interface UserData {
   role: AppRole;
 }
 
+interface OrphanUser {
+  id: string;
+  email: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+}
+
 const AdminUsers = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +66,13 @@ const AdminUsers = () => {
   const [showQuickDeleteDialog, setShowQuickDeleteDialog] = useState(false);
   const [quickDeleteEmail, setQuickDeleteEmail] = useState("");
   const [quickDeleteLoading, setQuickDeleteLoading] = useState(false);
+
+  // Orphan users state
+  const [orphanUsers, setOrphanUsers] = useState<OrphanUser[]>([]);
+  const [orphanLoading, setOrphanLoading] = useState(false);
+  const [selectedOrphan, setSelectedOrphan] = useState<OrphanUser | null>(null);
+  const [showOrphanDeleteDialog, setShowOrphanDeleteDialog] = useState(false);
+  const [orphanDeleteLoading, setOrphanDeleteLoading] = useState(false);
 
   const { notifySuccess, notifyError } = useAdminNotifications();
 
@@ -93,6 +109,25 @@ const AdminUsers = () => {
       toast.error("Erro ao carregar usuários");
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchOrphanUsers = useCallback(async () => {
+    try {
+      setOrphanLoading(true);
+      const { data, error } = await supabase.functions.invoke("list-orphan-users", {
+        method: "GET",
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erro ao buscar usuários órfãos");
+
+      setOrphanUsers(data.orphanUsers || []);
+    } catch (error: any) {
+      console.error("Error fetching orphan users:", error);
+      toast.error(error.message || "Erro ao carregar usuários órfãos");
+    } finally {
+      setOrphanLoading(false);
     }
   }, []);
 
@@ -224,6 +259,10 @@ const AdminUsers = () => {
       setShowQuickDeleteDialog(false);
       setQuickDeleteEmail("");
       fetchUsers();
+      // Also refresh orphan list if it was loaded
+      if (orphanUsers.length > 0) {
+        fetchOrphanUsers();
+      }
     } catch (error: any) {
       console.error("Error deleting user by email:", error);
       const errorMessage = error.message || "Erro ao remover usuário. Verifique os logs.";
@@ -231,6 +270,34 @@ const AdminUsers = () => {
       notifyError("Erro", errorMessage);
     } finally {
       setQuickDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteOrphanUser = async () => {
+    if (!selectedOrphan) return;
+
+    try {
+      setOrphanDeleteLoading(true);
+
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { userId: selectedOrphan.id },
+      });
+
+      if (error) throw new Error(error.message || "Erro ao excluir usuário");
+      if (!data?.success) throw new Error(data?.error || "Erro ao excluir usuário");
+
+      toast.success(`Usuário órfão ${selectedOrphan.email || selectedOrphan.id} removido!`);
+      notifySuccess("Usuário Órfão Removido", `${selectedOrphan.email || selectedOrphan.id} foi removido do sistema`);
+      setShowOrphanDeleteDialog(false);
+      setSelectedOrphan(null);
+      fetchOrphanUsers();
+    } catch (error: any) {
+      console.error("Error deleting orphan user:", error);
+      const errorMessage = error.message || "Erro ao remover usuário órfão.";
+      toast.error(errorMessage);
+      notifyError("Erro", errorMessage);
+    } finally {
+      setOrphanDeleteLoading(false);
     }
   };
 
@@ -305,78 +372,194 @@ const AdminUsers = () => {
           </div>
         </div>
 
-        {/* Users Table */}
-        <Card className="border-dm-cadet/20">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Cadastro</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      Carregando...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredUsers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      Nenhum usuário encontrado
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone || "-"}</TableCell>
-                      <TableCell>{getRoleBadge(user.role)}</TableCell>
-                      <TableCell>
-                        {new Date(user.created_at).toLocaleDateString("pt-BR")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setNewRole(user.role);
-                              setShowRoleDialog(true);
-                            }}
-                            title="Alterar papel"
-                          >
-                            <UserCog className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowDeleteDialog(true);
-                            }}
-                            title="Remover usuário"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+        {/* Tabs for Users and Orphans */}
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Usuários ({users.length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="orphans" 
+              className="flex items-center gap-2"
+              onClick={() => {
+                if (orphanUsers.length === 0 && !orphanLoading) {
+                  fetchOrphanUsers();
+                }
+              }}
+            >
+              <AlertTriangle className="w-4 h-4" />
+              Órfãos {orphanUsers.length > 0 && (
+                <Badge variant="destructive" className="ml-1">
+                  {orphanUsers.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="mt-4">
+            <Card className="border-dm-cadet/20">
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Papel</TableHead>
+                      <TableHead>Cadastro</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          Carregando...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          Nenhum usuário encontrado
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredUsers.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.name}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.phone || "-"}</TableCell>
+                          <TableCell>{getRoleBadge(user.role)}</TableCell>
+                          <TableCell>
+                            {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setNewRole(user.role);
+                                  setShowRoleDialog(true);
+                                }}
+                                title="Alterar papel"
+                              >
+                                <UserCog className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setShowDeleteDialog(true);
+                                }}
+                                title="Remover usuário"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Orphan Users Tab */}
+          <TabsContent value="orphans" className="mt-4">
+            <Card className="border-destructive/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-destructive" />
+                    <div>
+                      <h3 className="font-semibold">Usuários Órfãos</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Contas em auth.users sem perfil correspondente. Esses usuários conseguem fazer login mas não aparecem na lista normal.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchOrphanUsers}
+                    disabled={orphanLoading}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${orphanLoading ? 'animate-spin' : ''}`} />
+                    Atualizar
+                  </Button>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Criado em</TableHead>
+                      <TableHead>Último login</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orphanLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8">
+                          Buscando usuários órfãos...
+                        </TableCell>
+                      </TableRow>
+                    ) : orphanUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          ✓ Nenhum usuário órfão encontrado
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      orphanUsers.map((orphan) => (
+                        <TableRow key={orphan.id} className="bg-destructive/5">
+                          <TableCell className="font-medium">
+                            {orphan.email || <span className="text-muted-foreground italic">Sem email</span>}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {orphan.id.slice(0, 8)}...
+                          </TableCell>
+                          <TableCell>
+                            {new Date(orphan.created_at).toLocaleDateString("pt-BR")}
+                          </TableCell>
+                          <TableCell>
+                            {orphan.last_sign_in_at 
+                              ? new Date(orphan.last_sign_in_at).toLocaleDateString("pt-BR") 
+                              : "-"
+                            }
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedOrphan(orphan);
+                                setShowOrphanDeleteDialog(true);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Quick Delete Dialog */}
         <Dialog open={showQuickDeleteDialog} onOpenChange={setShowQuickDeleteDialog}>
@@ -478,6 +661,7 @@ const AdminUsers = () => {
                 </p>
                 <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
                   <li>Remover a conta de login do usuário</li>
+                  <li>Revogar todas as sessões ativas</li>
                   <li>Excluir todos os veículos cadastrados</li>
                   <li>Excluir todos os diagnósticos realizados</li>
                   <li>Excluir tickets de suporte</li>
@@ -496,6 +680,42 @@ const AdminUsers = () => {
               <Button variant="destructive" onClick={handleDeleteUser}>
                 <Trash2 className="w-4 h-4 mr-2" />
                 Remover Permanentemente
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Orphan Delete Dialog */}
+        <Dialog open={showOrphanDeleteDialog} onOpenChange={setShowOrphanDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-destructive flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                Excluir Usuário Órfão
+              </DialogTitle>
+              <DialogDescription className="space-y-2">
+                <p>
+                  Confirma a exclusão do usuário órfão <strong>{selectedOrphan?.email || selectedOrphan?.id}</strong>?
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Este usuário existe em auth.users mas não tem perfil. A exclusão removerá a conta de autenticação permanentemente.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowOrphanDeleteDialog(false)}
+                disabled={orphanDeleteLoading}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteOrphanUser}
+                disabled={orphanDeleteLoading}
+              >
+                {orphanDeleteLoading ? "Excluindo..." : "Excluir Permanentemente"}
               </Button>
             </DialogFooter>
           </DialogContent>
