@@ -35,3 +35,15 @@ verify_jwt = false
 
 [functions.abacatepay-webhook]
 verify_jwt = false
+
+[functions.create-pix-qrcode]
+verify_jwt = false
+
+[functions.check-subscription-renewal]
+verify_jwt = false
+
+[functions.check-spam-alerts]
+verify_jwt = false
+
+[functions.carcare-scheduled-scan]
+verify_jwt = false
