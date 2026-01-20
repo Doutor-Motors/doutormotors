@@ -49,10 +49,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubscription, PLAN_FEATURES } from "@/hooks/useSubscription";
 import { ProgressStepper } from "@/components/subscription/ProgressStepper";
 import PaymentGuard from "@/components/subscription/PaymentGuard";
+import AwaitingActivation from "@/components/subscription/AwaitingActivation";
 import logo from "@/assets/images/logo-new-car.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
-type CheckoutStep = "form" | "payment" | "success" | "expired";
+type CheckoutStep = "form" | "payment" | "awaiting_activation" | "success" | "expired";
 
 interface PixPaymentData {
   id: string;
