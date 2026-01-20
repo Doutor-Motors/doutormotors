@@ -71,12 +71,12 @@ const GUIDE_SECTIONS = [
     id: "4",
     title: "Fluxo de Pagamento Seguro",
     icon: Shield,
-    status: "pending",
-    description: "Integração Stripe e tratamento de falhas",
+    status: "complete",
+    description: "Integração AbacatePay PIX e tratamento de falhas",
     items: [
       "Jornada do usuário (7 etapas)",
-      "Integração com Stripe Checkout",
-      "Webhooks e eventos",
+      "Integração com AbacatePay PIX QR Code",
+      "Webhooks e eventos de confirmação",
       "Tratamento de falhas e estornos",
     ],
   },
@@ -134,12 +134,12 @@ const GUIDE_SECTIONS = [
 ];
 
 const IMPLEMENTATION_CHECKLIST = [
-  { id: "stripe", label: "Integração Stripe habilitada", done: false },
-  { id: "products", label: "Produtos e preços criados no Stripe", done: false },
-  { id: "checkout", label: "Edge Function de checkout implementada", done: false },
-  { id: "webhook", label: "Webhook de eventos implementado", done: false },
-  { id: "sandbox", label: "Testes em modo sandbox", done: false },
-  { id: "emails", label: "Emails transacionais configurados", done: false },
+  { id: "gateway", label: "Integração AbacatePay habilitada", done: true },
+  { id: "products", label: "Planos Basic e Pro configurados", done: true },
+  { id: "checkout", label: "Edge Function de checkout (create-pix-qrcode)", done: true },
+  { id: "webhook", label: "Webhook de eventos (abacatepay-webhook)", done: true },
+  { id: "sandbox", label: "Testes em modo sandbox (devMode)", done: true },
+  { id: "emails", label: "Emails transacionais configurados", done: true },
   { id: "production", label: "Lançamento em produção", done: false },
 ];
 
