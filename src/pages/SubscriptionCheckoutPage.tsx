@@ -20,7 +20,9 @@ import {
   TrendingUp,
   Timer,
   AlertTriangle,
-  Play
+  Play,
+  User,
+  LogOut
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -135,6 +147,7 @@ export default function SubscriptionCheckoutPage() {
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
   const [simulatingPayment, setSimulatingPayment] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<"idle" | "waiting" | "received" | "processed">("idle");
+  const [showExitDialog, setShowExitDialog] = useState(false);
   
   // Timer state
   const [timeRemaining, setTimeRemaining] = useState(PIX_TIMEOUT_SECONDS);
@@ -152,6 +165,10 @@ export default function SubscriptionCheckoutPage() {
     name?: string;
     selectedPlan?: "basic" | "pro";
   } | null;
+
+  // Get user display info
+  const userName = signupData?.name || user?.user_metadata?.name || "";
+  const userEmail = signupData?.email || user?.email || "";
   
   // Get the selected plan (default to pro if not specified)
   const selectedPlan = signupData?.selectedPlan || "pro";
@@ -455,16 +472,21 @@ export default function SubscriptionCheckoutPage() {
     navigate("/dashboard");
   };
 
-  // Sair: faz logout completo e redireciona para home
-  // O cadastro fica "pendente" até o pagamento ser concluído
-  const handleExit = async () => {
+  // Sair: mostra modal de confirmação
+  const handleExitClick = () => {
+    setShowExitDialog(true);
+  };
+
+  // Confirma saída: faz logout completo e redireciona para home
+  const handleExitConfirm = async () => {
+    setShowExitDialog(false);
     try {
       await supabase.auth.signOut();
       toast.info("Você saiu. Finalize o pagamento para acessar o sistema.");
-      navigate("/");
+      navigate("/", { replace: true });
     } catch (error) {
       console.error("Erro ao sair:", error);
-      navigate("/");
+      navigate("/", { replace: true });
     }
   };
 
@@ -513,17 +535,61 @@ export default function SubscriptionCheckoutPage() {
         backgroundPosition: "center",
       }}
     >
-      {/* Botão Sair - Fixed */}
+      {/* Exit Confirmation Dialog */}
+      <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">Tem certeza que deseja sair?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Você será desconectado e precisará fazer login novamente para continuar o processo de pagamento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-muted text-foreground hover:bg-muted/80">
+              Continuar pagando
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleExitConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sim, sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Header with User Info + Exit Button - Fixed */}
       {step !== "success" && (
-        <div className="fixed top-4 left-4 z-50 flex gap-2">
-          <Button
-            variant="ghost"
-            onClick={handleExit}
-            className="gap-2 font-chakra uppercase text-sm text-white/80 hover:text-red-400 hover:bg-red-500/10"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Sair</span>
-          </Button>
+        <div className="fixed top-0 left-0 right-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-white/10">
+          <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+            {/* User Info */}
+            {(userName || userEmail) && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
+                <User className="w-4 h-4 text-primary" />
+                <div className="flex flex-col">
+                  {userName && (
+                    <span className="text-xs font-medium text-white truncate max-w-[120px]">
+                      {userName}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-white/60 truncate max-w-[120px]">
+                    {userEmail}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {/* Exit Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleExitClick}
+              className="gap-2 text-white/70 hover:text-red-400 hover:bg-red-500/10"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
+          </div>
         </div>
       )}
 
@@ -552,7 +618,7 @@ export default function SubscriptionCheckoutPage() {
         )}
       </AnimatePresence>
 
-      <div className="w-full max-w-lg">
+      <div className={`w-full max-w-lg ${step !== "success" ? "pt-16" : ""}`}>
         {/* Logo */}
         <motion.div 
           className="flex flex-col items-center mb-6 cursor-default"
