@@ -21,6 +21,7 @@ interface CreatePixRequest {
   metadata?: {
     externalId?: string;
     planType?: string;
+    userId?: string;
   };
 }
 
@@ -59,7 +60,6 @@ Deno.serve(async (req) => {
     }
 
     // VALIDAÇÃO CRÍTICA: Valor mínimo do plano
-    // Se o valor for menor que R$ 29,90 (2990 centavos), rejeita
     if (body.amount < MINIMUM_PLAN_AMOUNT_CENTS) {
       console.error(`Amount ${body.amount} is less than minimum ${MINIMUM_PLAN_AMOUNT_CENTS}`);
       return new Response(JSON.stringify({ 
@@ -80,15 +80,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Call AbacatePay PIX QRCode API directly (not billing)
-    // This returns the brCode and brCodeBase64 for direct PIX payment
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Generate external ID for tracking
+    const externalId = body.metadata?.externalId || crypto.randomUUID();
+
+    // Call AbacatePay PIX QRCode API with customer data (as per their documentation)
     console.log("Calling AbacatePay PIX QRCode API...");
     
-    // O valor já vem em centavos do frontend
     const pixPayload = {
-      amount: body.amount, // AbacatePay espera em centavos
+      amount: body.amount, // AbacatePay expects cents
       expiresIn: body.expiresIn || 3600, // seconds (default 1 hour)
       description: body.description || "Assinatura Doutor Motors Pro",
+      customer: {
+        name: body.customer.name,
+        cellphone: body.customer.cellphone || "",
+        email: body.customer.email,
+        taxId: body.customer.taxId.replace(/\D/g, ""), // Remove formatting from CPF
+      },
+      metadata: {
+        externalId: externalId,
+        userId: body.metadata?.userId || "",
+        planType: body.metadata?.planType || "pro",
+      }
     };
 
     console.log("AbacatePay PIX payload:", JSON.stringify(pixPayload, null, 2));
@@ -136,14 +153,11 @@ Deno.serve(async (req) => {
     }
 
     // Use the base64 QR code from AbacatePay or generate one
-    const qrCodeUrl = brCodeBase64 || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brCode)}`;
+    const qrCodeUrl = brCodeBase64 
+      ? `data:image/png;base64,${brCodeBase64}`
+      : `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brCode)}`;
     
     console.log("PIX created:", pixId, "brCode length:", brCode.length);
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Use expiration from AbacatePay response or calculate
     const paymentExpiresAt = pixExpiresAt || new Date(Date.now() + (body.expiresIn || 3600) * 1000).toISOString();
@@ -163,10 +177,11 @@ Deno.serve(async (req) => {
         customer_tax_id: body.customer.taxId,
         description: body.description || "Assinatura Doutor Motors Pro",
         metadata: { 
-          ...(body.metadata || {}),
+          externalId: externalId,
           devMode: pix.devMode,
           originalAmount: body.amount,
           planType: body.metadata?.planType || "pro",
+          userId: body.metadata?.userId,
         },
         expires_at: paymentExpiresAt,
       })

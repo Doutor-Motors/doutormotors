@@ -12,7 +12,6 @@ Deno.serve(async (req) => {
   }
 
   // AbacatePay panels sometimes "test" the URL with GET/HEAD.
-  // Return 200 for these methods so the endpoint can be verified.
   if (req.method === "GET" || req.method === "HEAD") {
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
@@ -34,11 +33,24 @@ Deno.serve(async (req) => {
     // Get the signature from headers
     const signature = req.headers.get("x-webhook-signature");
     
-    // Parse the request body
-    const body = await req.json();
+    // Get raw body for signature verification
+    const rawBody = await req.text();
+    let body;
+    
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      console.error("Failed to parse webhook body");
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
     console.log("Webhook received:", JSON.stringify(body, null, 2));
 
     // Validate webhook signature if secret is configured
+    let signatureValid = false;
     if (webhookSecret && signature) {
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -52,15 +64,17 @@ Deno.serve(async (req) => {
       const signatureBytes = await crypto.subtle.sign(
         "HMAC",
         key,
-        encoder.encode(JSON.stringify(body))
+        encoder.encode(rawBody)
       );
       
       const expectedSignature = Array.from(new Uint8Array(signatureBytes))
         .map(b => b.toString(16).padStart(2, "0"))
         .join("");
       
-      if (signature !== expectedSignature) {
-        console.warn("Invalid webhook signature");
+      signatureValid = signature === expectedSignature;
+      
+      if (!signatureValid) {
+        console.warn("Invalid webhook signature - expected:", expectedSignature, "received:", signature);
       }
     }
 
@@ -69,92 +83,148 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Log webhook for debugging
+    await supabase.from("webhook_logs").insert({
+      provider: "abacatepay",
+      event_type: body.event || body.type || "unknown",
+      payload: body,
+      signature_valid: signatureValid,
+      ip_address: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
+      user_agent: req.headers.get("user-agent"),
+    });
+
     // Handle different event types from AbacatePay
     const eventType = body.event || body.type;
     console.log("Event type:", eventType);
 
-    // Handle billing paid event
-    if (eventType === "billing.paid" || eventType === "BILLING_PAID") {
-      const billing = body.billing || body.data?.billing || body.data;
-      const billingId = billing?.id || body.billingId;
+    // Handle PIX QR Code paid event
+    if (eventType === "pixQrCode.paid" || eventType === "PIXQRCODE_PAID" || 
+        eventType === "billing.paid" || eventType === "BILLING_PAID") {
       
-      if (!billingId) {
-        console.error("No billing ID in webhook");
-        return new Response(JSON.stringify({ received: true, warning: "No billing ID" }), {
+      // Try to extract PIX ID from different possible locations in the payload
+      const pixQrCode = body.data?.pixQrCode || body.pixQrCode || body.data;
+      const pixId = pixQrCode?.id || body.pixQrCodeId || body.id;
+      
+      if (!pixId) {
+        console.error("No PIX ID in webhook payload");
+        return new Response(JSON.stringify({ received: true, warning: "No PIX ID found" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      console.log("Processing paid billing:", billingId);
+      console.log("Processing paid PIX:", pixId);
 
-      // Update pix_payments table (for checkout demo)
-      const { data: pixPayment, error: pixError } = await supabase
+      // Find and update the pix_payments record
+      const { data: pixPayment, error: findError } = await supabase
+        .from("pix_payments")
+        .select("*")
+        .eq("pix_id", pixId)
+        .single();
+
+      if (findError || !pixPayment) {
+        console.log("PIX payment not found for ID:", pixId, findError);
+        return new Response(JSON.stringify({ received: true, warning: "Payment not found" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Update pix_payments status
+      const { error: updateError } = await supabase
         .from("pix_payments")
         .update({
           status: "paid",
           paid_at: new Date().toISOString(),
         })
-        .eq("pix_id", billingId)
-        .select()
-        .single();
+        .eq("pix_id", pixId);
 
-      if (pixError) {
-        console.log("PIX payment not found or update failed:", pixError);
+      if (updateError) {
+        console.error("Error updating PIX payment:", updateError);
       } else {
-        console.log("PIX payment updated:", pixPayment?.id);
+        console.log("PIX payment marked as paid:", pixPayment.id);
       }
 
-      // Also update regular payments table (for subscriptions)
-      const { data: payment, error: paymentError } = await supabase
-        .from("payments")
-        .select("*, user_subscriptions(*)")
-        .or(`picpay_charge_id.eq.${billingId},metadata->abacatepay_billing_id.eq.${billingId}`)
-        .single();
+      // Get user ID from metadata if available
+      const metadata = pixPayment.metadata as Record<string, unknown> | null;
+      const userId = metadata?.userId as string | undefined;
+      const planType = (metadata?.planType as string) || "pro";
 
-      if (!paymentError && payment) {
-        console.log("Found subscription payment:", payment.id);
+      // If we have a user ID, activate their subscription
+      if (userId) {
+        console.log("Activating subscription for user:", userId);
 
-        // Update payment status
-        await supabase
-          .from("payments")
-          .update({
-            status: "paid",
-            paid_at: new Date().toISOString(),
-            picpay_end_to_end_id: body.payment?.id || null,
-            metadata: {
-              ...((payment.metadata as Record<string, unknown>) || {}),
-              abacatepay_payment: body.payment,
-              paid_via: "abacatepay_webhook",
-            },
-          })
-          .eq("id", payment.id);
+        const now = new Date();
+        const expiresAt = new Date();
+        expiresAt.setMonth(expiresAt.getMonth() + 1); // 1 month subscription
 
-        // Activate subscription if exists
-        if (payment.subscription_id) {
-          const now = new Date();
-          const expiresAt = new Date();
-          expiresAt.setMonth(expiresAt.getMonth() + 1);
+        // Check if user already has a subscription
+        const { data: existingSub } = await supabase
+          .from("user_subscriptions")
+          .select("id")
+          .eq("user_id", userId)
+          .single();
 
-          await supabase
+        if (existingSub) {
+          // Update existing subscription
+          const { error: subError } = await supabase
             .from("user_subscriptions")
             .update({
               status: "active",
+              plan_type: planType,
               started_at: now.toISOString(),
               expires_at: expiresAt.toISOString(),
               next_billing_at: expiresAt.toISOString(),
               payment_method: "pix_abacatepay",
+              updated_at: now.toISOString(),
             })
-            .eq("id", payment.subscription_id);
+            .eq("user_id", userId);
 
-          console.log("Subscription activated:", payment.subscription_id);
+          if (subError) {
+            console.error("Error updating subscription:", subError);
+          } else {
+            console.log("Subscription updated for user:", userId);
+          }
+        } else {
+          // Create new subscription
+          const { error: subError } = await supabase
+            .from("user_subscriptions")
+            .insert({
+              user_id: userId,
+              status: "active",
+              plan_type: planType,
+              started_at: now.toISOString(),
+              expires_at: expiresAt.toISOString(),
+              next_billing_at: expiresAt.toISOString(),
+              payment_method: "pix_abacatepay",
+            });
+
+          if (subError) {
+            console.error("Error creating subscription:", subError);
+          } else {
+            console.log("Subscription created for user:", userId);
+          }
         }
+
+        // Also create a payment record for tracking
+        await supabase.from("payments").insert({
+          user_id: userId,
+          amount_cents: pixPayment.amount,
+          status: "paid",
+          method: "pix",
+          paid_at: now.toISOString(),
+          metadata: {
+            pix_payment_id: pixPayment.id,
+            pix_id: pixId,
+            provider: "abacatepay",
+          },
+        });
       }
 
-      console.log("Payment processed successfully");
+      console.log("Payment processed successfully via webhook");
     }
 
-    return new Response(JSON.stringify({ received: true }), {
+    return new Response(JSON.stringify({ received: true, processed: true }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
