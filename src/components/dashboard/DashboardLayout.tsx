@@ -185,7 +185,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {isSidebarOpen && (
         <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setIsSidebarOpen(false)}>
           <aside 
-            className="absolute left-0 top-0 bottom-0 w-64 bg-dm-space text-primary-foreground pt-16"
+            className="absolute left-0 top-0 bottom-0 w-64 bg-dm-space text-primary-foreground pt-24"
             onClick={(e) => e.stopPropagation()}
           >
             <nav className="flex-1 px-4 py-4">
@@ -246,7 +246,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-0 pt-16 lg:pt-0">
+      <main className="flex-1 lg:ml-0 pt-24 lg:pt-0">
         <div className="p-4 md:p-6 lg:p-8">
           {/* Botão Voltar Desktop - dentro do conteúdo */}
           {!isDashboardHome && (
