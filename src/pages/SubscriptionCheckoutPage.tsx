@@ -397,14 +397,16 @@ export default function SubscriptionCheckoutPage() {
     navigate("/dashboard");
   };
 
-  const handleBack = () => {
-    if (step === "payment" || step === "expired") {
-      setStep("form");
-      setPixData(null);
-      setTimerStarted(false);
-      setTimeRemaining(PIX_TIMEOUT_SECONDS);
-    } else {
-      navigate(-1);
+  // Sair: faz logout completo e redireciona para home
+  // O cadastro fica "pendente" até o pagamento ser concluído
+  const handleExit = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.info("Você saiu. Finalize o pagamento para acessar o sistema.");
+      navigate("/");
+    } catch (error) {
+      console.error("Erro ao sair:", error);
+      navigate("/");
     }
   };
 
@@ -415,8 +417,8 @@ export default function SubscriptionCheckoutPage() {
     setTimeRemaining(PIX_TIMEOUT_SECONDS);
   };
 
-  // Reset completo: limpa tudo e volta ao início
-  const handleFullReset = () => {
+  // Reset do formulário (volta para step form sem sair)
+  const handleResetForm = () => {
     setStep("form");
     setPixData(null);
     setTimerStarted(false);
@@ -428,11 +430,6 @@ export default function SubscriptionCheckoutPage() {
       customerTaxId: "",
     });
     setCopied(false);
-  };
-
-  // Cancelar checkout e voltar à página inicial
-  const handleCancelCheckout = () => {
-    navigate("/");
   };
 
   if (authLoading || subLoading) {
@@ -458,38 +455,29 @@ export default function SubscriptionCheckoutPage() {
         backgroundPosition: "center",
       }}
     >
-      {/* Back Button - Fixed */}
+      {/* Botão Sair - Fixed */}
       {step !== "success" && (
         <div className="fixed top-4 left-4 z-50 flex gap-2">
           <Button
             variant="ghost"
-            onClick={handleBack}
-            className="gap-2 font-chakra uppercase text-sm text-white/80 hover:text-white hover:bg-white/10"
+            onClick={handleExit}
+            className="gap-2 font-chakra uppercase text-sm text-white/80 hover:text-red-400 hover:bg-red-500/10"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Voltar</span>
-          </Button>
-          
-          {/* Botão de cancelar/sair */}
-          <Button
-            variant="ghost"
-            onClick={handleCancelCheckout}
-            className="gap-2 font-chakra uppercase text-xs text-white/60 hover:text-red-400 hover:bg-red-500/10"
-          >
-            <span className="hidden sm:inline">Sair</span>
+            <span>Sair</span>
           </Button>
         </div>
       )}
 
-      {/* Reset Button - Only show when stuck (payment or expired) */}
+      {/* Botão Recomeçar - Only show when in payment or expired */}
       {(step === "payment" || step === "expired") && (
         <Button
           variant="outline"
-          onClick={handleFullReset}
+          onClick={handleResetForm}
           className="fixed bottom-4 left-4 z-50 gap-2 font-chakra uppercase text-xs border-white/20 text-white/70 hover:text-white hover:bg-white/10"
         >
           <ArrowLeft className="w-3 h-3" />
-          Recomeçar do Zero
+          Recomeçar
         </Button>
       )}
 
