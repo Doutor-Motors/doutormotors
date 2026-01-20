@@ -61,6 +61,10 @@ interface PixPaymentData {
   qr_code_url: string;
   expires_at: string;
   devMode?: boolean;
+  // Vem do DB no realtime; usamos para saber qual plano foi pago
+  metadata?: unknown;
+  // Retornado pela edge function no momento de criação
+  plan_type?: "basic" | "pro";
 }
 
 interface FormData {
@@ -203,23 +207,36 @@ export default function SubscriptionCheckoutPage() {
   }, []);
   
   // Pre-fill with data from signup, including selected plan
-  const signupData = location.state as { 
-    fromSignup?: boolean; 
-    email?: string; 
+  const signupData = location.state as {
+    fromSignup?: boolean;
+    email?: string;
     name?: string;
     selectedPlan?: "basic" | "pro";
   } | null;
 
-  // Get user display info
-  const userName = signupData?.name || user?.user_metadata?.name || "";
-  const userEmail = signupData?.email || user?.email || "";
-  
-  // Get the selected plan (default to pro if not specified)
-  const selectedPlan = signupData?.selectedPlan || "pro";
+  const normalizePlanType = (value: unknown): "basic" | "pro" | null => {
+    const v = String(value ?? "").trim().toLowerCase();
+    if (v === "basic") return "basic";
+    if (v === "pro") return "pro";
+    return null;
+  };
+
+  const planFromQuery = normalizePlanType(new URLSearchParams(location.search).get("plan"));
+  const planFromState = normalizePlanType(signupData?.selectedPlan);
+
+  // IMPORTANTE: fallback em Basic (mais seguro) quando não houver escolha explícita
+  const [selectedPlan, setSelectedPlan] = useState<"basic" | "pro">(
+    planFromState ?? planFromQuery ?? "basic"
+  );
+
   const planConfig = PLAN_FEATURES[selectedPlan];
   const planPriceInCents = planConfig.priceValue;
   const formattedPrice = formatCurrency(planPriceInCents);
   const planName = planConfig.name;
+
+  // Get user display info
+  const userName = signupData?.name || user?.user_metadata?.name || "";
+  const userEmail = signupData?.email || user?.email || "";
   
   const [formData, setFormData] = useState<FormData>({
     customerName: signupData?.name || "",
@@ -335,19 +352,26 @@ export default function SubscriptionCheckoutPage() {
         async (payload) => {
           console.log("Payment updated:", payload);
           const newData = payload.new as PixPaymentData;
-          setPixData(prev => prev ? { ...prev, ...newData } : null);
-          
+          setPixData((prev) => (prev ? { ...prev, ...newData } : null));
+
+          // Tenta inferir o plano pago pelo metadata.planType (vem do DB)
+          const paidPlanFromMetadata = normalizePlanType(
+            (newData.metadata as any)?.planType
+          );
+          const paidPlan = paidPlanFromMetadata ?? selectedPlan;
+
+          if (paidPlanFromMetadata) {
+            setSelectedPlan(paidPlanFromMetadata);
+          }
+
           // Update webhook status indicator
           setWebhookStatus("received");
 
           if (newData.status === "paid") {
             setWebhookStatus("processed");
-            // Activate subscription
-            await activateSubscription();
             setStep("success");
-            // Trigger confetti celebration
             triggerConfetti();
-            toast.success(`Pagamento confirmado! Sua assinatura ${planName} está ativa.`);
+            toast.success(`Pagamento confirmado! Sua assinatura ${PLAN_FEATURES[paidPlan].name} está ativa.`);
           }
         }
       )
@@ -358,33 +382,8 @@ export default function SubscriptionCheckoutPage() {
     };
   }, [pixData?.id]);
 
-  const activateSubscription = async () => {
-    if (!user) return;
-
-    try {
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
-
-      const { error } = await supabase
-        .from("user_subscriptions")
-        .upsert({
-          user_id: user.id,
-          plan_type: selectedPlan,
-          status: "active",
-          started_at: new Date().toISOString(),
-          expires_at: expiresAt.toISOString(),
-          payment_method: "pix",
-        }, {
-          onConflict: "user_id"
-        });
-
-      if (error) {
-        console.error("Error activating subscription:", error);
-      }
-    } catch (error) {
-      console.error("Error activating subscription:", error);
-    }
-  };
+  // A ativação da assinatura é feita pelo webhook (abacatepay-webhook) usando metadata.planType
+  // para evitar inconsistências quando o usuário dá refresh na página.
 
   // Simulate payment (DevMode only)
   const handleSimulatePayment = async () => {
@@ -487,6 +486,10 @@ export default function SubscriptionCheckoutPage() {
         setLoading(false);
         return;
       }
+
+      // Mantém o plano alinhado com o que a edge function retornou
+      const returnedPlan = normalizePlanType((data?.data as any)?.plan_type);
+      if (returnedPlan) setSelectedPlan(returnedPlan);
 
       setPixData(data.data);
       setStep("payment");
