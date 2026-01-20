@@ -15,7 +15,9 @@ type TableName =
   | 'coding_executions'
   | 'contact_messages'
   | 'system_alerts'
-  | 'audit_logs';
+  | 'audit_logs'
+  | 'pix_payments'
+  | 'payments';
 
 type ChangeEvent = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
 
