@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, subDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   CreditCard,
@@ -13,13 +13,19 @@ import {
   AlertCircle,
   Crown,
   User,
+  Download,
+  Filter,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { generatePaymentReceipt } from "@/services/pdf/paymentReceiptGenerator";
+import { toast } from "sonner";
 
 interface PixPayment {
   id: string;
@@ -28,11 +34,22 @@ interface PixPayment {
   created_at: string;
   paid_at: string | null;
   expires_at: string | null;
+  customer_name?: string;
+  customer_email?: string;
   metadata: {
     planType?: string;
     [key: string]: unknown;
   } | null;
 }
+
+type PeriodFilter = "all" | "30" | "60" | "90";
+
+const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "30", label: "30 dias" },
+  { value: "60", label: "60 dias" },
+  { value: "90", label: "90 dias" },
+];
 
 const formatCurrency = (cents: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -99,6 +116,7 @@ const getPlanBadge = (planType: string | undefined) => {
 
 export default function MyPaymentsPage() {
   const { user } = useAuth();
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
 
   const { data: payments, isLoading, error } = useQuery({
     queryKey: ["my-payments", user?.id],
@@ -126,8 +144,38 @@ export default function MyPaymentsPage() {
     enabled: !!user?.id,
   });
 
-  const paidPayments = payments?.filter((p) => p.status === "paid") || [];
+  // Filter payments by period
+  const filteredPayments = useMemo(() => {
+    if (!payments) return [];
+    if (periodFilter === "all") return payments;
+
+    const daysAgo = parseInt(periodFilter);
+    const cutoffDate = subDays(new Date(), daysAgo);
+
+    return payments.filter((p) => isAfter(new Date(p.created_at), cutoffDate));
+  }, [payments, periodFilter]);
+
+  const paidPayments = filteredPayments.filter((p) => p.status === "paid");
   const totalPaid = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+
+  const handleDownloadReceipt = (payment: PixPayment) => {
+    try {
+      generatePaymentReceipt({
+        id: payment.id,
+        amount: payment.amount,
+        status: payment.status,
+        created_at: payment.created_at,
+        paid_at: payment.paid_at,
+        planType: payment.metadata?.planType,
+        customerName: payment.customer_name,
+        customerEmail: payment.customer_email,
+      });
+      toast.success("Recibo gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar recibo:", error);
+      toast.error("Erro ao gerar recibo. Tente novamente.");
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -144,6 +192,31 @@ export default function MyPaymentsPage() {
           </div>
         </div>
 
+        {/* Period Filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Filter className="w-4 h-4" />
+            <span>Período:</span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {PERIOD_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                variant={periodFilter === option.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPeriodFilter(option.value)}
+                className={`font-chakra uppercase text-xs ${
+                  periodFilter === option.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-transparent border-border hover:bg-muted"
+                }`}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         {/* Summary Card */}
         <Card className="bg-card border-border">
           <CardContent className="p-6">
@@ -154,7 +227,7 @@ export default function MyPaymentsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total de Pagamentos</p>
-                  <p className="text-xl font-bold text-foreground">{payments?.length || 0}</p>
+                  <p className="text-xl font-bold text-foreground">{filteredPayments.length}</p>
                 </div>
               </div>
 
@@ -189,7 +262,9 @@ export default function MyPaymentsPage() {
               Histórico de Transações
             </CardTitle>
             <CardDescription>
-              Todas as transações PIX realizadas na sua conta
+              {periodFilter === "all"
+                ? "Todas as transações PIX realizadas na sua conta"
+                : `Transações dos últimos ${periodFilter} dias`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -203,21 +278,24 @@ export default function MyPaymentsPage() {
                 <p className="text-foreground font-semibold">Erro ao carregar pagamentos</p>
                 <p className="text-muted-foreground text-sm">Tente novamente mais tarde</p>
               </div>
-            ) : payments?.length === 0 ? (
+            ) : filteredPayments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <CreditCard className="w-12 h-12 text-muted-foreground mb-4" />
                 <p className="text-foreground font-semibold">Nenhum pagamento encontrado</p>
                 <p className="text-muted-foreground text-sm">
-                  Seus pagamentos PIX aparecerão aqui
+                  {periodFilter === "all"
+                    ? "Seus pagamentos PIX aparecerão aqui"
+                    : `Nenhum pagamento nos últimos ${periodFilter} dias`}
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
-                {payments?.map((payment, index) => {
+                {filteredPayments.map((payment, index) => {
                   const statusConfig = getStatusConfig(payment.status);
                   const StatusIcon = statusConfig.icon;
                   const planConfig = getPlanBadge(payment.metadata?.planType);
                   const PlanIcon = planConfig.icon;
+                  const isPaid = payment.status === "paid";
 
                   return (
                     <div key={payment.id}>
@@ -257,6 +335,26 @@ export default function MyPaymentsPage() {
                           <span className="text-xl font-bold text-foreground">
                             {formatCurrency(payment.amount)}
                           </span>
+                          {isPaid && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDownloadReceipt(payment)}
+                                    className="gap-2 border-green-500/30 text-green-500 hover:bg-green-500/10 hover:text-green-400"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Recibo</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Baixar recibo em PDF</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
                       </div>
                     </div>
