@@ -4,6 +4,7 @@ import { Menu, X, ArrowRight, ArrowLeft, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/images/logo-new-car.png";
 import MobileMenuOverlay from "@/components/layout/MobileMenuOverlay";
+import FloatingMenuButton from "@/components/layout/FloatingMenuButton";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -192,6 +193,12 @@ const Header = () => {
           onClose={() => setIsMenuOpen(false)}
         />
       </div>
+
+      {/* Floating Menu Button - appears when header is hidden on mobile */}
+      <FloatingMenuButton 
+        isVisible={!isVisible && !isMenuOpen} 
+        onClick={() => setIsMenuOpen(true)} 
+      />
     </header>
   );
 };
