@@ -23,9 +23,9 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
   basic: {
     tier: "basic",
     label: "Basic",
-    badgeColor: "text-muted-foreground",
-    badgeBgColor: "bg-muted/50",
-    badgeBorderColor: "border-muted",
+    badgeColor: "text-sky-100",
+    badgeBgColor: "bg-sky-600/80",
+    badgeBorderColor: "border-sky-400/50",
     icon: "user",
     canAccessProFeatures: false,
     canAccessAdminFeatures: false,
