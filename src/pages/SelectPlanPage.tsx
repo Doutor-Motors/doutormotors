@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription, PLAN_FEATURES } from "@/hooks/useSubscription";
+import { ProgressStepper } from "@/components/subscription/ProgressStepper";
 import logo from "@/assets/images/logo-new-car.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -233,16 +234,22 @@ export default function SelectPlanPage() {
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-5xl">
+          {/* Progress Stepper */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <ProgressStepper currentStep={2} />
+          </motion.div>
+
           {/* Title */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
             className="text-center mb-8"
           >
-            <Badge className="mb-4 bg-primary/20 text-primary border-primary/30 px-4 py-1.5">
-              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-              Passo 2 de 3
-            </Badge>
             <h1 className="text-3xl sm:text-4xl font-bold font-chakra text-white mb-3">
               Escolha o plano ideal para você
             </h1>
