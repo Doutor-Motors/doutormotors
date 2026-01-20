@@ -81,15 +81,16 @@ const SignUpPage = () => {
       return;
     }
 
-    // IMPORTANTE: Após criar conta, redireciona para checkout de pagamento
-    // O usuário precisa pagar antes de acessar o dashboard
+    // IMPORTANTE: Após criar conta, redireciona para checkout de pagamento PIX
+    // O usuário PRECISA PAGAR antes de acessar o dashboard
     notifySuccess(
       'Conta criada com sucesso!', 
       'Agora finalize sua assinatura para acessar o sistema.'
     );
     
-    // Redireciona para página de upgrade/checkout
-    navigate("/dashboard/upgrade", { 
+    // Redireciona para página de checkout PIX FORA do dashboard
+    // Isso garante que o usuário não acesse o sistema antes de pagar
+    navigate("/subscription-checkout", { 
       state: { 
         fromSignup: true,
         email: email,

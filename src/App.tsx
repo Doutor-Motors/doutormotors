@@ -67,6 +67,7 @@ import AdminCarCareData from "./pages/admin/AdminCarCareData";
 import ContactAnalytics from "./pages/admin/ContactAnalytics";
 import AdminPayments from "./pages/admin/AdminPayments";
 import PixCheckoutPage from "./pages/PixCheckoutPage";
+import SubscriptionCheckoutPage from "./pages/SubscriptionCheckoutPage";
 
 const queryClient = new QueryClient();
 
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="/use-de-qualquer-lugar" element={<UseFromAnywherePage />} />
                 <Route path="/instalar" element={<InstallAppPage />} />
                 <Route path="/checkout-pix" element={<PixCheckoutPage />} />
+                <Route path="/subscription-checkout" element={<SubscriptionCheckoutPage />} />
                 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />

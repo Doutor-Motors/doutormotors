@@ -43,13 +43,19 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     subscription.id && 
     subscription.id !== "";
 
-  // Se não tem assinatura válida, redireciona para checkout
-  // Exceto se já estiver na página de checkout ou upgrade
-  const isCheckoutPage = location.pathname.includes("checkout") || 
-                         location.pathname.includes("upgrade");
+  // Se não tem assinatura válida, redireciona para página de checkout PIX
+  // A página de upgrade dentro do dashboard é só para usuários já assinantes
+  // Novos usuários devem usar /subscription-checkout
+  const isUpgradePage = location.pathname === "/dashboard/upgrade";
   
-  if (!hasValidSubscription && !isCheckoutPage) {
-    return <Navigate to="/dashboard/upgrade" state={{ from: location }} replace />;
+  if (!hasValidSubscription) {
+    // Se está tentando acessar /dashboard/upgrade sem assinatura, 
+    // redireciona para o checkout correto
+    if (isUpgradePage) {
+      return <Navigate to="/subscription-checkout" state={{ from: location }} replace />;
+    }
+    // Qualquer outra página do dashboard sem assinatura → checkout
+    return <Navigate to="/subscription-checkout" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
