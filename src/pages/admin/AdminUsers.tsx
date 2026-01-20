@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, UserCog, Shield, User, Trash2, Eye, RefreshCw } from "lucide-react";
+import { Search, UserCog, Shield, User, Trash2, RefreshCw } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -48,10 +48,16 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newRole, setNewRole] = useState<AppRole>("user");
+
+  const [showQuickDeleteDialog, setShowQuickDeleteDialog] = useState(false);
+  const [quickDeleteEmail, setQuickDeleteEmail] = useState("");
+  const [quickDeleteLoading, setQuickDeleteLoading] = useState(false);
+
   const { notifySuccess, notifyError } = useAdminNotifications();
 
   const fetchUsers = useCallback(async () => {
@@ -153,7 +159,7 @@ const AdminUsers = () => {
       }
 
       toast.success("Papel atualizado com sucesso!");
-      notifySuccess("Papel Atualizado", `${selectedUser.name} agora é ${newRole === 'admin' ? 'Administrador' : newRole === 'user' ? 'Usuário' : 'Moderador'}`);
+      notifySuccess("Papel Atualizado", `${selectedUser.name} agora é ${newRole === 'admin' ? 'Administrador' : 'Usuário'}`);
       setShowRoleDialog(false);
       fetchUsers();
     } catch (error) {
@@ -182,7 +188,10 @@ const AdminUsers = () => {
       }
 
       toast.success("Usuário removido permanentemente do sistema!");
-      notifySuccess("Usuário Removido", `${selectedUser.name} foi removido permanentemente do sistema`);
+      notifySuccess(
+        "Usuário Removido",
+        `${selectedUser.name} foi removido permanentemente do sistema`
+      );
       setShowDeleteDialog(false);
       fetchUsers();
     } catch (error: any) {
@@ -190,6 +199,38 @@ const AdminUsers = () => {
       const errorMessage = error.message || "Erro ao remover usuário. Verifique os logs.";
       toast.error(errorMessage);
       notifyError("Erro", errorMessage);
+    }
+  };
+
+  const handleQuickDeleteByEmail = async () => {
+    const email = quickDeleteEmail.trim();
+    if (!email) {
+      toast.error("Informe um email para excluir");
+      return;
+    }
+
+    try {
+      setQuickDeleteLoading(true);
+
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { email },
+      });
+
+      if (error) throw new Error(error.message || "Erro ao excluir usuário");
+      if (!data?.success) throw new Error(data?.error || "Erro ao excluir usuário");
+
+      toast.success(`Usuário ${email} removido permanentemente!`);
+      notifySuccess("Usuário Removido", `${email} foi removido permanentemente do sistema`);
+      setShowQuickDeleteDialog(false);
+      setQuickDeleteEmail("");
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error deleting user by email:", error);
+      const errorMessage = error.message || "Erro ao remover usuário. Verifique os logs.";
+      toast.error(errorMessage);
+      notifyError("Erro", errorMessage);
+    } finally {
+      setQuickDeleteLoading(false);
     }
   };
 
@@ -201,16 +242,14 @@ const AdminUsers = () => {
 
   const getRoleBadge = (role: AppRole) => {
     const styles = {
-      admin: "bg-red-500/20 text-red-500",
-      moderator: "bg-yellow-500/20 text-yellow-500",
-      user: "bg-blue-500/20 text-blue-500",
+      admin: "bg-destructive/15 text-destructive",
+      user: "bg-primary/15 text-primary",
     };
 
     const labels = {
       admin: "Administrador",
-      moderator: "Moderador",
       user: "Usuário",
-    };
+    } as const;
 
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium ${styles[role]}`}>
@@ -243,6 +282,17 @@ const AdminUsers = () => {
                 className="pl-10"
               />
             </div>
+
+            <Button
+              variant="outline"
+              onClick={() => setShowQuickDeleteDialog(true)}
+              disabled={loading}
+              title="Remover usuário por email"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Excluir por email
+            </Button>
+
             <Button
               variant="outline"
               size="icon"
@@ -328,6 +378,50 @@ const AdminUsers = () => {
           </CardContent>
         </Card>
 
+        {/* Quick Delete Dialog */}
+        <Dialog open={showQuickDeleteDialog} onOpenChange={setShowQuickDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-destructive flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Excluir usuário por email
+              </DialogTitle>
+              <DialogDescription>
+                Essa ação remove permanentemente a conta de login e todos os dados vinculados ao usuário.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-2">
+              <Input
+                placeholder="email@exemplo.com"
+                value={quickDeleteEmail}
+                onChange={(e) => setQuickDeleteEmail(e.target.value)}
+                disabled={quickDeleteLoading}
+              />
+              <p className="text-xs text-muted-foreground">
+                Dica: use isso para excluir usuários que conseguem logar mas não aparecem na lista (sem perfil).
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowQuickDeleteDialog(false)}
+                disabled={quickDeleteLoading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleQuickDeleteByEmail}
+                disabled={quickDeleteLoading}
+              >
+                {quickDeleteLoading ? "Removendo..." : "Remover permanentemente"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Role Dialog */}
         <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
           <DialogContent>
@@ -347,12 +441,6 @@ const AdminUsers = () => {
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4" />
                       Usuário
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="moderator">
-                    <div className="flex items-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      Moderador
                     </div>
                   </SelectItem>
                   <SelectItem value="admin">
