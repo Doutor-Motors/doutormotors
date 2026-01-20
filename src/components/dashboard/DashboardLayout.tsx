@@ -26,7 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAdminNotification } from "@/contexts/AdminNotificationContext";
 import { useUserTier } from "@/hooks/useUserTier";
-import { ProBadge, AdminBadge } from "@/components/subscription/UserBadge";
+import { UserBadge, ProBadge, AdminBadge } from "@/components/subscription/UserBadge";
 import logo from "@/assets/images/logo-new-car.png";
 
 interface DashboardLayoutProps {
@@ -92,6 +92,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="flex flex-col items-start cursor-default">
             <img src={logo} alt="Doutor Motors" className="h-[100px] w-auto object-contain -ml-1" />
             <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[29px] ml-1">DOUTOR MOTORS</span>
+          </div>
+          {/* User Plan Badge */}
+          <div className="mt-4 flex items-center justify-center">
+            <UserBadge size="md" showLabel />
           </div>
         </div>
 
@@ -164,6 +168,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <img src={logo} alt="Doutor Motors" className="h-[70px] w-auto object-contain -ml-1" />
             <span className="font-chakra text-primary-foreground text-sm font-bold tracking-wider -mt-[20px] ml-1">DOUTOR MOTORS</span>
           </div>
+          {/* User Plan Badge - Mobile Header */}
+          <UserBadge size="sm" showLabel />
         </div>
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
