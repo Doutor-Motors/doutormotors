@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
@@ -11,7 +11,8 @@ import {
   Star,
   ArrowRight,
   Loader2,
-  BadgeCheck
+  BadgeCheck,
+  LogOut
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ export default function SelectPlanPage() {
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
   const { subscription, isLoading: subLoading, isPro, isAdmin } = useSubscription();
+  const [isExiting, setIsExiting] = useState(false);
   
   const signupData = location.state as SignupState | null;
 
@@ -104,6 +106,19 @@ export default function SelectPlanPage() {
     navigate("/subscription-checkout", { state: checkoutState });
   };
 
+  const handleExit = async () => {
+    setIsExiting(true);
+    try {
+      await supabase.auth.signOut();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Erro ao sair:", error);
+      toast.error("Erro ao encerrar sessão");
+    } finally {
+      setIsExiting(false);
+    }
+  };
+
   if (authLoading || subLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -129,10 +144,22 @@ export default function SelectPlanPage() {
       <header className="w-full py-4 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <img src={logo} alt="Doutor Motors" className="h-10 sm:h-12" />
-          <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
-            <BadgeCheck className="w-4 h-4" />
-            Escolha seu plano
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
+              <BadgeCheck className="w-4 h-4" />
+              Escolha seu plano
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleExit}
+              disabled={isExiting}
+              className="gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
+          </div>
         </div>
       </header>
 
