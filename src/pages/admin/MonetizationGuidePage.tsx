@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   FileText, 
   Download, 
@@ -15,6 +15,10 @@ import {
   Clock,
   CheckCircle2,
   ArrowRight,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Loader2,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -27,124 +31,197 @@ import { toast } from "sonner";
 import { downloadMonetizationGuide } from "@/services/pdf/monetizationGuideGenerator";
 import { PLAN_FEATURES } from "@/hooks/useSubscription";
 import { USAGE_LIMITS } from "@/hooks/useUsageTracking";
+import { useSystemStatus } from "@/hooks/useSystemStatus";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-const GUIDE_SECTIONS = [
-  {
-    id: "1",
-    title: "Visão Geral da Monetização",
-    icon: Target,
-    status: "complete",
-    description: "Objetivos, princípios e práticas a evitar",
-    items: [
-      "Objetivo da monetização dentro do produto",
-      "Princípios de monetização segura (transparência, consentimento, controle)",
-      "Práticas abusivas a evitar",
-    ],
-  },
-  {
-    id: "2",
-    title: "Modelos de Monetização",
-    icon: CreditCard,
-    status: "complete",
-    description: "Planos Basic e Pro com todos os detalhes",
-    items: [
-      `Plano Basic: R$ 0/mês com ${USAGE_LIMITS.basic.diagnostics} diagnósticos`,
-      `Plano Pro: ${PLAN_FEATURES.pro.price} com recursos ilimitados`,
-      "Comparativo detalhado de recursos",
-      "Limitações e benefícios de cada plano",
-    ],
-  },
-  {
-    id: "3",
-    title: "Implementação Técnica",
-    icon: FileText,
-    status: "complete",
-    description: "Front-end e back-end da monetização",
-    items: [
-      "Hooks: useSubscription, useUsageTracking",
-      "Componentes: FeatureGate, UpgradePrompt, PlanCard",
-      "Tabelas: user_subscriptions, usage_tracking",
-      "Edge Functions para pagamentos",
-    ],
-  },
-  {
-    id: "4",
-    title: "Fluxo de Pagamento Seguro",
-    icon: Shield,
-    status: "complete",
-    description: "Integração AbacatePay PIX e tratamento de falhas",
-    items: [
-      "Jornada do usuário (7 etapas)",
-      "Integração com AbacatePay PIX QR Code",
-      "Webhooks e eventos de confirmação",
-      "Tratamento de falhas e estornos",
-    ],
-  },
-  {
-    id: "5",
-    title: "Compliance e Proteção",
-    icon: AlertTriangle,
-    status: "complete",
-    description: "Aspectos legais e comunicação de riscos",
-    items: [
-      "Consentimento explícito obrigatório",
-      "Termos de uso e limites de responsabilidade",
-      "Comunicação clara de riscos",
-      "Avisos sobre não substituir mecânico",
-    ],
-  },
-  {
-    id: "6",
-    title: "Onboarding Financeiro",
-    icon: BookOpen,
-    status: "complete",
-    description: "Apresentação de planos e microcopy",
-    items: [
-      "Apresentação sem pressão",
-      "Textos claros sobre o que é pago",
-      "Microcopy para gerar confiança",
-      "Emails transacionais",
-    ],
-  },
-  {
-    id: "7",
-    title: "Métricas e Controle",
-    icon: TrendingUp,
-    status: "complete",
-    description: "KPIs e monitoramento de abusos",
-    items: [
-      "Conversão, Churn, LTV, CAC",
-      "Indicadores de problemas de confiança",
-      "Alertas de uso anormal",
-      "Monitoramento de fraudes",
-    ],
-  },
-  {
-    id: "8",
-    title: "Roadmap de Evolução",
-    icon: Rocket,
-    status: "pending",
-    description: "MVP, intermediário e B2B",
-    items: [
-      "Fase 1: MVP atual (Basic + Pro)",
-      "Fase 2: Trial, plano anual, compra pontual",
-      "Fase 3: B2B (Oficinas, Frotas, API)",
-    ],
-  },
-];
-
-const IMPLEMENTATION_CHECKLIST = [
-  { id: "gateway", label: "Integração AbacatePay habilitada", done: true },
-  { id: "products", label: "Planos Basic e Pro configurados", done: true },
-  { id: "checkout", label: "Edge Function de checkout (create-pix-qrcode)", done: true },
-  { id: "webhook", label: "Webhook de eventos (abacatepay-webhook)", done: true },
-  { id: "sandbox", label: "Testes em modo sandbox (devMode)", done: true },
-  { id: "emails", label: "Emails transacionais configurados", done: true },
-  { id: "production", label: "Lançamento em produção", done: false },
-];
+interface GuideSection {
+  id: string;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  status: "complete" | "pending" | "partial";
+  description: string;
+  items: string[];
+  checkFeatures?: string[]; // IDs do useSystemStatus para verificar
+}
 
 export default function MonetizationGuidePage() {
   const [isDownloading, setIsDownloading] = useState(false);
+  const { features, isLoading, lastUpdated, refetch, categories } = useSystemStatus();
+
+  // Função para verificar se uma feature está completa
+  const isFeatureComplete = (featureId: string): boolean => {
+    const feature = features.find((f) => f.id === featureId);
+    return feature?.status === "complete";
+  };
+
+  // Função para determinar status de uma seção baseado em features
+  const getSectionStatus = (checkFeatures: string[]): "complete" | "pending" | "partial" => {
+    if (checkFeatures.length === 0) return "complete";
+    const completeCount = checkFeatures.filter(isFeatureComplete).length;
+    if (completeCount === checkFeatures.length) return "complete";
+    if (completeCount > 0) return "partial";
+    return "pending";
+  };
+
+  // Seções do guia com verificação dinâmica
+  const GUIDE_SECTIONS: GuideSection[] = useMemo(() => [
+    {
+      id: "1",
+      title: "Visão Geral da Monetização",
+      icon: Target,
+      status: "complete", // Documentação sempre completa
+      description: "Objetivos, princípios e práticas a evitar",
+      items: [
+        "Objetivo da monetização dentro do produto",
+        "Princípios de monetização segura (transparência, consentimento, controle)",
+        "Práticas abusivas a evitar",
+      ],
+    },
+    {
+      id: "2",
+      title: "Modelos de Monetização",
+      icon: CreditCard,
+      status: getSectionStatus(["subscription-system"]),
+      description: "Planos Basic e Pro com todos os detalhes",
+      checkFeatures: ["subscription-system"],
+      items: [
+        `Plano Basic: R$ 0/mês com ${USAGE_LIMITS.basic.diagnostics} diagnósticos`,
+        `Plano Pro: ${PLAN_FEATURES.pro.price} com recursos ilimitados`,
+        "Comparativo detalhado de recursos",
+        "Limitações e benefícios de cada plano",
+        features.find(f => f.id === "subscription-system")?.details || "",
+      ].filter(Boolean),
+    },
+    {
+      id: "3",
+      title: "Implementação Técnica",
+      icon: FileText,
+      status: getSectionStatus(["database-schema", "edge-functions-diagnose"]),
+      description: "Front-end e back-end da monetização",
+      checkFeatures: ["database-schema", "edge-functions-diagnose"],
+      items: [
+        "Hooks: useSubscription, useUsageTracking, useSystemStatus",
+        "Componentes: FeatureGate, UpgradePrompt, PlanCard, PixCheckoutModal",
+        "Tabelas: user_subscriptions, usage_tracking, pix_payments, payments",
+        "Edge Functions para pagamentos PIX",
+        `Status do Schema: ${features.find(f => f.id === "database-schema")?.details || "Verificando..."}`,
+      ],
+    },
+    {
+      id: "4",
+      title: "Fluxo de Pagamento Seguro",
+      icon: Shield,
+      status: getSectionStatus(["abacatepay-integration", "payment-webhooks", "checkout-sessions"]),
+      description: "Integração AbacatePay PIX e tratamento de falhas",
+      checkFeatures: ["abacatepay-integration", "payment-webhooks", "checkout-sessions"],
+      items: [
+        "Jornada do usuário (7 etapas)",
+        "Integração com AbacatePay PIX QR Code",
+        "Webhooks e eventos de confirmação",
+        "Tratamento de falhas e estornos",
+        features.find(f => f.id === "abacatepay-integration")?.details || "",
+        features.find(f => f.id === "payment-webhooks")?.details || "",
+      ].filter(Boolean),
+    },
+    {
+      id: "5",
+      title: "Compliance e Proteção",
+      icon: AlertTriangle,
+      status: getSectionStatus(["legal-consents", "rls-policies", "audit-logging"]),
+      description: "Aspectos legais e comunicação de riscos",
+      checkFeatures: ["legal-consents", "rls-policies", "audit-logging"],
+      items: [
+        "Consentimento explícito obrigatório",
+        "Termos de uso e limites de responsabilidade",
+        "Comunicação clara de riscos",
+        "Avisos sobre não substituir mecânico",
+        features.find(f => f.id === "audit-logging")?.details || "",
+      ].filter(Boolean),
+    },
+    {
+      id: "6",
+      title: "Onboarding Financeiro",
+      icon: BookOpen,
+      status: getSectionStatus(["user-management"]),
+      description: "Apresentação de planos e microcopy",
+      checkFeatures: ["user-management"],
+      items: [
+        "Apresentação sem pressão",
+        "Textos claros sobre o que é pago",
+        "Microcopy para gerar confiança",
+        "Emails transacionais",
+        features.find(f => f.id === "user-management")?.details || "",
+      ].filter(Boolean),
+    },
+    {
+      id: "7",
+      title: "Métricas e Controle",
+      icon: TrendingUp,
+      status: "complete",
+      description: "KPIs e monitoramento de abusos",
+      items: [
+        "Conversão, Churn, LTV, CAC",
+        "Indicadores de problemas de confiança",
+        "Alertas de uso anormal",
+        "Monitoramento de fraudes",
+      ],
+    },
+    {
+      id: "8",
+      title: "Roadmap de Evolução",
+      icon: Rocket,
+      status: "partial", // Roadmap sempre em evolução
+      description: "MVP, intermediário e B2B",
+      items: [
+        "Fase 1: MVP atual (Basic + Pro) ✅",
+        "Fase 2: Trial, plano anual, compra pontual ⏳",
+        "Fase 3: B2B (Oficinas, Frotas, API) 🔜",
+      ],
+    },
+  ], [features]);
+
+  // Checklist de implementação dinâmico
+  const IMPLEMENTATION_CHECKLIST = useMemo(() => [
+    { 
+      id: "gateway", 
+      label: "Integração AbacatePay habilitada", 
+      done: isFeatureComplete("abacatepay-integration"),
+      details: features.find(f => f.id === "abacatepay-integration")?.details,
+    },
+    { 
+      id: "products", 
+      label: "Planos Basic e Pro configurados", 
+      done: isFeatureComplete("subscription-system"),
+      details: features.find(f => f.id === "subscription-system")?.details,
+    },
+    { 
+      id: "checkout", 
+      label: "Edge Function de checkout (create-pix-qrcode)", 
+      done: isFeatureComplete("edge-functions-payments"),
+    },
+    { 
+      id: "webhook", 
+      label: "Webhook de eventos (abacatepay-webhook)", 
+      done: isFeatureComplete("payment-webhooks"),
+      details: features.find(f => f.id === "payment-webhooks")?.details,
+    },
+    { 
+      id: "sandbox", 
+      label: "Testes em modo sandbox (devMode)", 
+      done: true, // Sempre disponível
+    },
+    { 
+      id: "emails", 
+      label: "Emails transacionais configurados", 
+      done: isFeatureComplete("edge-functions-notifications"),
+    },
+    { 
+      id: "production", 
+      label: "Lançamento em produção", 
+      done: false, // Manual
+    },
+  ], [features, isFeatureComplete]);
 
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
@@ -165,6 +242,18 @@ export default function MonetizationGuidePage() {
 
   const completedSections = GUIDE_SECTIONS.filter(s => s.status === "complete").length;
   const progressPercentage = (completedSections / GUIDE_SECTIONS.length) * 100;
+  const completedChecklist = IMPLEMENTATION_CHECKLIST.filter(i => i.done).length;
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="text-muted-foreground">Verificando status do sistema...</span>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -176,30 +265,48 @@ export default function MonetizationGuidePage() {
               <Badge variant="outline" className="text-primary border-primary">
                 Guia de Desenvolvimento
               </Badge>
+              <Badge variant="outline" className="text-green-500 border-green-500/50 gap-1">
+                <Wifi className="w-3 h-3" />
+                Tempo Real
+              </Badge>
             </div>
             <h1 className="text-3xl font-bold">Monetização Segura</h1>
             <p className="text-muted-foreground mt-1">
-              Guia completo para implementação de monetização no Doutor Motors
+              Guia com verificação automática do estado do sistema
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Última atualização: {format(lastUpdated, "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
             </p>
           </div>
-          <Button 
-            size="lg" 
-            onClick={handleDownloadPDF}
-            disabled={isDownloading}
-            className="gap-2"
-          >
-            {isDownloading ? (
-              <>
-                <Clock className="h-5 w-5 animate-spin" />
-                Gerando PDF...
-              </>
-            ) : (
-              <>
-                <Download className="h-5 w-5" />
-                Baixar PDF Completo
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Atualizar
+            </Button>
+            <Button 
+              size="lg" 
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="gap-2"
+            >
+              {isDownloading ? (
+                <>
+                  <Clock className="h-5 w-5 animate-spin" />
+                  Gerando PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="h-5 w-5" />
+                  Baixar PDF Completo
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Progress Overview */}
@@ -214,13 +321,18 @@ export default function MonetizationGuidePage() {
           </CardHeader>
           <CardContent>
             <Progress value={progressPercentage} className="h-3" />
-            <p className="text-sm text-muted-foreground mt-2">
-              {completedSections} de {GUIDE_SECTIONS.length} seções implementadas
-            </p>
+            <div className="flex justify-between mt-2">
+              <p className="text-sm text-muted-foreground">
+                {completedSections} de {GUIDE_SECTIONS.length} seções implementadas
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Checklist: {completedChecklist}/{IMPLEMENTATION_CHECKLIST.length}
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - Dados em Tempo Real */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
@@ -229,8 +341,8 @@ export default function MonetizationGuidePage() {
                   <CreditCard className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">2</p>
-                  <p className="text-sm text-muted-foreground">Planos Ativos</p>
+                  <p className="text-2xl font-bold">{categories.payments.complete}/{categories.payments.total}</p>
+                  <p className="text-sm text-muted-foreground">Pagamentos</p>
                 </div>
               </div>
             </CardContent>
@@ -268,8 +380,8 @@ export default function MonetizationGuidePage() {
                   <Rocket className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">3</p>
-                  <p className="text-sm text-muted-foreground">Fases do Roadmap</p>
+                  <p className="text-2xl font-bold">{categories.edge_functions.percentage}%</p>
+                  <p className="text-sm text-muted-foreground">Edge Functions</p>
                 </div>
               </div>
             </CardContent>
@@ -281,7 +393,7 @@ export default function MonetizationGuidePage() {
           <CardHeader>
             <CardTitle>Seções do Guia</CardTitle>
             <CardDescription>
-              Clique em cada seção para ver os detalhes incluídos no PDF
+              Status verificado automaticamente com base no estado real do sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -293,11 +405,15 @@ export default function MonetizationGuidePage() {
                       <div className={`p-2 rounded-lg ${
                         section.status === "complete" 
                           ? "bg-green-500/10" 
+                          : section.status === "partial"
+                          ? "bg-blue-500/10"
                           : "bg-amber-500/10"
                       }`}>
                         <section.icon className={`h-5 w-5 ${
                           section.status === "complete" 
                             ? "text-green-500" 
+                            : section.status === "partial"
+                            ? "text-blue-500"
                             : "text-amber-500"
                         }`} />
                       </div>
@@ -310,10 +426,10 @@ export default function MonetizationGuidePage() {
                         </p>
                       </div>
                       <Badge 
-                        variant={section.status === "complete" ? "default" : "secondary"}
+                        variant={section.status === "complete" ? "default" : section.status === "partial" ? "secondary" : "outline"}
                         className="ml-auto mr-4"
                       >
-                        {section.status === "complete" ? "Implementado" : "Pendente"}
+                        {section.status === "complete" ? "✓ Implementado" : section.status === "partial" ? "◐ Parcial" : "⏳ Pendente"}
                       </Badge>
                     </div>
                   </AccordionTrigger>
@@ -339,9 +455,12 @@ export default function MonetizationGuidePage() {
             <CardTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5" />
               Checklist de Implementação
+              <Badge variant="outline" className="ml-2 text-xs">
+                Verificação em Tempo Real
+              </Badge>
             </CardTitle>
             <CardDescription>
-              Próximos passos para lançar a monetização em produção
+              Status verificado automaticamente - atualiza quando o sistema muda
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -360,10 +479,15 @@ export default function MonetizationGuidePage() {
                   }`}>
                     {item.done ? <Check className="h-4 w-4" /> : index + 1}
                   </div>
-                  <span className={item.done ? "line-through text-muted-foreground" : ""}>
-                    {item.label}
-                  </span>
-                  {!item.done && index === 0 && (
+                  <div className="flex-1">
+                    <span className={item.done ? "text-foreground" : "text-muted-foreground"}>
+                      {item.label}
+                    </span>
+                    {item.details && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.details}</p>
+                    )}
+                  </div>
+                  {!item.done && index === IMPLEMENTATION_CHECKLIST.findIndex(i => !i.done) && (
                     <Badge variant="outline" className="ml-auto">
                       Próximo Passo
                     </Badge>

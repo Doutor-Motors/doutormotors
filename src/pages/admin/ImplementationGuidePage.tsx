@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   BookOpen, 
   AlertTriangle, 
@@ -21,7 +21,10 @@ import {
   Layers,
   GitBranch,
   FileText,
-  Download
+  Download,
+  RefreshCw,
+  Wifi,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { useSystemStatus } from "@/hooks/useSystemStatus";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -57,6 +61,7 @@ interface RoadmapItem {
 
 const ImplementationGuidePage = () => {
   const [openGaps, setOpenGaps] = useState<string[]>([]);
+  const { features, isLoading, lastUpdated, refetch, categories, overallProgress: systemProgress } = useSystemStatus();
 
   const toggleGap = (id: string) => {
     setOpenGaps(prev => 
@@ -64,34 +69,45 @@ const ImplementationGuidePage = () => {
     );
   };
 
-  // System completion metrics
-  const systemMetrics = {
-    frontend: 85,
-    backend: 75,
-    database: 95,
-    integrations: 40,
-    security: 80,
-    testing: 30,
+  // Função para verificar status de uma feature
+  const isFeatureComplete = (featureId: string): boolean => {
+    const feature = features.find((f) => f.id === featureId);
+    return feature?.status === "complete";
   };
 
-  const overallProgress = Math.round(
-    Object.values(systemMetrics).reduce((a, b) => a + b, 0) / Object.keys(systemMetrics).length
-  );
+  // System completion metrics - AGORA EM TEMPO REAL
+  const systemMetrics = useMemo(() => ({
+    frontend: categories.frontend.percentage,
+    backend: categories.edge_functions.percentage,
+    database: categories.database.percentage,
+    integrations: categories.integrations.percentage,
+    security: categories.security.percentage,
+    testing: 30, // Testes ainda são manuais
+  }), [categories]);
 
-  // Gap Analysis Data
-  const gaps: GapItem[] = [
-    {
-      id: "stripe",
-      module: "Pagamentos",
-      title: "Integração Stripe Incompleta",
-      description: "Checkout session, webhooks e atualização automática de subscriptions não estão implementados.",
-      impact: "Impossibilita monetização e cobrança de planos Pro.",
-      risk: "critical",
-      affectedFeature: "Upgrade de plano, pagamentos recorrentes",
-      userImpact: "Usuários não conseguem fazer upgrade para o plano Pro",
-      technicalRisk: "Alto - Bloqueia modelo de receita do sistema",
-    },
-    {
+  const overallProgress = systemProgress;
+
+  // Gap Analysis Data - AGORA DINÂMICO baseado no estado real
+  const gaps: GapItem[] = useMemo(() => {
+    const dynamicGaps: GapItem[] = [];
+    
+    // Verificar Stripe/AbacatePay
+    if (!isFeatureComplete("abacatepay-integration")) {
+      dynamicGaps.push({
+        id: "pix-payments",
+        module: "Pagamentos",
+        title: "Nenhum pagamento PIX confirmado ainda",
+        description: "A integração AbacatePay está configurada mas ainda não houve pagamentos confirmados.",
+        impact: "Monetização não está gerando receita real ainda.",
+        risk: "high",
+        affectedFeature: "Upgrade de plano, pagamentos recorrentes",
+        userImpact: "Sistema funcionando em modo demonstração/teste",
+        technicalRisk: "Baixo - Integração já existe, falta tráfego real",
+      });
+    }
+    
+    // OBD Real
+    dynamicGaps.push({
       id: "obd-real",
       module: "Diagnóstico OBD",
       title: "Conexão OBD não testada com hardware real",
@@ -101,19 +117,25 @@ const ImplementationGuidePage = () => {
       affectedFeature: "Central de Diagnóstico, Leitura de DTCs",
       userImpact: "Funcionalidade principal pode não funcionar em ambiente real",
       technicalRisk: "Alto - Core feature do sistema",
-    },
-    {
-      id: "native-app",
-      module: "App Mobile",
-      title: "PWA atual tem limitações de conectividade",
-      description: "Sistema está como PWA (app web instalável). Web Bluetooth funciona apenas no Chrome Android e Desktop. WiFi OBD não funciona em navegadores. Safari/iOS não suporta Web Bluetooth.",
-      impact: "Usuários iPhone não podem usar Bluetooth. Nenhum usuário pode usar adaptadores WiFi pelo navegador.",
-      risk: "high",
-      affectedFeature: "Conexão OBD via Bluetooth em iOS, Conexão WiFi em todos dispositivos",
-      userImpact: "Usuários iOS ficam limitados ao modo demonstração. Usuários com adaptador WiFi não conseguem conectar.",
-      technicalRisk: "Médio - Solução é criar app nativo com Capacitor (já configurado no projeto)",
-    },
-    {
+    });
+    
+    // App Nativo
+    if (!isFeatureComplete("capacitor-setup")) {
+      dynamicGaps.push({
+        id: "native-app",
+        module: "App Mobile",
+        title: "PWA atual tem limitações de conectividade",
+        description: "Sistema está como PWA. Web Bluetooth funciona apenas no Chrome Android e Desktop. WiFi OBD não funciona em navegadores. Safari/iOS não suporta Web Bluetooth.",
+        impact: "Usuários iPhone não podem usar Bluetooth. Nenhum usuário pode usar adaptadores WiFi pelo navegador.",
+        risk: "high",
+        affectedFeature: "Conexão OBD via Bluetooth em iOS, Conexão WiFi em todos dispositivos",
+        userImpact: "Usuários iOS ficam limitados ao modo demonstração. Usuários com adaptador WiFi não conseguem conectar.",
+        technicalRisk: "Médio - Solução é criar app nativo com Capacitor (já configurado no projeto)",
+      });
+    }
+    
+    // Push Notifications
+    dynamicGaps.push({
       id: "push-native",
       module: "Notificações",
       title: "Push Notifications nativas não implementadas",
@@ -123,19 +145,10 @@ const ImplementationGuidePage = () => {
       affectedFeature: "Alertas de diagnóstico, lembretes de manutenção",
       userImpact: "Usuários não recebem notificações importantes",
       technicalRisk: "Baixo - Implementação bem documentada",
-    },
-    {
-      id: "email-templates",
-      module: "Comunicação",
-      title: "Templates de e-mail básicos",
-      description: "E-mails transacionais usam templates simples, sem branding completo.",
-      impact: "Comunicação menos profissional com usuários.",
-      risk: "low",
-      affectedFeature: "Confirmação de conta, recuperação de senha, alertas",
-      userImpact: "Experiência de marca menos consistente",
-      technicalRisk: "Baixo - Apenas mudança de templates",
-    },
-    {
+    });
+    
+    // Analytics
+    dynamicGaps.push({
       id: "analytics",
       module: "Métricas",
       title: "Analytics de uso não implementado",
@@ -145,8 +158,10 @@ const ImplementationGuidePage = () => {
       affectedFeature: "Dashboard admin, tomada de decisões",
       userImpact: "Indireto - afeta evolução do produto",
       technicalRisk: "Baixo - Integração simples com GA4 ou similar",
-    },
-    {
+    });
+    
+    // Offline
+    dynamicGaps.push({
       id: "offline",
       module: "Experiência",
       title: "Modo offline não implementado",
@@ -156,30 +171,10 @@ const ImplementationGuidePage = () => {
       affectedFeature: "Histórico de diagnósticos, dados de veículos",
       userImpact: "Acesso limitado em garagens subterrâneas ou áreas rurais",
       technicalRisk: "Médio - Requer estratégia de sync",
-    },
-    {
-      id: "rate-limit",
-      module: "Segurança",
-      title: "Rate limiting não implementado",
-      description: "Edge functions não têm proteção contra abuso de requisições.",
-      impact: "Vulnerabilidade a ataques de força bruta e DDoS.",
-      risk: "high",
-      affectedFeature: "Todas as APIs, login, diagnósticos",
-      userImpact: "Potencial indisponibilidade do serviço",
-      technicalRisk: "Médio - Implementação via Supabase ou edge",
-    },
-    {
-      id: "leaked-password",
-      module: "Segurança",
-      title: "Proteção de senhas vazadas desabilitada",
-      description: "Supabase Leaked Password Protection não está ativo.",
-      impact: "Usuários podem usar senhas já comprometidas.",
-      risk: "medium",
-      affectedFeature: "Cadastro, troca de senha",
-      userImpact: "Risco de conta comprometida",
-      technicalRisk: "Baixo - Apenas configuração no Supabase",
-    },
-    {
+    });
+    
+    // E2E Tests
+    dynamicGaps.push({
       id: "e2e-tests",
       module: "Qualidade",
       title: "Cobertura de testes E2E limitada",
@@ -189,8 +184,10 @@ const ImplementationGuidePage = () => {
       affectedFeature: "Todas as funcionalidades",
       userImpact: "Potenciais bugs em produção",
       technicalRisk: "Baixo - Playwright já configurado",
-    },
-  ];
+    });
+    
+    return dynamicGaps;
+  }, [features]);
 
   // Immediate implementation priorities
   const immediatePriorities = [
