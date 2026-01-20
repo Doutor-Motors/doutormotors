@@ -6,7 +6,8 @@ const corsHeaders = {
 };
 
 interface DeleteUserRequest {
-  userId: string;
+  userId?: string;
+  email?: string;
 }
 
 Deno.serve(async (req) => {
@@ -69,14 +70,60 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const body: DeleteUserRequest = await req.json();
-    const { userId } = body;
+    const body: DeleteUserRequest = await req.json().catch(() => ({} as DeleteUserRequest));
+    let { userId, email } = body;
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "userId is required" }), {
+    if (!userId && !email) {
+      return new Response(JSON.stringify({ error: "userId or email is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // If email was provided, resolve userId via Admin API (auth doesn't provide direct lookup)
+    if (!userId && email) {
+      const targetEmail = String(email).trim().toLowerCase();
+      if (!targetEmail) {
+        return new Response(JSON.stringify({ error: "email is invalid" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const perPage = 200;
+      let page = 1;
+      let foundId: string | null = null;
+
+      for (let i = 0; i < 20 && !foundId; i++) {
+        const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+
+        if (listError) {
+          console.error("Error listing users:", listError);
+          throw listError;
+        }
+
+        const users = usersData?.users ?? [];
+        const match = users.find((u) => (u.email ?? "").toLowerCase() === targetEmail);
+        if (match) foundId = match.id;
+
+        if (users.length < perPage) break;
+        page += 1;
+      }
+
+      if (!foundId) {
+        return new Response(
+          JSON.stringify({ error: "User not found", details: { email: targetEmail } }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      userId = foundId;
     }
 
     // Prevent admin from deleting themselves
@@ -89,12 +136,15 @@ Deno.serve(async (req) => {
 
     console.log(`Admin ${requestingUser.id} is deleting user ${userId}`);
 
-    // Get user info before deletion for audit
+    // Get user info before deletion for audit (profile can be missing)
+    const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(userId!);
+    const authEmail = authUserData?.user?.email ?? null;
+
     const { data: userProfile } = await supabaseAdmin
       .from("profiles")
       .select("name, email")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
 
     // Delete related data first (cascade should handle most, but being explicit)
     
@@ -221,7 +271,7 @@ Deno.serve(async (req) => {
       .eq("user_id", userId);
 
     // 14. Finally, delete the user from auth.users
-    const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId!);
 
     if (deleteAuthError) {
       console.error("Error deleting auth user:", deleteAuthError);
@@ -243,8 +293,8 @@ Deno.serve(async (req) => {
         entity_type: "user",
         entity_id: userId,
         old_value: { 
-          name: userProfile?.name, 
-          email: userProfile?.email 
+          name: userProfile?.name,
+          email: userProfile?.email ?? authEmail,
         },
         metadata: {
           deleted_by_admin: requestingUser.email,
@@ -260,7 +310,7 @@ Deno.serve(async (req) => {
       deletedUser: {
         id: userId,
         name: userProfile?.name,
-        email: userProfile?.email,
+        email: userProfile?.email ?? authEmail,
       },
     }), {
       status: 200,
