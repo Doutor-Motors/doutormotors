@@ -41,8 +41,8 @@ function useIsAdminInternal(userId: string | undefined) {
 export const PLAN_FEATURES = {
   basic: {
     name: "Basic",
-    price: "R$ 0",
-    priceValue: 0,
+    price: "R$ 19,90/mês",
+    priceValue: 1990, // Valor em CENTAVOS para API de pagamento
     maxVehicles: 1,
     maxDiagnosticsPerMonth: 5,
     maxRealTimeParameters: 4,
