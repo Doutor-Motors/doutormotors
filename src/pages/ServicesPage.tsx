@@ -391,7 +391,7 @@ const ServicesPage = () => {
                               <Crown className="h-4 w-4 text-amber-500" />
                               Pro
                             </span>
-                            <span className="text-xs text-muted-foreground font-normal">R$ 29,90/mês</span>
+                            <span className="text-xs text-muted-foreground font-normal">R$ 34,90/mês</span>
                           </div>
                         </th>
                       </tr>
