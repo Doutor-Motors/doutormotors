@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -15,7 +15,11 @@ import {
   Star,
   CreditCard,
   BadgeCheck,
-  Sparkles
+  Sparkles,
+  Users,
+  TrendingUp,
+  Timer,
+  AlertTriangle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,7 +35,7 @@ import { useSubscription, PLAN_FEATURES } from "@/hooks/useSubscription";
 import logo from "@/assets/images/logo-new-car.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
-type CheckoutStep = "form" | "payment" | "success";
+type CheckoutStep = "form" | "payment" | "success" | "expired";
 
 interface PixPaymentData {
   id: string;
@@ -47,6 +52,13 @@ interface FormData {
   customerEmail: string;
   customerCellphone: string;
   customerTaxId: string;
+}
+
+interface RecentSubscriber {
+  id: string;
+  name: string;
+  city: string;
+  timeAgo: string;
 }
 
 const formatCPF = (value: string) => {
@@ -73,6 +85,26 @@ const formatCurrency = (cents: number): string => {
   }).format(cents / 100);
 };
 
+// PIX timeout in seconds (10 minutes)
+const PIX_TIMEOUT_SECONDS = 10 * 60;
+
+// Simulated recent subscribers for social proof
+const CITIES = ["São Paulo", "Rio de Janeiro", "Belo Horizonte", "Curitiba", "Porto Alegre", "Brasília", "Salvador", "Fortaleza", "Recife", "Campinas"];
+const FIRST_NAMES = ["João", "Maria", "Pedro", "Ana", "Carlos", "Fernanda", "Lucas", "Juliana", "Rafael", "Patrícia", "Bruno", "Camila", "Diego", "Larissa", "Marcos"];
+
+const generateRandomSubscriber = (): RecentSubscriber => {
+  const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+  const city = CITIES[Math.floor(Math.random() * CITIES.length)];
+  const minutesAgo = Math.floor(Math.random() * 15) + 1;
+  
+  return {
+    id: Math.random().toString(36).substr(2, 9),
+    name: `${firstName} ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}.`,
+    city,
+    timeAgo: minutesAgo === 1 ? "agora mesmo" : `há ${minutesAgo} min`,
+  };
+};
+
 const PRO_BENEFITS = [
   { icon: Zap, text: "Diagnósticos ilimitados" },
   { icon: Star, text: "Gravação de dados avançada" },
@@ -93,6 +125,15 @@ export default function SubscriptionCheckoutPage() {
   const [copied, setCopied] = useState(false);
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
   
+  // Timer state
+  const [timeRemaining, setTimeRemaining] = useState(PIX_TIMEOUT_SECONDS);
+  const [timerStarted, setTimerStarted] = useState(false);
+  
+  // Social proof state
+  const [recentSubscribers, setRecentSubscribers] = useState<RecentSubscriber[]>([]);
+  const [currentSubscriberIndex, setCurrentSubscriberIndex] = useState(0);
+  const [subscriberCount, setSubscriberCount] = useState(0);
+  
   // Get the plan price in cents from config
   const planPriceInCents = PLAN_FEATURES.pro.priceValue;
   const formattedPrice = formatCurrency(planPriceInCents);
@@ -106,6 +147,79 @@ export default function SubscriptionCheckoutPage() {
     customerCellphone: "",
     customerTaxId: "",
   });
+
+  // Initialize social proof data
+  useEffect(() => {
+    // Generate initial subscribers
+    const initialSubscribers = Array.from({ length: 5 }, () => generateRandomSubscriber());
+    setRecentSubscribers(initialSubscribers);
+    
+    // Random subscriber count for today (between 12-47)
+    setSubscriberCount(Math.floor(Math.random() * 35) + 12);
+  }, []);
+
+  // Rotate social proof every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSubscriberIndex(prev => {
+        const next = (prev + 1) % recentSubscribers.length;
+        // Occasionally add a new subscriber
+        if (Math.random() > 0.7) {
+          setRecentSubscribers(prev => {
+            const newList = [...prev];
+            newList[next] = generateRandomSubscriber();
+            return newList;
+          });
+        }
+        return next;
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [recentSubscribers.length]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (!timerStarted || step !== "payment") return;
+
+    const interval = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setStep("expired");
+          toast.error("O tempo para pagamento expirou. Gere um novo QR Code.");
+          return 0;
+        }
+        
+        // Warning at 2 minutes
+        if (prev === 120) {
+          toast.warning("Restam apenas 2 minutos para concluir o pagamento!");
+        }
+        
+        // Warning at 1 minute
+        if (prev === 60) {
+          toast.warning("Último minuto! Finalize o pagamento agora.", {
+            duration: 5000,
+          });
+        }
+        
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerStarted, step]);
+
+  // Format time remaining as MM:SS
+  const formatTime = useCallback((seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  }, []);
+
+  // Timer progress percentage
+  const timerProgress = (timeRemaining / PIX_TIMEOUT_SECONDS) * 100;
+  const isTimerCritical = timeRemaining <= 120; // 2 minutes or less
 
   // Redirect if user already has active subscription
   useEffect(() => {
@@ -255,6 +369,8 @@ export default function SubscriptionCheckoutPage() {
 
       setPixData(data.data);
       setStep("payment");
+      setTimeRemaining(PIX_TIMEOUT_SECONDS);
+      setTimerStarted(true);
       toast.success("QR Code gerado com sucesso!");
     } catch (error) {
       console.error("Error creating PIX:", error);
@@ -282,12 +398,21 @@ export default function SubscriptionCheckoutPage() {
   };
 
   const handleBack = () => {
-    if (step === "payment") {
+    if (step === "payment" || step === "expired") {
       setStep("form");
       setPixData(null);
+      setTimerStarted(false);
+      setTimeRemaining(PIX_TIMEOUT_SECONDS);
     } else {
       navigate(-1);
     }
+  };
+
+  const handleRetry = () => {
+    setStep("form");
+    setPixData(null);
+    setTimerStarted(false);
+    setTimeRemaining(PIX_TIMEOUT_SECONDS);
   };
 
   if (authLoading || subLoading) {
@@ -300,6 +425,8 @@ export default function SubscriptionCheckoutPage() {
       </div>
     );
   }
+
+  const currentSubscriber = recentSubscribers[currentSubscriberIndex];
 
   return (
     <div
@@ -323,10 +450,35 @@ export default function SubscriptionCheckoutPage() {
         </Button>
       )}
 
+      {/* Social Proof Banner - Fixed at top */}
+      <AnimatePresence mode="wait">
+        {currentSubscriber && step !== "success" && (
+          <motion.div
+            key={currentSubscriber.id}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 right-4 z-50 hidden sm:block"
+          >
+            <div className="bg-green-500/90 backdrop-blur-sm text-white px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-3">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <Users className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold">{currentSubscriber.name}</p>
+                <p className="text-xs opacity-90">
+                  {currentSubscriber.city} • Assinou {currentSubscriber.timeAgo}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="w-full max-w-lg">
         {/* Logo */}
         <motion.div 
-          className="flex flex-col items-center mb-8 cursor-default"
+          className="flex flex-col items-center mb-6 cursor-default"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -337,16 +489,34 @@ export default function SubscriptionCheckoutPage() {
           </span>
         </motion.div>
 
+        {/* Social Proof Stats - Mobile */}
+        {step === "form" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="flex items-center justify-center gap-4 mb-4"
+          >
+            <div className="flex items-center gap-2 text-white/80 text-sm">
+              <div className="flex items-center gap-1 bg-green-500/20 px-3 py-1.5 rounded-full">
+                <TrendingUp className="w-4 h-4 text-green-400" />
+                <span className="font-semibold text-green-400">{subscriberCount}</span>
+                <span className="text-white/70">assinantes hoje</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Progress Indicator */}
         <motion.div 
-          className="flex items-center justify-center gap-3 mb-8"
+          className="flex items-center justify-center gap-3 mb-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
           {["Dados", "Pagamento", "Ativação"].map((label, index) => {
             const stepIndex = index + 1;
-            const currentStepIndex = step === "form" ? 1 : step === "payment" ? 2 : 3;
+            const currentStepIndex = step === "form" ? 1 : step === "payment" || step === "expired" ? 2 : 3;
             const isActive = stepIndex === currentStepIndex;
             const isCompleted = stepIndex < currentStepIndex;
             
@@ -396,11 +566,13 @@ export default function SubscriptionCheckoutPage() {
                 {step === "form" && "Finalize sua Assinatura"}
                 {step === "payment" && "Realize o Pagamento"}
                 {step === "success" && "Assinatura Ativada!"}
+                {step === "expired" && "Tempo Expirado"}
               </CardTitle>
               <CardDescription className="text-muted-foreground">
                 {step === "form" && "Preencha seus dados para gerar o PIX"}
                 {step === "payment" && "Escaneie o QR Code ou copie o código"}
                 {step === "success" && "Você agora tem acesso completo ao sistema"}
+                {step === "expired" && "O QR Code expirou. Gere um novo para continuar."}
               </CardDescription>
             </CardHeader>
 
@@ -446,6 +618,14 @@ export default function SubscriptionCheckoutPage() {
                           ))}
                         </div>
                       </div>
+                    </div>
+
+                    {/* Social Proof inline */}
+                    <div className="flex items-center justify-center gap-2 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                      <Users className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-green-400">
+                        <strong>{subscriberCount} pessoas</strong> assinaram nas últimas 24 horas
+                      </span>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -553,8 +733,33 @@ export default function SubscriptionCheckoutPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    className="text-center space-y-6"
+                    className="text-center space-y-5"
                   >
+                    {/* Timer Bar */}
+                    <div className={`rounded-lg p-3 ${isTimerCritical ? "bg-red-500/20 border border-red-500/30" : "bg-muted/30 border border-border/30"}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Timer className={`w-4 h-4 ${isTimerCritical ? "text-red-500 animate-pulse" : "text-muted-foreground"}`} />
+                          <span className={`text-sm font-medium ${isTimerCritical ? "text-red-500" : "text-muted-foreground"}`}>
+                            Tempo restante
+                          </span>
+                        </div>
+                        <span className={`font-mono text-lg font-bold ${isTimerCritical ? "text-red-500" : "text-foreground"}`}>
+                          {formatTime(timeRemaining)}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={timerProgress} 
+                        className={`h-2 ${isTimerCritical ? "[&>div]:bg-red-500" : ""}`}
+                      />
+                      {isTimerCritical && (
+                        <p className="text-xs text-red-400 mt-2 flex items-center justify-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Finalize o pagamento antes que o código expire!
+                        </p>
+                      )}
+                    </div>
+
                     {/* Status indicator */}
                     <div className="flex items-center justify-center gap-2">
                       <div className="relative">
@@ -565,8 +770,8 @@ export default function SubscriptionCheckoutPage() {
                     </div>
 
                     {/* Payment card */}
-                    <div className="bg-gradient-to-br from-muted/50 to-muted/20 rounded-xl p-6 border border-border/30">
-                      <div className="mb-4">
+                    <div className="bg-gradient-to-br from-muted/50 to-muted/20 rounded-xl p-5 border border-border/30">
+                      <div className="mb-3">
                         <p className="text-sm text-muted-foreground mb-1">Valor a pagar</p>
                         <p className="text-3xl font-bold text-primary font-chakra">
                           {formattedPrice}
@@ -574,15 +779,15 @@ export default function SubscriptionCheckoutPage() {
                       </div>
 
                       {/* QR Code */}
-                      <div className="bg-white p-4 rounded-xl inline-block mb-4 shadow-lg">
+                      <div className="bg-white p-3 rounded-xl inline-block mb-4 shadow-lg">
                         {pixData.qr_code_url ? (
                           <img
                             src={`data:image/png;base64,${pixData.qr_code_url}`}
                             alt="QR Code PIX"
-                            className="w-48 h-48 mx-auto"
+                            className="w-44 h-44 mx-auto"
                           />
                         ) : (
-                          <div className="w-48 h-48 bg-muted/30 rounded-lg flex items-center justify-center">
+                          <div className="w-44 h-44 bg-muted/30 rounded-lg flex items-center justify-center">
                             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                           </div>
                         )}
@@ -592,7 +797,7 @@ export default function SubscriptionCheckoutPage() {
                       <Button
                         onClick={copyToClipboard}
                         variant="outline"
-                        className="w-full gap-2 h-12 text-base border-primary/30 hover:bg-primary/10"
+                        className="w-full gap-2 h-11 text-base border-primary/30 hover:bg-primary/10"
                         disabled={!pixData.br_code}
                       >
                         {copied ? (
@@ -610,7 +815,7 @@ export default function SubscriptionCheckoutPage() {
 
                       {/* PIX code preview */}
                       {pixData.br_code && (
-                        <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                        <div className="mt-3 p-2.5 bg-muted/30 rounded-lg">
                           <p className="text-xs text-muted-foreground font-mono break-all line-clamp-2">
                             {pixData.br_code}
                           </p>
@@ -618,10 +823,74 @@ export default function SubscriptionCheckoutPage() {
                       )}
                     </div>
 
+                    {/* Social proof during payment */}
+                    <AnimatePresence mode="wait">
+                      {currentSubscriber && (
+                        <motion.div
+                          key={`payment-${currentSubscriber.id}`}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="flex items-center justify-center gap-2 p-3 bg-green-500/10 rounded-lg border border-green-500/20"
+                        >
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span className="text-sm text-green-400">
+                            <strong>{currentSubscriber.name}</strong> de {currentSubscriber.city} assinou {currentSubscriber.timeAgo}
+                          </span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                       <AlertCircle className="w-4 h-4" />
                       <span>O pagamento será confirmado automaticamente</span>
                     </div>
+                  </motion.div>
+                )}
+
+                {/* Step: Expired */}
+                {step === "expired" && (
+                  <motion.div
+                    key="expired"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="text-center space-y-6 py-4"
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", delay: 0.2 }}
+                      className="w-24 h-24 mx-auto bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/30"
+                    >
+                      <AlertTriangle className="w-14 h-14 text-white" />
+                    </motion.div>
+
+                    <div>
+                      <h3 className="text-2xl font-bold font-chakra text-foreground mb-2">
+                        QR Code Expirado
+                      </h3>
+                      <p className="text-muted-foreground">
+                        O tempo limite de 10 minutos foi atingido.
+                        <br />
+                        Gere um novo QR Code para continuar.
+                      </p>
+                    </div>
+
+                    <div className="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20">
+                      <p className="text-sm text-amber-400">
+                        Por segurança, os códigos PIX expiram após 10 minutos.
+                        Não se preocupe, você pode gerar um novo código gratuitamente.
+                      </p>
+                    </div>
+
+                    <Button
+                      onClick={handleRetry}
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase h-12 text-base"
+                    >
+                      <CreditCard className="w-5 h-5 mr-2" />
+                      Gerar Novo QR Code
+                    </Button>
                   </motion.div>
                 )}
 
