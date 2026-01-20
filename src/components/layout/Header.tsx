@@ -19,10 +19,6 @@ const Header = () => {
   ];
 
   const isLandingPage = location.pathname === "/";
-  
-  // Páginas onde a logo e nome devem ser menores
-  const compactLogoPages = ["/sobre", "/servicos", "/como-funciona", "/contato", "/termos", "/privacidade", "/faq"];
-  const isCompactLogo = compactLogoPages.includes(location.pathname);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -33,41 +29,31 @@ const Header = () => {
   };
 
   return (
-    <>
-      {/* Logo e nome fixos - fora do header */}
-      <div className={`absolute left-8 md:left-16 flex flex-col items-start cursor-default z-50 ${isCompactLogo ? "top-[-80px]" : "top-[-120px]"}`}>
-        <img 
-          src={logo} 
-          alt="Doutor Motors" 
-          className={`object-contain ${isCompactLogo ? "h-[250px] w-[250px] -ml-[45px]" : "h-[350px] w-[350px] -ml-[60px]"}`} 
-        />
-        <span className={`font-chakra text-primary-foreground font-bold tracking-wider ${isCompactLogo ? "text-xl md:text-2xl -mt-[100px] -ml-[38px]" : "text-2xl md:text-3xl -mt-[140px] -ml-[48px]"}`}>
-          DOUTOR MOTORS
-        </span>
-      </div>
+    <header className={`absolute top-0 left-0 w-full z-40 px-4 md:px-10 ${isLandingPage ? "" : "bg-secondary"}`}>
+      <div className="container mx-auto flex items-center gap-6 lg:gap-12 py-4">
+        {/* Logo - Estilo do Footer */}
+        <Link to="/" className="flex flex-col items-start shrink-0">
+          <img src={logo} alt="Doutor Motors" className="h-[100px] w-auto object-contain -ml-1" />
+          <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[29px] ml-1">DOUTOR MOTORS</span>
+        </Link>
 
-      <header className={`absolute top-0 left-0 w-full z-40 px-4 md:px-10 ${isLandingPage ? "" : "bg-secondary"}`}>
-        <div className="container mx-auto flex justify-end items-center gap-6 lg:gap-12 py-6">
-          {/* Botão Voltar - aparece em todas as páginas exceto landing */}
-          {!isLandingPage && (
-            <Button
-              variant="ghost-light"
-              onClick={handleBack}
-              className="gap-2 font-chakra uppercase text-sm mr-auto"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Voltar</span>
-            </Button>
-          )}
+        {/* Botão Voltar - aparece em todas as páginas exceto landing */}
+        {!isLandingPage && (
+          <Button
+            variant="ghost-light"
+            onClick={handleBack}
+            className="gap-2 font-chakra uppercase text-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Voltar</span>
+          </Button>
+        )}
 
-          {/* Espaçador para a logo fixa */}
-          <div className="hidden lg:block w-[300px]" />
-
-          {/* Linha divisória sutil - apenas desktop */}
-          <div className="hidden lg:block h-16 w-px bg-primary-foreground/20" />
+        {/* Spacer */}
+        <div className="flex-1" />
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-8 flex-1">
+        <nav className="hidden lg:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link
               key={link.name}
@@ -141,9 +127,8 @@ const Header = () => {
             </nav>
           </div>
         )}
-        </div>
-      </header>
-    </>
+      </div>
+    </header>
   );
 };
 
