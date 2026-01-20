@@ -11,7 +11,16 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only accept POST requests
+  // AbacatePay panels sometimes "test" the URL with GET/HEAD.
+  // Return 200 for these methods so the endpoint can be verified.
+  if (req.method === "GET" || req.method === "HEAD") {
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Only accept POST requests for actual webhook delivery
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
