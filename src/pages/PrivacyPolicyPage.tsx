@@ -41,7 +41,7 @@ const PrivacyPolicyPage = () => {
           </div>
 
           {/* Resumo */}
-          <Card className="mb-8 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
+          <Card className="mb-6 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <Lock className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
@@ -58,6 +58,47 @@ const PrivacyPolicyPage = () => {
                   </ul>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Índice de Navegação */}
+          <Card className="mb-8 bg-muted/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="font-chakra text-sm uppercase text-muted-foreground">
+                Índice
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <nav className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <a href="#introducao" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Eye className="w-4 h-4" />
+                  1. Introdução
+                </a>
+                <a href="#dados-coletados" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Database className="w-4 h-4" />
+                  2. Dados Coletados
+                </a>
+                <a href="#uso-dados" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <UserCheck className="w-4 h-4" />
+                  3. Como Usamos seus Dados
+                </a>
+                <a href="#compartilhamento" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Globe className="w-4 h-4" />
+                  4. Compartilhamento
+                </a>
+                <a href="#seguranca" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Lock className="w-4 h-4" />
+                  5. Segurança
+                </a>
+                <a href="#direitos" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Shield className="w-4 h-4" />
+                  6. Seus Direitos (LGPD)
+                </a>
+                <a href="#exclusao" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                  7. Exclusão de Dados
+                </a>
+              </nav>
             </CardContent>
           </Card>
 
