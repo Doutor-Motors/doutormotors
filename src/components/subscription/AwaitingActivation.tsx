@@ -18,6 +18,8 @@ interface AwaitingActivationProps {
   planType: "basic" | "pro";
   onActivated?: () => void;
   onExpired?: () => void;
+  /** Quando true, renderiza apenas o conteúdo interno (sem wrapper de página/card) */
+  inline?: boolean;
 }
 
 type ActivationStatus = "waiting" | "processing" | "activated" | "expired" | "error";
@@ -31,12 +33,14 @@ export function AwaitingActivation({
   planType,
   onActivated,
   onExpired,
+  inline = false,
 }: AwaitingActivationProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const [status, setStatus] = useState<ActivationStatus>("waiting");
+  // Inicia como "processing" quando inline (já sabe que o PIX foi pago)
+  const [status, setStatus] = useState<ActivationStatus>(inline ? "processing" : "waiting");
   const [progress, setProgress] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const MAX_WAIT_SECONDS = 120; // 2 minutos máximo
@@ -234,6 +238,152 @@ export function AwaitingActivation({
 
   const planLabel = planType === "pro" ? "Pro" : "Basic";
 
+  // Conteúdo interno dos status (reutilizável em ambos os modos)
+  const statusContent = (
+    <>
+      {/* Status: Waiting */}
+      {status === "waiting" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center space-y-4"
+        >
+          <div className="w-20 h-20 mx-auto bg-primary/20 rounded-full flex items-center justify-center">
+            <Clock className="w-10 h-10 text-primary animate-pulse" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold font-chakra text-foreground">
+              Processando Ativação
+            </h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              Aguarde enquanto ativamos sua assinatura...
+            </p>
+          </div>
+          <Progress value={progress} className="h-2" />
+          <p className="text-xs text-muted-foreground">
+            Verificando a cada 3 segundos ({Math.floor(elapsedSeconds)}s)
+          </p>
+        </motion.div>
+      )}
+
+      {/* Status: Processing */}
+      {status === "processing" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center space-y-4"
+        >
+          <div className="w-20 h-20 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center">
+            <Loader2 className="w-10 h-10 text-amber-400 animate-spin" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold font-chakra text-foreground">
+              Pagamento Confirmado!
+            </h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              Ativando sua assinatura {planLabel}...
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-sm text-amber-400">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Processando webhook...
+          </div>
+        </motion.div>
+      )}
+
+      {/* Status: Activated - chama onActivated, não mostra botão (o parent controla) */}
+      {status === "activated" && !inline && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center space-y-6"
+        >
+          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30">
+            <CheckCircle className="w-14 h-14 text-white" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold font-chakra text-foreground">
+              Assinatura Ativada!
+            </h3>
+            <p className="text-muted-foreground mt-1">
+              Seu plano {planLabel} está pronto para uso.
+            </p>
+          </div>
+          <Button
+            onClick={handleGoToDashboard}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase h-12"
+          >
+            <Zap className="w-5 h-5 mr-2" />
+            Acessar Dashboard
+          </Button>
+        </motion.div>
+      )}
+
+      {/* Status: Expired */}
+      {status === "expired" && !inline && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center space-y-4"
+        >
+          <div className="w-20 h-20 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center">
+            <AlertCircle className="w-10 h-10 text-amber-400" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold font-chakra text-foreground">
+              Tempo Esgotado
+            </h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              Não detectamos a ativação a tempo. Verifique se o pagamento foi
+              realizado ou entre em contato com o suporte.
+            </p>
+          </div>
+          <Button
+            onClick={handleRetry}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase h-12"
+          >
+            Tentar Novamente
+          </Button>
+        </motion.div>
+      )}
+
+      {/* Status: Error */}
+      {status === "error" && !inline && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center space-y-4"
+        >
+          <div className="w-20 h-20 mx-auto bg-destructive/20 rounded-full flex items-center justify-center">
+            <AlertCircle className="w-10 h-10 text-destructive" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold font-chakra text-foreground">
+              Erro na Verificação
+            </h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              Ocorreu um erro ao verificar seu pagamento. Entre em contato
+              com o suporte.
+            </p>
+          </div>
+          <Button
+            onClick={handleRetry}
+            variant="outline"
+            className="w-full h-12"
+          >
+            Tentar Novamente
+          </Button>
+        </motion.div>
+      )}
+    </>
+  );
+
+  // Modo inline: retorna apenas o conteúdo (para uso dentro de outro Card)
+  if (inline) {
+    return <div className="space-y-6">{statusContent}</div>;
+  }
+
+  // Modo standalone: página completa com background e card
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
@@ -256,140 +406,7 @@ export function AwaitingActivation({
 
         <Card className="bg-card/95 backdrop-blur-sm border-border shadow-2xl">
           <CardContent className="pt-8 pb-6 space-y-6">
-            {/* Status: Waiting */}
-            {status === "waiting" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center space-y-4"
-              >
-                <div className="w-20 h-20 mx-auto bg-primary/20 rounded-full flex items-center justify-center">
-                  <Clock className="w-10 h-10 text-primary animate-pulse" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold font-chakra text-foreground">
-                    Aguardando Pagamento
-                  </h3>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Estamos verificando seu pagamento PIX...
-                  </p>
-                </div>
-                <Progress value={progress} className="h-2" />
-                <p className="text-xs text-muted-foreground">
-                  Verificando a cada 3 segundos ({Math.floor(elapsedSeconds)}s)
-                </p>
-              </motion.div>
-            )}
-
-            {/* Status: Processing */}
-            {status === "processing" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center space-y-4"
-              >
-                <div className="w-20 h-20 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center">
-                  <Loader2 className="w-10 h-10 text-amber-400 animate-spin" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold font-chakra text-foreground">
-                    Pagamento Confirmado!
-                  </h3>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Ativando sua assinatura {planLabel}...
-                  </p>
-                </div>
-                <div className="flex items-center justify-center gap-2 text-sm text-amber-400">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Processando webhook...
-                </div>
-              </motion.div>
-            )}
-
-            {/* Status: Activated */}
-            {status === "activated" && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center space-y-6"
-              >
-                <div className="w-24 h-24 mx-auto bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30">
-                  <CheckCircle className="w-14 h-14 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold font-chakra text-foreground">
-                    Assinatura Ativada!
-                  </h3>
-                  <p className="text-muted-foreground mt-1">
-                    Seu plano {planLabel} está pronto para uso.
-                  </p>
-                </div>
-                <Button
-                  onClick={handleGoToDashboard}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase h-12"
-                >
-                  <Zap className="w-5 h-5 mr-2" />
-                  Acessar Dashboard
-                </Button>
-              </motion.div>
-            )}
-
-            {/* Status: Expired */}
-            {status === "expired" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center space-y-4"
-              >
-                <div className="w-20 h-20 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-10 h-10 text-amber-400" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold font-chakra text-foreground">
-                    Tempo Esgotado
-                  </h3>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Não detectamos o pagamento a tempo. Verifique se o PIX foi
-                    realizado ou gere um novo.
-                  </p>
-                </div>
-                <Button
-                  onClick={handleRetry}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase h-12"
-                >
-                  Tentar Novamente
-                </Button>
-              </motion.div>
-            )}
-
-            {/* Status: Error */}
-            {status === "error" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center space-y-4"
-              >
-                <div className="w-20 h-20 mx-auto bg-destructive/20 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-10 h-10 text-destructive" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold font-chakra text-foreground">
-                    Erro na Verificação
-                  </h3>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Ocorreu um erro ao verificar seu pagamento. Entre em contato
-                    com o suporte.
-                  </p>
-                </div>
-                <Button
-                  onClick={handleRetry}
-                  variant="outline"
-                  className="w-full h-12"
-                >
-                  Tentar Novamente
-                </Button>
-              </motion.div>
-            )}
+            {statusContent}
           </CardContent>
         </Card>
       </motion.div>
