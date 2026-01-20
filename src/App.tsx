@@ -65,6 +65,7 @@ import SystemScanReportPage from "./pages/admin/SystemScanReportPage";
 import ImplementationGuidePage from "./pages/admin/ImplementationGuidePage";
 import AdminCarCareData from "./pages/admin/AdminCarCareData";
 import ContactAnalytics from "./pages/admin/ContactAnalytics";
+import AdminPayments from "./pages/admin/AdminPayments";
 import PixCheckoutPage from "./pages/PixCheckoutPage";
 
 const queryClient = new QueryClient();
@@ -135,6 +136,7 @@ const App = () => (
                 <Route path="/admin/settings" element={<ProtectedRoute><AdminProtectedRoute><AdminSettings /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/alerts" element={<ProtectedRoute><AdminProtectedRoute><AdminAlerts /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/subscriptions" element={<ProtectedRoute><AdminProtectedRoute><AdminSubscriptions /></AdminProtectedRoute></ProtectedRoute>} />
+                <Route path="/admin/payments" element={<ProtectedRoute><AdminProtectedRoute><AdminPayments /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/permissions" element={<ProtectedRoute><AdminProtectedRoute><AdminPermissions /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/monetization-guide" element={<ProtectedRoute><AdminProtectedRoute><MonetizationGuidePage /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/system-scan" element={<ProtectedRoute><AdminProtectedRoute><SystemScanReportPage /></AdminProtectedRoute></ProtectedRoute>} />
