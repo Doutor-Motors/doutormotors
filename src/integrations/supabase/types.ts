@@ -543,6 +543,71 @@ export type Database = {
           },
         ]
       }
+      expert_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+          vehicle_context: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+          vehicle_context?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          vehicle_context?: Json | null
+        }
+        Relationships: []
+      }
+      expert_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          image_url: string | null
+          role: string
+          suggested_tutorials: Json | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          role: string
+          suggested_tutorials?: Json | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          role?: string
+          suggested_tutorials?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "expert_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_consents: {
         Row: {
           consent_type: string
