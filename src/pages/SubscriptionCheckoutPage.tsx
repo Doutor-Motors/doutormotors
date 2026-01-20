@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { 
   CheckCircle, 
   Clock, 
@@ -158,6 +159,48 @@ export default function SubscriptionCheckoutPage() {
   const [recentSubscribers, setRecentSubscribers] = useState<RecentSubscriber[]>([]);
   const [currentSubscriberIndex, setCurrentSubscriberIndex] = useState(0);
   const [subscriberCount, setSubscriberCount] = useState(0);
+
+  // Confetti celebration function
+  const triggerConfetti = useCallback(() => {
+    const duration = 3000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+    const interval = setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+
+      // Confetti from both sides
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+        colors: ['#C91A1A', '#22C55E', '#F59E0B', '#3B82F6', '#A855F7'],
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+        colors: ['#C91A1A', '#22C55E', '#F59E0B', '#3B82F6', '#A855F7'],
+      });
+    }, 250);
+
+    // Initial burst
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#C91A1A', '#22C55E', '#F59E0B'],
+      zIndex: 9999,
+    });
+  }, []);
   
   // Pre-fill with data from signup, including selected plan
   const signupData = location.state as { 
@@ -302,6 +345,8 @@ export default function SubscriptionCheckoutPage() {
             // Activate subscription
             await activateSubscription();
             setStep("success");
+            // Trigger confetti celebration
+            triggerConfetti();
             toast.success("Pagamento confirmado! Sua assinatura Pro está ativa.");
           }
         }
