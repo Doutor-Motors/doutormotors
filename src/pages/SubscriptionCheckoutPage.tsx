@@ -816,9 +816,14 @@ export default function SubscriptionCheckoutPage() {
                       <div className="bg-white p-3 rounded-xl inline-block mb-4 shadow-lg">
                         {pixData.qr_code_url ? (
                           <img
-                            src={`data:image/png;base64,${pixData.qr_code_url}`}
+                            src={pixData.qr_code_url}
                             alt="QR Code PIX"
                             className="w-44 h-44 mx-auto"
+                            onError={(e) => {
+                              console.error("Error loading QR Code image");
+                              // Fallback to external QR generator
+                              e.currentTarget.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixData.br_code || "")}`;
+                            }}
                           />
                         ) : (
                           <div className="w-44 h-44 bg-muted/30 rounded-lg flex items-center justify-center">
