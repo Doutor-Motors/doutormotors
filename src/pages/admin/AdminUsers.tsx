@@ -167,22 +167,29 @@ const AdminUsers = () => {
     if (!selectedUser) return;
 
     try {
-      // Delete profile (cascade will handle related data)
-      const { error } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("user_id", selectedUser.user_id);
+      // Call the edge function to properly delete user from auth.users
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { userId: selectedUser.user_id },
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Erro ao excluir usuário");
+      }
 
-      toast.success("Usuário removido com sucesso!");
-      notifySuccess("Usuário Removido", `${selectedUser.name} foi removido do sistema`);
+      if (!data.success) {
+        throw new Error(data.error || "Erro ao excluir usuário");
+      }
+
+      toast.success("Usuário removido permanentemente do sistema!");
+      notifySuccess("Usuário Removido", `${selectedUser.name} foi removido permanentemente do sistema`);
       setShowDeleteDialog(false);
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting user:", error);
-      toast.error("Erro ao remover usuário. O usuário pode ter dados relacionados.");
-      notifyError("Erro", "Não foi possível remover o usuário. Verifique dados relacionados.");
+      const errorMessage = error.message || "Erro ao remover usuário. Verifique os logs.";
+      toast.error(errorMessage);
+      notifyError("Erro", errorMessage);
     }
   };
 
@@ -370,10 +377,28 @@ const AdminUsers = () => {
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Remover Usuário</DialogTitle>
-              <DialogDescription>
-                Tem certeza que deseja remover {selectedUser?.name}? Esta ação não
-                pode ser desfeita.
+              <DialogTitle className="text-destructive flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Remover Usuário Permanentemente
+              </DialogTitle>
+              <DialogDescription className="space-y-2">
+                <p>
+                  Tem certeza que deseja remover <strong>{selectedUser?.name}</strong>?
+                </p>
+                <p className="text-destructive font-medium">
+                  ⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL e irá:
+                </p>
+                <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
+                  <li>Remover a conta de login do usuário</li>
+                  <li>Excluir todos os veículos cadastrados</li>
+                  <li>Excluir todos os diagnósticos realizados</li>
+                  <li>Excluir tickets de suporte</li>
+                  <li>Cancelar assinaturas ativas</li>
+                  <li>Remover todos os dados do usuário</li>
+                </ul>
+                <p className="text-sm text-muted-foreground mt-2">
+                  O usuário <strong>NÃO poderá mais fazer login</strong> após esta ação.
+                </p>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -381,7 +406,8 @@ const AdminUsers = () => {
                 Cancelar
               </Button>
               <Button variant="destructive" onClick={handleDeleteUser}>
-                Remover
+                <Trash2 className="w-4 h-4 mr-2" />
+                Remover Permanentemente
               </Button>
             </DialogFooter>
           </DialogContent>

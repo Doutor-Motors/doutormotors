@@ -77,8 +77,8 @@ const AdminTickets = () => {
   const [replyMessage, setReplyMessage] = useState("");
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Fetch all tickets
-  const { data: tickets, isLoading } = useQuery({
+  // Fetch all tickets with profiles
+  const { data: tickets, isLoading, refetch } = useQuery({
     queryKey: ["admin-tickets", statusFilter],
     queryFn: async () => {
       let query = supabase
@@ -91,9 +91,23 @@ const AdminTickets = () => {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      return data as unknown as TicketWithProfile[];
+
+      // Fetch profiles separately to join
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, name, email");
+
+      // Map profiles to tickets
+      const ticketsWithProfiles = (data || []).map(ticket => {
+        const profile = profiles?.find(p => p.user_id === ticket.user_id);
+        return {
+          ...ticket,
+          profiles: profile ? { name: profile.name, email: profile.email } : null
+        };
+      });
+
+      return ticketsWithProfiles as TicketWithProfile[];
     },
   });
 

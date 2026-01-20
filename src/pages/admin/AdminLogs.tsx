@@ -23,11 +23,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface LogEntry {
   id: string;
-  type: "user" | "vehicle" | "diagnostic";
+  type: "user" | "vehicle" | "diagnostic" | "admin" | "payment";
   action: string;
   description: string;
   timestamp: string;
   user_name?: string;
+  metadata?: Record<string, any>;
 }
 
 const AdminLogs = () => {
@@ -44,6 +45,48 @@ const AdminLogs = () => {
     setLoading(true);
     try {
       const allLogs: LogEntry[] = [];
+
+      // Fetch audit logs first (admin actions)
+      const { data: auditLogs } = await supabase
+        .from("audit_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      const { data: auditProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, name");
+
+      auditLogs?.forEach((log) => {
+        const admin = auditProfiles?.find((p) => p.user_id === log.user_id);
+        allLogs.push({
+          id: `audit-${log.id}`,
+          type: "admin",
+          action: log.action,
+          description: `${log.action} em ${log.entity_type}${log.entity_id ? ` (${log.entity_id.slice(0, 8)}...)` : ""}`,
+          timestamp: log.created_at,
+          user_name: admin?.name || "Admin",
+          metadata: log.metadata as Record<string, any> | undefined,
+        });
+      });
+
+      // Fetch PIX payments
+      const { data: payments } = await supabase
+        .from("pix_payments")
+        .select("id, customer_name, customer_email, amount, status, created_at, paid_at")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      payments?.forEach((payment) => {
+        allLogs.push({
+          id: `payment-${payment.id}`,
+          type: "payment",
+          action: payment.status === "paid" ? "Pagamento Confirmado" : payment.status === "pending" ? "PIX Gerado" : "Pagamento " + payment.status,
+          description: `${payment.customer_name} - R$ ${(payment.amount / 100).toFixed(2)}`,
+          timestamp: payment.paid_at || payment.created_at,
+          user_name: payment.customer_name,
+        });
+      });
 
       // Fetch recent profiles (user registrations)
       const { data: profiles } = await supabase
@@ -152,6 +195,10 @@ const AdminLogs = () => {
         return <Car className="w-4 h-4 text-green-500" />;
       case "diagnostic":
         return <Activity className="w-4 h-4 text-purple-500" />;
+      case "admin":
+        return <RefreshCw className="w-4 h-4 text-red-500" />;
+      case "payment":
+        return <Activity className="w-4 h-4 text-emerald-500" />;
       default:
         return <Calendar className="w-4 h-4 text-gray-500" />;
     }
@@ -162,12 +209,16 @@ const AdminLogs = () => {
       user: "bg-blue-500/20 text-blue-500",
       vehicle: "bg-green-500/20 text-green-500",
       diagnostic: "bg-purple-500/20 text-purple-500",
+      admin: "bg-red-500/20 text-red-500",
+      payment: "bg-emerald-500/20 text-emerald-500",
     };
 
     const labels: Record<string, string> = {
       user: "Usuário",
       vehicle: "Veículo",
       diagnostic: "Diagnóstico",
+      admin: "Admin",
+      payment: "Pagamento",
     };
 
     return (
@@ -206,6 +257,8 @@ const AdminLogs = () => {
                 <SelectItem value="user">Usuários</SelectItem>
                 <SelectItem value="vehicle">Veículos</SelectItem>
                 <SelectItem value="diagnostic">Diagnósticos</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="payment">Pagamentos</SelectItem>
               </SelectContent>
             </Select>
 

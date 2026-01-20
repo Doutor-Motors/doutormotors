@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.carcare-scheduled-scan]
 verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
