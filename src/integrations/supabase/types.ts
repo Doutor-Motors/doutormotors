@@ -698,6 +698,63 @@ export type Database = {
           },
         ]
       }
+      pix_payments: {
+        Row: {
+          amount: number
+          br_code: string | null
+          created_at: string
+          customer_cellphone: string | null
+          customer_email: string
+          customer_name: string
+          customer_tax_id: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          paid_at: string | null
+          pix_id: string | null
+          qr_code_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          br_code?: string | null
+          created_at?: string
+          customer_cellphone?: string | null
+          customer_email: string
+          customer_name: string
+          customer_tax_id: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          paid_at?: string | null
+          pix_id?: string | null
+          qr_code_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          br_code?: string | null
+          created_at?: string
+          customer_cellphone?: string | null
+          customer_email?: string
+          customer_name?: string
+          customer_tax_id?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          paid_at?: string | null
+          pix_id?: string | null
+          qr_code_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
