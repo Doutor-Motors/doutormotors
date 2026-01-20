@@ -264,51 +264,51 @@ export default function SelectPlanPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.15 }}
             >
-              <Card className="h-full border-white/10 bg-white/5 backdrop-blur-sm hover:border-white/20 transition-all duration-300 overflow-hidden">
+              <Card className="h-full border border-white/20 bg-secondary/80 backdrop-blur-md hover:border-white/30 transition-all duration-300 overflow-hidden shadow-xl">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <Badge variant="outline" className="text-xs border-white/20 text-white/70">
+                    <Badge variant="outline" className="text-xs border-white/30 text-white/80 bg-white/5">
                       Econômico
                     </Badge>
                   </div>
                   <CardTitle className="text-2xl font-chakra text-white">Basic</CardTitle>
-                  <CardDescription className="text-white/60">
+                  <CardDescription className="text-white/70">
                     Perfeito para começar a explorar
                   </CardDescription>
                   <div className="pt-3">
                     <span className="text-4xl font-bold font-chakra text-white">R$ 19,90</span>
-                    <span className="text-white/50 text-sm">/mês</span>
+                    <span className="text-white/60 text-sm">/mês</span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   {/* Features */}
-                  <div className="space-y-2.5">
-                    <p className="text-xs font-semibold text-white/40 uppercase tracking-wide">
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-white/50 uppercase tracking-wide">
                       Inclui:
                     </p>
                     {BASIC_FEATURES.map((feature, i) => (
-                      <div key={i} className="flex items-center gap-2.5 text-sm">
-                        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                          <feature.icon className="w-3.5 h-3.5 text-green-400" />
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                          <feature.icon className="w-4 h-4 text-green-400" />
                         </div>
-                        <span className="text-white/80">{feature.text}</span>
+                        <span className="text-white font-medium">{feature.text}</span>
                       </div>
                     ))}
                   </div>
 
                   {/* Limitations */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-white/40 uppercase tracking-wide">
+                  <div className="space-y-2.5">
+                    <p className="text-xs font-semibold text-white/50 uppercase tracking-wide">
                       Limitações:
                     </p>
                     {BASIC_LIMITATIONS.map((limitation, i) => (
-                      <div key={i} className="flex items-center gap-2.5 text-sm text-white/40">
-                        <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
-                          <X className="w-3.5 h-3.5 text-red-400/60" />
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
+                          <X className="w-4 h-4 text-red-400" />
                         </div>
-                        <span>{limitation}</span>
+                        <span className="text-white/60">{limitation}</span>
                       </div>
                     ))}
                   </div>
@@ -317,7 +317,7 @@ export default function SelectPlanPage() {
                   <Button 
                     onClick={() => handleSelectPlan("basic")}
                     variant="outline"
-                    className="w-full h-12 text-base gap-2 mt-4 border-white/20 text-white hover:bg-white/10 hover:border-white/30"
+                    className="w-full h-12 text-base gap-2 mt-4 border-white/30 bg-white/5 text-white hover:bg-white/15 hover:border-white/50 font-medium"
                   >
                     Assinar Basic
                     <ArrowRight className="w-4 h-4" />
@@ -330,27 +330,24 @@ export default function SelectPlanPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.25 }}
               className="relative"
             >
-              {/* Outer glow ring */}
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-orange-500 to-primary rounded-xl opacity-75 blur-sm animate-pulse" />
+              {/* Subtle border glow */}
+              <div className="absolute -inset-[1px] bg-gradient-to-r from-primary to-orange-500 rounded-xl opacity-60" />
               
-              <Card className="relative h-full border-primary/50 bg-gradient-to-b from-primary/20 via-primary/10 to-white/5 backdrop-blur-sm overflow-hidden group hover:border-primary/70 transition-all duration-300 pulse-glow">
+              <Card className="relative h-full border-0 bg-secondary/95 backdrop-blur-md overflow-hidden shadow-2xl shadow-primary/10">
                 {/* Popular Badge */}
-                <div className="absolute top-0 right-0">
+                <div className="absolute top-0 right-0 z-10">
                   <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl flex items-center gap-1.5 shadow-lg">
                     <Star className="w-3.5 h-3.5 fill-current" />
                     MAIS POPULAR
                   </div>
                 </div>
 
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
                 <CardHeader className="pb-4 relative">
                   <div className="flex items-center justify-between mb-2">
-                    <Badge className="bg-primary/30 text-primary border-primary/40 gap-1.5">
+                    <Badge className="bg-primary/20 text-primary border border-primary/30 gap-1.5">
                       <Crown className="w-3.5 h-3.5" />
                       Recomendado
                     </Badge>
@@ -359,26 +356,26 @@ export default function SelectPlanPage() {
                     Pro
                     <Sparkles className="w-5 h-5 text-primary" />
                   </CardTitle>
-                  <CardDescription className="text-white/60">
+                  <CardDescription className="text-white/70">
                     Potência máxima para profissionais
                   </CardDescription>
                   <div className="pt-3">
                     <span className="text-4xl font-bold font-chakra text-primary">R$ 34,90</span>
-                    <span className="text-white/50 text-sm">/mês</span>
+                    <span className="text-white/60 text-sm">/mês</span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5 relative">
                   {/* Features */}
-                  <div className="space-y-2.5">
-                    <p className="text-xs font-semibold text-primary/80 uppercase tracking-wide">
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
                       Tudo do Basic, mais:
                     </p>
                     {PRO_FEATURES.map((feature, i) => (
-                      <div key={i} className="flex items-center gap-2.5 text-sm">
-                        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                          <feature.icon className="w-3.5 h-3.5 text-primary" />
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                          <feature.icon className="w-4 h-4 text-primary" />
                         </div>
-                        <span className="text-white/90">{feature.text}</span>
+                        <span className="text-white font-medium">{feature.text}</span>
                       </div>
                     ))}
                   </div>
@@ -386,7 +383,7 @@ export default function SelectPlanPage() {
                   {/* Button */}
                   <Button 
                     onClick={() => handleSelectPlan("pro")}
-                    className="w-full h-12 text-base gap-2 mt-4 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
+                    className="w-full h-12 text-base gap-2 mt-4 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/30 font-semibold"
                   >
                     <Crown className="w-4 h-4" />
                     Assinar Pro
@@ -394,7 +391,7 @@ export default function SelectPlanPage() {
                   </Button>
 
                   {/* Payment info */}
-                  <div className="flex items-center justify-center gap-2 text-xs text-white/50 pt-2">
+                  <div className="flex items-center justify-center gap-2 text-xs text-white/60 pt-2">
                     <Shield className="w-3.5 h-3.5" />
                     <span>Pagamento seguro via PIX</span>
                   </div>
