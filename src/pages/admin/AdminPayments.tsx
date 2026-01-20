@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +19,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { useAdminNotification } from "@/contexts/AdminNotificationContext";
 import {
   DollarSign,
   TrendingUp,
@@ -34,17 +46,21 @@ import {
   ArrowDownRight,
   Percent,
   Receipt,
+  Download,
+  FileText,
+  Undo2,
+  Loader2,
 } from "lucide-react";
-import { format, subDays, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { format, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-
-type PaymentStatus = "pending" | "paid" | "expired" | "refunded";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface PixPayment {
   id: string;
@@ -60,16 +76,6 @@ interface PixPayment {
   description: string | null;
 }
 
-interface Payment {
-  id: string;
-  amount_cents: number;
-  status: string | null;
-  user_id: string;
-  created_at: string | null;
-  paid_at: string | null;
-  method: string | null;
-}
-
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   pending: { label: "Pendente", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: <Clock className="w-3 h-3" /> },
   paid: { label: "Pago", color: "bg-green-500/20 text-green-400 border-green-500/30", icon: <CheckCircle2 className="w-3 h-3" /> },
@@ -77,12 +83,15 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
   refunded: { label: "Reembolsado", color: "bg-purple-500/20 text-purple-400 border-purple-500/30", icon: <RefreshCw className="w-3 h-3" /> },
 };
 
-const COLORS = ["#22c55e", "#eab308", "#ef4444", "#a855f7"];
-
 const AdminPayments = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<string>("30");
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<PixPayment | null>(null);
+  
+  const queryClient = useQueryClient();
+  const { addNotification } = useAdminNotification();
 
   // Fetch PIX payments
   const { data: pixPayments, isLoading: pixLoading, refetch: refetchPix } = useQuery({
@@ -100,19 +109,67 @@ const AdminPayments = () => {
     },
   });
 
-  // Fetch general payments
-  const { data: payments, isLoading: paymentsLoading } = useQuery({
-    queryKey: ["admin-payments", dateRange],
-    queryFn: async () => {
-      const fromDate = subDays(new Date(), parseInt(dateRange));
-      const { data, error } = await supabase
-        .from("payments")
-        .select("*")
-        .gte("created_at", fromDate.toISOString())
-        .order("created_at", { ascending: false });
+  // Real-time subscription for new paid payments
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-pix-payments-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pix_payments',
+          filter: 'status=eq.paid',
+        },
+        (payload) => {
+          const payment = payload.new as PixPayment;
+          const oldPayment = payload.old as PixPayment;
+          
+          // Only notify if status changed to paid
+          if (oldPayment.status !== 'paid' && payment.status === 'paid') {
+            addNotification({
+              type: 'system_alert',
+              title: '💰 Pagamento Confirmado!',
+              subtitle: 'PIX',
+              message: `${payment.customer_name} pagou`,
+              highlight: `R$ ${(payment.amount / 100).toFixed(2)}`,
+              secondaryMessage: payment.customer_email,
+              duration: 10000,
+            });
+            
+            // Refetch to update the list
+            refetchPix();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [addNotification, refetchPix]);
+
+  // Refund mutation
+  const refundMutation = useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { error } = await supabase
+        .from("pix_payments")
+        .update({ 
+          status: "refunded",
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", paymentId);
       
       if (error) throw error;
-      return data as Payment[];
+    },
+    onSuccess: () => {
+      toast.success("Pagamento marcado como reembolsado");
+      queryClient.invalidateQueries({ queryKey: ["admin-pix-payments"] });
+      setRefundDialogOpen(false);
+      setSelectedPayment(null);
+    },
+    onError: (error) => {
+      toast.error("Erro ao processar reembolso: " + error.message);
     },
   });
 
@@ -123,6 +180,7 @@ const AdminPayments = () => {
     paidPayments: pixPayments?.filter(p => p.status === "paid").length || 0,
     pendingPayments: pixPayments?.filter(p => p.status === "pending").length || 0,
     expiredPayments: pixPayments?.filter(p => p.status === "expired").length || 0,
+    refundedPayments: pixPayments?.filter(p => p.status === "refunded").length || 0,
     conversionRate: pixPayments?.length 
       ? ((pixPayments.filter(p => p.status === "paid").length / pixPayments.length) * 100).toFixed(1)
       : "0",
@@ -136,6 +194,7 @@ const AdminPayments = () => {
     { name: "Pagos", value: metrics.paidPayments, color: "#22c55e" },
     { name: "Pendentes", value: metrics.pendingPayments, color: "#eab308" },
     { name: "Expirados", value: metrics.expiredPayments, color: "#ef4444" },
+    { name: "Reembolsados", value: metrics.refundedPayments, color: "#a855f7" },
   ].filter(d => d.value > 0);
 
   // Chart data - Daily revenue (last 7 days)
@@ -172,7 +231,94 @@ const AdminPayments = () => {
     }).format(value);
   };
 
-  const isLoading = pixLoading || paymentsLoading;
+  // Export to CSV
+  const exportToCSV = () => {
+    const headers = ["Cliente", "Email", "CPF/CNPJ", "Valor", "Status", "Criado em", "Pago em"];
+    const rows = filteredPayments.map(p => [
+      p.customer_name,
+      p.customer_email,
+      p.customer_tax_id,
+      (p.amount / 100).toFixed(2),
+      statusConfig[p.status]?.label || p.status,
+      format(parseISO(p.created_at), "dd/MM/yyyy HH:mm"),
+      p.paid_at ? format(parseISO(p.paid_at), "dd/MM/yyyy HH:mm") : "-"
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `pagamentos-pix-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.click();
+    
+    toast.success("Relatório CSV exportado com sucesso!");
+  };
+
+  // Export to PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(40);
+    doc.text("Relatório de Pagamentos PIX", 14, 22);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 30);
+    doc.text(`Período: Últimos ${dateRange} dias`, 14, 36);
+    
+    // Summary
+    doc.setFontSize(12);
+    doc.setTextColor(40);
+    doc.text("Resumo", 14, 48);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text(`Receita Total: ${formatCurrency(metrics.totalRevenue)}`, 14, 56);
+    doc.text(`Total de Pagamentos: ${metrics.totalPayments}`, 14, 62);
+    doc.text(`Pagos: ${metrics.paidPayments}`, 14, 68);
+    doc.text(`Pendentes: ${metrics.pendingPayments}`, 80, 68);
+    doc.text(`Expirados: ${metrics.expiredPayments}`, 130, 68);
+    doc.text(`Taxa de Conversão: ${metrics.conversionRate}%`, 14, 74);
+    doc.text(`Ticket Médio: ${formatCurrency(parseFloat(metrics.avgTicket))}`, 80, 74);
+
+    // Table
+    autoTable(doc, {
+      startY: 85,
+      head: [["Cliente", "CPF/CNPJ", "Valor", "Status", "Data Criação", "Data Pagamento"]],
+      body: filteredPayments.map(p => [
+        p.customer_name,
+        p.customer_tax_id.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"),
+        formatCurrency(p.amount / 100),
+        statusConfig[p.status]?.label || p.status,
+        format(parseISO(p.created_at), "dd/MM/yyyy HH:mm"),
+        p.paid_at ? format(parseISO(p.paid_at), "dd/MM/yyyy HH:mm") : "-"
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    doc.save(`pagamentos-pix-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    toast.success("Relatório PDF exportado com sucesso!");
+  };
+
+  const handleRefundClick = (payment: PixPayment) => {
+    setSelectedPayment(payment);
+    setRefundDialogOpen(true);
+  };
+
+  const confirmRefund = () => {
+    if (selectedPayment) {
+      refundMutation.mutate(selectedPayment.id);
+    }
+  };
+
+  const isLoading = pixLoading;
 
   return (
     <AdminLayout>
@@ -187,7 +333,7 @@ const AdminPayments = () => {
               Gerencie e acompanhe todos os pagamentos via PIX
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue />
@@ -201,6 +347,14 @@ const AdminPayments = () => {
             </Select>
             <Button variant="outline" size="icon" onClick={() => refetchPix()}>
               <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" onClick={exportToCSV} className="gap-2">
+              <Download className="h-4 w-4" />
+              CSV
+            </Button>
+            <Button variant="outline" onClick={exportToPDF} className="gap-2">
+              <FileText className="h-4 w-4" />
+              PDF
             </Button>
           </div>
         </div>
@@ -435,6 +589,7 @@ const AdminPayments = () => {
                       <TableHead>Status</TableHead>
                       <TableHead>Criado em</TableHead>
                       <TableHead>Pago em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -475,6 +630,19 @@ const AdminPayments = () => {
                               <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
+                          <TableCell className="text-right">
+                            {payment.status === "paid" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRefundClick(payment)}
+                                className="text-purple-500 hover:text-purple-600 hover:bg-purple-500/10"
+                              >
+                                <Undo2 className="w-4 h-4 mr-1" />
+                                Reembolsar
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -486,7 +654,7 @@ const AdminPayments = () => {
         </Card>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-500/20 rounded-lg">
@@ -522,6 +690,17 @@ const AdminPayments = () => {
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <RefreshCw className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Reembolsados</p>
+                <p className="text-xl font-bold">{metrics.refundedPayments}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/20 rounded-lg">
                 <DollarSign className="w-5 h-5 text-primary" />
               </div>
@@ -535,6 +714,47 @@ const AdminPayments = () => {
           </Card>
         </div>
       </div>
+
+      {/* Refund Confirmation Dialog */}
+      <AlertDialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Reembolso</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja marcar este pagamento como reembolsado?
+              <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
+                <p><strong>Cliente:</strong> {selectedPayment?.customer_name}</p>
+                <p><strong>Email:</strong> {selectedPayment?.customer_email}</p>
+                <p><strong>Valor:</strong> {selectedPayment && formatCurrency(selectedPayment.amount / 100)}</p>
+              </div>
+              <p className="mt-4 text-sm text-yellow-600">
+                ⚠️ Esta ação apenas marca o pagamento como reembolsado no sistema. 
+                O reembolso real deve ser processado manualmente via seu banco ou gateway de pagamento.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRefund}
+              disabled={refundMutation.isPending}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {refundMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <Undo2 className="w-4 h-4 mr-2" />
+                  Confirmar Reembolso
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
