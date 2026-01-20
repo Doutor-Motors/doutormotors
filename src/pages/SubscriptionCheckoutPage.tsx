@@ -107,6 +107,13 @@ const generateRandomSubscriber = (): RecentSubscriber => {
   };
 };
 
+const BASIC_BENEFITS = [
+  { icon: Zap, text: "5 diagnósticos/mês" },
+  { icon: Star, text: "1 veículo cadastrado" },
+  { icon: CreditCard, text: "4 parâmetros em tempo real" },
+  { icon: BadgeCheck, text: "Suporte por email" },
+];
+
 const PRO_BENEFITS = [
   { icon: Zap, text: "Diagnósticos ilimitados" },
   { icon: Star, text: "Gravação de dados avançada" },
@@ -665,35 +672,66 @@ export default function SubscriptionCheckoutPage() {
                     className="space-y-6"
                   >
                     {/* Value Preview Card - Transparência no valor */}
-                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-5 border border-primary/20">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
+                    <div className={`relative overflow-hidden rounded-xl p-5 border ${
+                      selectedPlan === "pro" 
+                        ? "bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border-primary/20"
+                        : "bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent border-blue-500/20"
+                    }`}>
+                      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl ${
+                        selectedPlan === "pro" ? "bg-primary/10" : "bg-blue-500/10"
+                      }`} />
                       
                       <div className="relative">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">Plano {planName} Mensal</p>
-                            <p className="text-3xl font-bold text-foreground font-chakra">
+                            <p className={`text-3xl font-bold font-chakra ${
+                              selectedPlan === "pro" ? "text-primary" : "text-blue-400"
+                            }`}>
                               {formattedPrice}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              {planPriceInCents} centavos • Renovação mensal
+                              Renovação mensal automática
                             </p>
                           </div>
-                          <div className="bg-primary/20 p-3 rounded-full">
-                            <Crown className="w-8 h-8 text-primary" />
+                          <div className={`p-3 rounded-full ${
+                            selectedPlan === "pro" ? "bg-primary/20" : "bg-blue-500/20"
+                          }`}>
+                            <Crown className={`w-8 h-8 ${
+                              selectedPlan === "pro" ? "text-primary" : "text-blue-400"
+                            }`} />
                           </div>
                         </div>
                         
                         <Separator className="my-4 bg-border/50" />
                         
-                        <div className="grid grid-cols-2 gap-3">
-                          {PRO_BENEFITS.map((benefit, i) => (
-                            <div key={i} className="flex items-center gap-2 text-sm">
-                              <benefit.icon className="w-4 h-4 text-primary shrink-0" />
-                              <span className="text-muted-foreground">{benefit.text}</span>
-                            </div>
-                          ))}
+                        {/* Plan-specific benefits */}
+                        <div className="space-y-2">
+                          <p className={`text-xs font-semibold uppercase tracking-wide ${
+                            selectedPlan === "pro" ? "text-primary" : "text-blue-400"
+                          }`}>
+                            {selectedPlan === "pro" ? "Recursos Premium:" : "Recursos Inclusos:"}
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(selectedPlan === "pro" ? PRO_BENEFITS : BASIC_BENEFITS).map((benefit, i) => (
+                              <div key={i} className="flex items-center gap-2 text-sm">
+                                <benefit.icon className={`w-4 h-4 shrink-0 ${
+                                  selectedPlan === "pro" ? "text-primary" : "text-blue-400"
+                                }`} />
+                                <span className="text-muted-foreground text-xs">{benefit.text}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
+
+                        {/* Upgrade hint for Basic */}
+                        {selectedPlan === "basic" && (
+                          <div className="mt-4 p-2.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                            <p className="text-xs text-amber-400 text-center">
+                              💡 Faça upgrade para o <strong>Pro</strong> a qualquer momento e desbloqueie recursos avançados!
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
 

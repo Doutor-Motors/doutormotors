@@ -239,7 +239,7 @@ export default function SelectPlanPage() {
                     Potência máxima para profissionais
                   </CardDescription>
                   <div className="pt-2">
-                    <span className="text-4xl font-bold font-chakra text-primary">R$ 29,90</span>
+                    <span className="text-4xl font-bold font-chakra text-primary">R$ 34,90</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                 </CardHeader>
