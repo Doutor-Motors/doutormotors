@@ -31,7 +31,6 @@ Deno.serve(async (req) => {
 
     // Validate webhook signature if secret is configured
     if (webhookSecret && signature) {
-      // AbacatePay uses HMAC-SHA256 for signature validation
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
         "raw",
@@ -53,93 +52,97 @@ Deno.serve(async (req) => {
       
       if (signature !== expectedSignature) {
         console.warn("Invalid webhook signature");
-        // Log but don't reject - some webhooks may have different signature formats
       }
     }
 
-    // Handle different event types
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Handle different event types from AbacatePay
     const eventType = body.event || body.type;
     console.log("Event type:", eventType);
 
+    // Handle billing paid event
     if (eventType === "billing.paid" || eventType === "BILLING_PAID") {
-      const billing = body.billing || body.data?.billing;
+      const billing = body.billing || body.data?.billing || body.data;
+      const billingId = billing?.id || body.billingId;
       
-      if (!billing) {
-        console.error("No billing data in webhook");
-        return new Response(JSON.stringify({ received: true }), {
+      if (!billingId) {
+        console.error("No billing ID in webhook");
+        return new Response(JSON.stringify({ received: true, warning: "No billing ID" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      console.log("Processing paid billing:", billing.id);
+      console.log("Processing paid billing:", billingId);
 
-      // Initialize Supabase client
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-      // Find the payment by AbacatePay billing ID
-      const { data: payment, error: paymentError } = await supabase
-        .from("payments")
-        .select("*, user_subscriptions(*)")
-        .or(`picpay_charge_id.eq.${billing.id},metadata->abacatepay_billing_id.eq.${billing.id}`)
-        .single();
-
-      if (paymentError || !payment) {
-        console.error("Payment not found:", paymentError);
-        // Still return 200 to acknowledge receipt
-        return new Response(JSON.stringify({ received: true, warning: "Payment not found" }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Update payment status
-      const { error: updateError } = await supabase
-        .from("payments")
+      // Update pix_payments table (for checkout demo)
+      const { data: pixPayment, error: pixError } = await supabase
+        .from("pix_payments")
         .update({
           status: "paid",
           paid_at: new Date().toISOString(),
-          picpay_end_to_end_id: body.payment?.id || null,
-          metadata: {
-            ...((payment.metadata as Record<string, unknown>) || {}),
-            abacatepay_payment: body.payment,
-            paid_via: "abacatepay_webhook",
-          },
         })
-        .eq("id", payment.id);
+        .eq("pix_id", billingId)
+        .select()
+        .single();
 
-      if (updateError) {
-        console.error("Error updating payment:", updateError);
-        throw updateError;
+      if (pixError) {
+        console.log("PIX payment not found or update failed:", pixError);
+      } else {
+        console.log("PIX payment updated:", pixPayment?.id);
       }
 
-      // If there's a subscription, activate it
-      if (payment.subscription_id) {
-        const now = new Date();
-        const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
+      // Also update regular payments table (for subscriptions)
+      const { data: payment, error: paymentError } = await supabase
+        .from("payments")
+        .select("*, user_subscriptions(*)")
+        .or(`picpay_charge_id.eq.${billingId},metadata->abacatepay_billing_id.eq.${billingId}`)
+        .single();
 
-        const { error: subError } = await supabase
-          .from("user_subscriptions")
+      if (!paymentError && payment) {
+        console.log("Found subscription payment:", payment.id);
+
+        // Update payment status
+        await supabase
+          .from("payments")
           .update({
-            status: "active",
-            started_at: now.toISOString(),
-            expires_at: expiresAt.toISOString(),
-            next_billing_at: expiresAt.toISOString(),
-            payment_method: "pix_abacatepay",
+            status: "paid",
+            paid_at: new Date().toISOString(),
+            picpay_end_to_end_id: body.payment?.id || null,
+            metadata: {
+              ...((payment.metadata as Record<string, unknown>) || {}),
+              abacatepay_payment: body.payment,
+              paid_via: "abacatepay_webhook",
+            },
           })
-          .eq("id", payment.subscription_id);
+          .eq("id", payment.id);
 
-        if (subError) {
-          console.error("Error updating subscription:", subError);
-        } else {
+        // Activate subscription if exists
+        if (payment.subscription_id) {
+          const now = new Date();
+          const expiresAt = new Date();
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+          await supabase
+            .from("user_subscriptions")
+            .update({
+              status: "active",
+              started_at: now.toISOString(),
+              expires_at: expiresAt.toISOString(),
+              next_billing_at: expiresAt.toISOString(),
+              payment_method: "pix_abacatepay",
+            })
+            .eq("id", payment.subscription_id);
+
           console.log("Subscription activated:", payment.subscription_id);
         }
       }
 
-      console.log("Payment processed successfully:", payment.id);
+      console.log("Payment processed successfully");
     }
 
     return new Response(JSON.stringify({ received: true }), {

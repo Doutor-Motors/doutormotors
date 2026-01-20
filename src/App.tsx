@@ -65,6 +65,7 @@ import SystemScanReportPage from "./pages/admin/SystemScanReportPage";
 import ImplementationGuidePage from "./pages/admin/ImplementationGuidePage";
 import AdminCarCareData from "./pages/admin/AdminCarCareData";
 import ContactAnalytics from "./pages/admin/ContactAnalytics";
+import PixCheckoutPage from "./pages/PixCheckoutPage";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +102,7 @@ const App = () => (
                 <Route path="/como-funciona-sistema" element={<HowSystemWorksPage />} />
                 <Route path="/use-de-qualquer-lugar" element={<UseFromAnywherePage />} />
                 <Route path="/instalar" element={<InstallAppPage />} />
+                <Route path="/checkout-pix" element={<PixCheckoutPage />} />
                 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
