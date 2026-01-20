@@ -68,6 +68,7 @@ import ContactAnalytics from "./pages/admin/ContactAnalytics";
 import AdminPayments from "./pages/admin/AdminPayments";
 import PixCheckoutPage from "./pages/PixCheckoutPage";
 import SubscriptionCheckoutPage from "./pages/SubscriptionCheckoutPage";
+import SelectPlanPage from "./pages/SelectPlanPage";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +107,7 @@ const App = () => (
                 <Route path="/instalar" element={<InstallAppPage />} />
                 <Route path="/checkout-pix" element={<PixCheckoutPage />} />
                 <Route path="/subscription-checkout" element={<SubscriptionCheckoutPage />} />
+                <Route path="/select-plan" element={<SelectPlanPage />} />
                 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
