@@ -21,7 +21,8 @@ import {
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { PlanCard } from "@/components/subscription/PlanCard";
 import { UserBadge } from "@/components/subscription/UserBadge";
-import { useSubscription, PlanType } from "@/hooks/useSubscription";
+import { PixCheckoutModal } from "@/components/subscription/PixCheckoutModal";
+import { useSubscription, PlanType, PLAN_FEATURES } from "@/hooks/useSubscription";
 import { useUserTier } from "@/hooks/useUserTier";
 import { USAGE_LIMITS } from "@/hooks/useUsageTracking";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -30,6 +31,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ComparisonRow {
   feature: string;
@@ -112,20 +115,27 @@ const TESTIMONIALS = [
 export default function UpgradePage() {
   const { currentPlan, isLoading, isPro, isAdmin } = useSubscription();
   const { tier, tierConfig } = useUserTier();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("benefits");
+  const [showPixCheckout, setShowPixCheckout] = useState(false);
 
   const handleSelectPlan = async (plan: PlanType) => {
     if (plan === currentPlan) return;
 
     if (plan === "pro") {
-      toast.info("Integração de pagamento em desenvolvimento", {
-        description: "Em breve você poderá fazer upgrade para o plano Pro!",
-      });
+      setShowPixCheckout(true);
     } else {
       toast.info("Alteração de plano", {
         description: "Entre em contato com o suporte para alterar seu plano.",
       });
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    // Invalidar cache para atualizar status da assinatura
+    queryClient.invalidateQueries({ queryKey: ["subscription", user?.id] });
+    toast.success("Assinatura Pro ativada com sucesso!");
   };
 
   const renderCellValue = (value: string | boolean) => {
@@ -175,11 +185,11 @@ export default function UpgradePage() {
             </AlertDescription>
           </Alert>
         ) : (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Sistema de Pagamento em Desenvolvimento</AlertTitle>
+          <Alert className="border-primary/30 bg-primary/5">
+            <Crown className="h-4 w-4 text-primary" />
+            <AlertTitle>Pagamento via PIX</AlertTitle>
             <AlertDescription>
-              A integração com Stripe está sendo implementada. Em breve você poderá assinar o plano Pro.
+              Assine o plano Pro com pagamento instantâneo via PIX. Aprovação imediata!
             </AlertDescription>
           </Alert>
         )}
@@ -337,6 +347,15 @@ export default function UpgradePage() {
             )}
           </CardContent>
         </Card>
+
+        {/* PIX Checkout Modal */}
+        <PixCheckoutModal
+          open={showPixCheckout}
+          onOpenChange={setShowPixCheckout}
+          planName="Pro"
+          amount={PLAN_FEATURES.pro.priceValue}
+          onSuccess={handlePaymentSuccess}
+        />
 
         {/* FAQ Quick Links */}
         <div className="text-center pb-8">
