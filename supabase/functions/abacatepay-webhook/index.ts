@@ -143,6 +143,35 @@ Deno.serve(async (req) => {
         console.error("Error updating PIX payment:", updateError);
       } else {
         console.log("PIX payment marked as paid:", pixPayment.id);
+        
+        // Notify admins about the new payment
+        try {
+          const { data: admins } = await supabase
+            .from("user_roles")
+            .select("user_id")
+            .eq("role", "admin");
+          
+          if (admins && admins.length > 0) {
+            const adminUserIds = admins.map(a => a.user_id);
+            
+            // Create system alert for admins
+            await supabase.from("system_alerts").insert({
+              title: "💰 Novo Pagamento PIX Confirmado!",
+              message: `${pixPayment.customer_name} pagou R$ ${(pixPayment.amount / 100).toFixed(2)}`,
+              type: "payment",
+              priority: "high",
+              target_type: "role",
+              target_role: "admin",
+              target_user_ids: adminUserIds,
+              sent_by: "system",
+              send_email: false,
+            });
+            
+            console.log("Admin notification created for payment:", pixPayment.id);
+          }
+        } catch (notifyError) {
+          console.error("Error creating admin notification:", notifyError);
+        }
       }
 
       // Get user ID from metadata if available
