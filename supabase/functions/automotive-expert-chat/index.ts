@@ -12,6 +12,7 @@ const SYSTEM_PROMPT = `Você é o Especialista Automotivo do Doutor Motors, um a
 2. **Diagnóstico Visual**: Analisar fotos de peças, componentes e problemas do veículo
 3. **Manutenção Preventiva**: Orientar sobre revisões, trocas de fluidos, peças e cuidados periódicos
 4. **Tomada de Decisão**: Auxiliar o usuário a entender se pode resolver sozinho ou precisa de um profissional
+5. **Análise de Códigos OBD**: Interpretar e explicar códigos de erro do veículo
 
 DIRETRIZES DE COMUNICAÇÃO:
 - Use linguagem simples e acessível, evitando jargões técnicos sem explicação
@@ -27,6 +28,13 @@ ANÁLISE DE IMAGENS:
 - Identifique peças, componentes, desgaste, danos ou anomalias
 - Explique o que está acontecendo e o que pode significar
 - Sugira próximos passos baseados na análise visual
+- **CRÍTICO**: Se identificar algo potencialmente perigoso (desgaste excessivo de freios, vazamentos, danos estruturais, problemas elétricos graves), INICIE sua resposta com "[ALERTA CRÍTICO]" para notificar o usuário
+
+ANÁLISE DE CÓDIGOS OBD:
+- Quando receber códigos OBD (DTCs), explique cada código de forma clara
+- Relacione os códigos com sintomas que o usuário pode estar notando
+- Explique a gravidade de cada código e se é seguro continuar dirigindo
+- Sugira as ações necessárias em ordem de prioridade
 
 LIMITAÇÕES (seja honesto sobre):
 - Não pode fazer diagnóstico definitivo sem inspeção física
@@ -39,7 +47,10 @@ FORMATO DAS RESPOSTAS:
 - Termine com uma pergunta de acompanhamento quando fizer sentido
 
 CONTEXTO DO VEÍCULO DO USUÁRIO:
-{{vehicleContext}}`;
+{{vehicleContext}}
+
+CÓDIGOS OBD DO VEÍCULO:
+{{obdCodes}}`;
 
 // Search for relevant tutorials based on the conversation
 async function searchTutorials(query: string, vehicleContext: any, supabase: any): Promise<any[]> {
@@ -108,13 +119,57 @@ function generateTitle(content: string): string {
   return words.join(" ") || "Nova Conversa";
 }
 
+// Check if response contains critical alert and send push notification
+async function checkAndSendCriticalAlert(
+  response: string, 
+  userId: string, 
+  supabase: any,
+  vehicleContext: any
+): Promise<void> {
+  try {
+    const isCritical = response.includes("[ALERTA CRÍTICO]") || 
+                       response.toLowerCase().includes("perigo imediato") ||
+                       response.toLowerCase().includes("não dirija") ||
+                       response.toLowerCase().includes("risco de segurança");
+    
+    if (!isCritical) return;
+
+    // Extract the critical message (first paragraph after [ALERTA CRÍTICO])
+    let alertMessage = "Problema crítico identificado na análise";
+    const alertMatch = response.match(/\[ALERTA CRÍTICO\][:\s]*([^\n]+)/i);
+    if (alertMatch) {
+      alertMessage = alertMatch[1].substring(0, 150);
+    }
+
+    const vehicleInfo = vehicleContext 
+      ? `${vehicleContext.brand} ${vehicleContext.model} ${vehicleContext.year}`
+      : "Seu veículo";
+
+    // Create a system alert for the user
+    await supabase.from("system_alerts").insert({
+      title: "⚠️ Alerta Crítico do Especialista",
+      message: `${vehicleInfo}: ${alertMessage}. Recomendamos procurar atendimento presencial imediatamente.`,
+      type: "diagnostic",
+      priority: "urgent",
+      target_type: "user",
+      target_user_ids: [userId],
+      sent_by: "expert-chat",
+      send_email: true,
+    });
+
+    console.log("Critical alert sent to user:", userId);
+  } catch (error) {
+    console.error("Error sending critical alert:", error);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, vehicleContext, conversationId, imageBase64 } = await req.json();
+    const { messages, vehicleContext, conversationId, obdCodes } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -136,7 +191,7 @@ serve(async (req) => {
       userId = user?.id || null;
     }
 
-    // Build system prompt with vehicle context
+    // Build system prompt with vehicle context and OBD codes
     let systemPrompt = SYSTEM_PROMPT;
     if (vehicleContext) {
       systemPrompt = systemPrompt.replace(
@@ -145,6 +200,19 @@ serve(async (req) => {
       );
     } else {
       systemPrompt = systemPrompt.replace("{{vehicleContext}}", "Não informado pelo usuário.");
+    }
+
+    // Add OBD codes context
+    if (obdCodes && obdCodes.length > 0) {
+      const codesDescription = obdCodes.map((c: any) => 
+        `- ${c.code}: ${c.description} (${c.priority}, severidade ${c.severity}/10)`
+      ).join("\n");
+      systemPrompt = systemPrompt.replace(
+        "{{obdCodes}}", 
+        `Códigos detectados no veículo:\n${codesDescription}`
+      );
+    } else {
+      systemPrompt = systemPrompt.replace("{{obdCodes}}", "Nenhum código OBD disponível.");
     }
 
     // Build messages array for AI
@@ -303,6 +371,9 @@ serve(async (req) => {
                 suggested_tutorials: suggestedTutorials.length > 0 ? suggestedTutorials : null,
               });
             }
+
+            // Check for critical alerts and send push notification
+            await checkAndSendCriticalAlert(fullResponse, userId, supabase, vehicleContext);
           } catch (dbError) {
             console.error("Error saving to database:", dbError);
           }

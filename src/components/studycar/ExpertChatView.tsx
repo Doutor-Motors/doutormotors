@@ -5,7 +5,6 @@ import {
   Send, 
   ArrowLeft, 
   Home, 
-  Sparkles, 
   Car,
   Wrench,
   AlertTriangle,
@@ -19,7 +18,9 @@ import {
   Plus,
   Play,
   ExternalLink,
-  Trash2
+  Trash2,
+  FileDown,
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +33,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { generateExpertConversationPDF, downloadExpertConversationPDF } from "@/services/pdf/expertConversationPDFGenerator";
+import ExpertLogo from "./ExpertLogo";
+import OBDContextPanel from "./OBDContextPanel";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface Message {
   role: "user" | "assistant";
@@ -58,6 +63,13 @@ interface Conversation {
   vehicle_context?: any;
 }
 
+interface DiagnosticCode {
+  code: string;
+  description: string;
+  priority: "critical" | "attention" | "preventive";
+  severity: number;
+}
+
 interface ExpertChatViewProps {
   userVehicle: { brand: string; model: string; year: number } | null;
   onBack: () => void;
@@ -73,6 +85,7 @@ const QUICK_QUESTIONS = [
 
 const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) => {
   const { user } = useAuth();
+  const { notifySuccess, notifyError } = useNotifications();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -81,6 +94,8 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [selectedOBDCodes, setSelectedOBDCodes] = useState<DiagnosticCode[]>([]);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -162,7 +177,37 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     setMessages([]);
     setCurrentConversationId(null);
     setSelectedImage(null);
+    setSelectedOBDCodes([]);
     setIsHistoryOpen(false);
+  };
+
+  // Export conversation to PDF
+  const exportToPDF = async () => {
+    if (messages.length === 0) {
+      notifyError("Erro", "Não há conversa para exportar");
+      return;
+    }
+
+    setIsExportingPDF(true);
+    try {
+      const conversation = conversations.find(c => c.id === currentConversationId);
+      
+      const blob = await generateExpertConversationPDF({
+        messages,
+        vehicle: userVehicle,
+        userName: user?.email,
+        conversationTitle: conversation?.title,
+        obdCodes: selectedOBDCodes.map(c => c.code),
+      });
+      
+      downloadExpertConversationPDF(blob, conversation?.title);
+      notifySuccess("PDF Exportado", "Arquivo salvo com sucesso!");
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      notifyError("Erro", "Falha ao exportar PDF");
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   // Auto-scroll to bottom when new messages arrive
@@ -229,6 +274,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
             })),
             vehicleContext: userVehicle,
             conversationId: currentConversationId,
+            obdCodes: selectedOBDCodes,
           }),
         }
       );
@@ -327,7 +373,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     } finally {
       setIsLoading(false);
     }
-  }, [messages, userVehicle, currentConversationId, loadConversations]);
+  }, [messages, userVehicle, currentConversationId, loadConversations, selectedOBDCodes]);
 
   const handleSend = () => {
     const trimmed = input.trim();
@@ -372,6 +418,23 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
             </div>
 
             <div className="flex items-center gap-2">
+              {messages.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={exportToPDF}
+                  disabled={isExportingPDF}
+                  className="gap-1"
+                >
+                  {isExportingPDF ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileDown className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">PDF</span>
+                </Button>
+              )}
+              
               {user && (
                 <>
                   <Button 
@@ -452,16 +515,14 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-              <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
-            </div>
+            <ExpertLogo size="md" />
             <div className="min-w-0">
               <h1 className="font-chakra text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 flex-wrap">
                 Especialista Automotivo
                 <Badge variant="secondary" className="text-xs">IA</Badge>
               </h1>
               <p className="text-muted-foreground text-xs sm:text-sm md:text-base line-clamp-2">
-                Converse e envie fotos para tirar dúvidas sobre mecânica e manutenção.
+                Converse, envie fotos e analise códigos OBD para tirar dúvidas.
               </p>
             </div>
           </div>
@@ -480,6 +541,33 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
 
       {/* Chat Area */}
       <div className="flex-1 container mx-auto px-4 py-4 flex flex-col max-w-4xl">
+        {/* OBD Context Panel */}
+        {user && (
+          <div className="mb-4">
+            <OBDContextPanel 
+              onCodesSelected={setSelectedOBDCodes}
+              selectedCodes={selectedOBDCodes}
+            />
+          </div>
+        )}
+
+        {/* Selected OBD Codes indicator */}
+        {selectedOBDCodes.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-3 flex items-center gap-2 flex-wrap"
+          >
+            <Activity className="w-4 h-4 text-primary" />
+            <span className="text-xs text-muted-foreground">Analisando:</span>
+            {selectedOBDCodes.map(code => (
+              <Badge key={code.code} variant="secondary" className="text-xs font-mono">
+                {code.code}
+              </Badge>
+            ))}
+          </motion.div>
+        )}
+
         <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 -mr-4">
           <div className="space-y-4 pb-4">
             {messages.length === 0 ? (
@@ -490,13 +578,13 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
               >
                 <Card className="bg-muted/30 border-dashed">
                   <CardContent className="p-4 sm:p-6 text-center">
-                    <MessageCircle className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-primary mb-3 sm:mb-4" />
+                    <ExpertLogo size="lg" className="mx-auto mb-4" />
                     <h3 className="font-chakra font-bold text-base sm:text-lg mb-2">
                       Olá! Sou seu Especialista Automotivo
                     </h3>
                     <p className="text-muted-foreground text-sm mb-4 sm:mb-6 max-w-md mx-auto">
                       Posso ajudar com dúvidas sobre mecânica, manutenção preventiva, 
-                      diagnóstico de problemas e <strong>analisar fotos</strong> de peças do seu veículo.
+                      diagnóstico de problemas, <strong>analisar fotos</strong> e <strong>interpretar códigos OBD</strong>.
                     </p>
                     
                     <p className="text-sm font-medium mb-3 sm:mb-4">Perguntas rápidas:</p>
