@@ -415,6 +415,26 @@ export default function SubscriptionCheckoutPage() {
     setTimeRemaining(PIX_TIMEOUT_SECONDS);
   };
 
+  // Reset completo: limpa tudo e volta ao início
+  const handleFullReset = () => {
+    setStep("form");
+    setPixData(null);
+    setTimerStarted(false);
+    setTimeRemaining(PIX_TIMEOUT_SECONDS);
+    setFormData({
+      customerName: signupData?.name || "",
+      customerEmail: signupData?.email || "",
+      customerCellphone: "",
+      customerTaxId: "",
+    });
+    setCopied(false);
+  };
+
+  // Cancelar checkout e voltar à página inicial
+  const handleCancelCheckout = () => {
+    navigate("/");
+  };
+
   if (authLoading || subLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary">
@@ -438,19 +458,42 @@ export default function SubscriptionCheckoutPage() {
         backgroundPosition: "center",
       }}
     >
-      {/* Back Button */}
+      {/* Back Button - Fixed */}
       {step !== "success" && (
+        <div className="fixed top-4 left-4 z-50 flex gap-2">
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            className="gap-2 font-chakra uppercase text-sm text-white/80 hover:text-white hover:bg-white/10"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Voltar</span>
+          </Button>
+          
+          {/* Botão de cancelar/sair */}
+          <Button
+            variant="ghost"
+            onClick={handleCancelCheckout}
+            className="gap-2 font-chakra uppercase text-xs text-white/60 hover:text-red-400 hover:bg-red-500/10"
+          >
+            <span className="hidden sm:inline">Sair</span>
+          </Button>
+        </div>
+      )}
+
+      {/* Reset Button - Only show when stuck (payment or expired) */}
+      {(step === "payment" || step === "expired") && (
         <Button
-          variant="ghost"
-          onClick={handleBack}
-          className="fixed top-4 left-4 z-50 gap-2 font-chakra uppercase text-sm text-white/80 hover:text-white hover:bg-white/10"
+          variant="outline"
+          onClick={handleFullReset}
+          className="fixed bottom-4 left-4 z-50 gap-2 font-chakra uppercase text-xs border-white/20 text-white/70 hover:text-white hover:bg-white/10"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Voltar</span>
+          <ArrowLeft className="w-3 h-3" />
+          Recomeçar do Zero
         </Button>
       )}
 
-      {/* Social Proof Banner - Fixed at top */}
+      {/* Social Proof Banner - Fixed at top right */}
       <AnimatePresence mode="wait">
         {currentSubscriber && step !== "success" && (
           <motion.div
