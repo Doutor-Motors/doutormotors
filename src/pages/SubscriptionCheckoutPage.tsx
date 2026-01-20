@@ -470,18 +470,6 @@ export default function SubscriptionCheckoutPage() {
         </div>
       )}
 
-      {/* Botão Recomeçar - Only show when in payment or expired */}
-      {(step === "payment" || step === "expired") && (
-        <Button
-          variant="outline"
-          onClick={handleResetForm}
-          className="fixed bottom-4 left-4 z-50 gap-2 font-chakra uppercase text-xs border-white/20 text-white/70 hover:text-white hover:bg-white/10"
-        >
-          <ArrowLeft className="w-3 h-3" />
-          Recomeçar
-        </Button>
-      )}
-
       {/* Social Proof Banner - Fixed at top right */}
       <AnimatePresence mode="wait">
         {currentSubscriber && step !== "success" && (
