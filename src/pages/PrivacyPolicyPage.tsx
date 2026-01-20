@@ -64,7 +64,7 @@ const PrivacyPolicyPage = () => {
           {/* Conteúdo da Política */}
           <div className="space-y-8">
             {/* 1. Introdução */}
-            <Card>
+            <Card id="introducao" className="scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Eye className="w-5 h-5 text-primary" />
@@ -86,7 +86,7 @@ const PrivacyPolicyPage = () => {
             </Card>
 
             {/* 2. Dados Coletados */}
-            <Card>
+            <Card id="dados-coletados" className="scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Database className="w-5 h-5 text-primary" />
@@ -137,7 +137,7 @@ const PrivacyPolicyPage = () => {
             </Card>
 
             {/* 3. Como Usamos */}
-            <Card>
+            <Card id="uso-dados" className="scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <UserCheck className="w-5 h-5 text-primary" />
@@ -166,7 +166,7 @@ const PrivacyPolicyPage = () => {
             </Card>
 
             {/* 4. Compartilhamento */}
-            <Card>
+            <Card id="compartilhamento" className="scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Globe className="w-5 h-5 text-primary" />
@@ -191,7 +191,7 @@ const PrivacyPolicyPage = () => {
             </Card>
 
             {/* 5. Segurança */}
-            <Card>
+            <Card id="seguranca" className="scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Lock className="w-5 h-5 text-primary" />
@@ -212,7 +212,7 @@ const PrivacyPolicyPage = () => {
             </Card>
 
             {/* 6. Seus Direitos */}
-            <Card className="border-primary/30">
+            <Card id="direitos" className="border-primary/30 scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Shield className="w-5 h-5 text-primary" />
@@ -239,7 +239,7 @@ const PrivacyPolicyPage = () => {
             </Card>
 
             {/* 7. Exclusão de Dados */}
-            <Card>
+            <Card id="exclusao" className="scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Trash2 className="w-5 h-5 text-primary" />
