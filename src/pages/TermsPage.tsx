@@ -37,7 +37,7 @@ const TermsPage = () => {
           </div>
 
           {/* Aviso Importante */}
-          <Card className="mb-8 border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
+          <Card className="mb-6 border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <AlertTriangle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-1" />
@@ -53,6 +53,43 @@ const TermsPage = () => {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Índice de Navegação */}
+          <Card className="mb-8 bg-muted/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="font-chakra text-sm uppercase text-muted-foreground">
+                Índice
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <nav className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <a href="#aceitacao" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Scale className="w-4 h-4" />
+                  1. Aceitação dos Termos
+                </a>
+                <a href="#natureza" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Car className="w-4 h-4" />
+                  2. Natureza do Serviço
+                </a>
+                <a href="#isencao" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <AlertTriangle className="w-4 h-4" />
+                  3. Isenção de Responsabilidade
+                </a>
+                <a href="#seguranca" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Shield className="w-4 h-4" />
+                  4. Sistemas Críticos
+                </a>
+                <a href="#cadastro" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Users className="w-4 h-4" />
+                  5. Cadastro e Conta
+                </a>
+                <a href="#propriedade" className="text-sm text-primary hover:underline flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+                  <Wrench className="w-4 h-4" />
+                  6. Propriedade Intelectual
+                </a>
+              </nav>
             </CardContent>
           </Card>
 
@@ -180,7 +217,7 @@ const TermsPage = () => {
             </Card>
 
             {/* 5. Cadastro e Conta */}
-            <Card>
+            <Card id="cadastro" className="scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" />
@@ -205,7 +242,7 @@ const TermsPage = () => {
             </Card>
 
             {/* 6. Propriedade Intelectual */}
-            <Card>
+            <Card id="propriedade" className="scroll-mt-24">
               <CardHeader>
                 <CardTitle className="font-chakra uppercase flex items-center gap-2">
                   <Wrench className="w-5 h-5 text-primary" />
