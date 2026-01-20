@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, ArrowRight, ArrowLeft, Smartphone, ChevronRight } from "lucide-react";
+import { Menu, X, ArrowRight, ArrowLeft, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/images/logo-new-car.png";
+import MobileMenuOverlay from "@/components/layout/MobileMenuOverlay";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -183,85 +184,13 @@ const Header = () => {
           </span>
         </button>
 
-        {/* Mobile Navigation - Fullscreen Overlay */}
-        <div 
-          className={`lg:hidden fixed inset-0 bg-gradient-to-b from-secondary via-secondary to-dm-blue-3 z-40 transition-all duration-500 ${
-            isMenuOpen 
-              ? "opacity-100 pointer-events-auto" 
-              : "opacity-0 pointer-events-none"
-          }`}
-          style={{ top: "0" }}
-        >
-          {/* Close area at top */}
-          <div className="h-20" onClick={() => setIsMenuOpen(false)} />
-          
-          <nav className="flex flex-col px-6 py-8 h-[calc(100%-5rem)] overflow-auto">
-            {/* Nav Links */}
-            <div className="space-y-2">
-              {navLinks.map((link, index) => {
-                const isActive = location.pathname === link.path;
-                const isHighlight = (link as any).highlight;
-                
-                return (
-                  <Link
-                    key={link.name}
-                    to={link.path}
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center justify-between px-5 py-4 rounded-2xl font-chakra text-lg uppercase transition-all duration-300 ${
-                      isActive 
-                        ? "bg-primary text-primary-foreground shadow-lg" 
-                        : isHighlight
-                          ? "bg-gradient-to-r from-purple-600/30 to-pink-600/30 text-primary-foreground border border-purple-500/30"
-                          : "text-primary-foreground/80 hover:bg-white/10 hover:text-primary-foreground"
-                    }`}
-                    style={{ 
-                      animationDelay: `${index * 50}ms`,
-                      transform: isMenuOpen ? "translateX(0)" : "translateX(-20px)",
-                      opacity: isMenuOpen ? 1 : 0,
-                      transition: `all 0.3s ease-out ${index * 50}ms`
-                    }}
-                  >
-                    <span className="flex items-center gap-3">
-                      {link.icon && <link.icon className="w-5 h-5" />}
-                      {link.name}
-                    </span>
-                    <ChevronRight className={`w-5 h-5 transition-transform ${isActive ? "translate-x-1" : ""}`} />
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Divider */}
-            <div className="my-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-
-            {/* Auth Buttons */}
-            <div className="flex flex-col gap-3 mt-auto">
-              <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  className="w-full border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-secondary font-chakra uppercase rounded-2xl h-14 text-base transition-all duration-300"
-                >
-                  Entrar
-                </Button>
-              </Link>
-              <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
-                <Button 
-                  size="lg"
-                  className="w-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-chakra uppercase rounded-2xl h-14 text-base shadow-lg shadow-primary/30 transition-all duration-300 flex items-center justify-center gap-2"
-                >
-                  Começar Agora
-                  <ArrowRight className="w-5 h-5" />
-                </Button>
-              </Link>
-            </div>
-
-            {/* Footer info */}
-            <p className="text-center text-primary-foreground/40 text-xs mt-6 font-chakra">
-              DOUTOR MOTORS © 2025
-            </p>
-          </nav>
-        </div>
+        {/* Mobile Navigation - Fullscreen Overlay (Portal to avoid transform issues) */}
+        <MobileMenuOverlay
+          isOpen={isMenuOpen}
+          navLinks={navLinks}
+          currentPath={location.pathname}
+          onClose={() => setIsMenuOpen(false)}
+        />
       </div>
     </header>
   );
