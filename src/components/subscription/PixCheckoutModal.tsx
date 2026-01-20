@@ -135,10 +135,12 @@ export function PixCheckoutModal({
       const { data, error } = await supabase.functions.invoke("create-pix-qrcode", {
         body: {
           amount,
-          customerName: formData.name,
-          customerEmail: formData.email,
-          customerTaxId: cpfNumbers,
-          customerCellphone: formData.phone.replace(/\D/g, "") || undefined,
+          customer: {
+            name: formData.name,
+            email: formData.email,
+            taxId: cpfNumbers,
+            cellphone: formData.phone.replace(/\D/g, "") || "",
+          },
           description: `Assinatura ${planName}`,
           expiresIn: 3600, // 1 hora
         },
@@ -146,7 +148,9 @@ export function PixCheckoutModal({
 
       if (error) throw error;
 
-      setPixData(data);
+      // API returns data wrapper
+      const paymentData = data?.data || data;
+      setPixData(paymentData);
       setStep("payment");
       toast.success("QR Code gerado! Escaneie para pagar.");
     } catch (error: any) {
