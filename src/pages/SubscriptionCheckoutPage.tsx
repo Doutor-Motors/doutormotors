@@ -127,6 +127,7 @@ export default function SubscriptionCheckoutPage() {
   const [copied, setCopied] = useState(false);
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
   const [simulatingPayment, setSimulatingPayment] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<"idle" | "waiting" | "received" | "processed">("idle");
   
   // Timer state
   const [timeRemaining, setTimeRemaining] = useState(PIX_TIMEOUT_SECONDS);
@@ -259,8 +260,12 @@ export default function SubscriptionCheckoutPage() {
           console.log("Payment updated:", payload);
           const newData = payload.new as PixPaymentData;
           setPixData(prev => prev ? { ...prev, ...newData } : null);
+          
+          // Update webhook status indicator
+          setWebhookStatus("received");
 
           if (newData.status === "paid") {
+            setWebhookStatus("processed");
             // Activate subscription
             await activateSubscription();
             setStep("success");
@@ -311,23 +316,28 @@ export default function SubscriptionCheckoutPage() {
     }
 
     setSimulatingPayment(true);
+    setWebhookStatus("waiting");
     try {
       const response = await supabase.functions.invoke("simulate-pix-payment", {
         body: { pixId: pixData.pix_id },
       });
 
       if (response.error) {
+        setWebhookStatus("idle");
         throw new Error(response.error.message || "Erro ao simular pagamento");
       }
 
       if (response.data?.success) {
         toast.success("Pagamento simulado! Aguardando confirmação do webhook...");
+        // Status will be updated by realtime subscription
       } else {
+        setWebhookStatus("idle");
         throw new Error(response.data?.error || "Erro ao simular pagamento");
       }
     } catch (error) {
       console.error("Error simulating payment:", error);
       toast.error(error instanceof Error ? error.message : "Erro ao simular pagamento");
+      setWebhookStatus("idle");
     } finally {
       setSimulatingPayment(false);
     }
@@ -932,6 +942,40 @@ export default function SubscriptionCheckoutPage() {
                           </>
                         )}
                       </Button>
+                    )}
+
+                    {/* Webhook Status Indicator (DevMode) */}
+                    {pixData.devMode && webhookStatus !== "idle" && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex items-center justify-center gap-3 p-3 rounded-lg border ${
+                          webhookStatus === "waiting" 
+                            ? "bg-amber-500/10 border-amber-500/30" 
+                            : webhookStatus === "received"
+                            ? "bg-blue-500/10 border-blue-500/30"
+                            : "bg-green-500/10 border-green-500/30"
+                        }`}
+                      >
+                        {webhookStatus === "waiting" && (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                            <span className="text-sm text-amber-400">Aguardando webhook...</span>
+                          </>
+                        )}
+                        {webhookStatus === "received" && (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                            <span className="text-sm text-blue-400">Webhook recebido! Processando...</span>
+                          </>
+                        )}
+                        {webhookStatus === "processed" && (
+                          <>
+                            <CheckCircle className="w-4 h-4 text-green-400" />
+                            <span className="text-sm text-green-400">Webhook processado com sucesso!</span>
+                          </>
+                        )}
+                      </motion.div>
                     )}
 
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
