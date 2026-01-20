@@ -72,7 +72,7 @@ export const PLAN_FEATURES = {
   pro: {
     name: "Pro",
     price: "R$ 29,90/mês",
-    priceValue: 29.90,
+    priceValue: 2990, // Valor em CENTAVOS para API de pagamento
     maxVehicles: 10,
     maxDiagnosticsPerMonth: -1, // ilimitado
     maxRealTimeParameters: -1, // ilimitado
