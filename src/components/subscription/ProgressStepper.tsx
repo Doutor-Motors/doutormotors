@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Check, UserPlus, CreditCard, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,45 +32,93 @@ export function ProgressStepper({ currentStep, className }: ProgressStepperProps
             <div key={step.id} className="flex items-center flex-1">
               {/* Step Circle */}
               <div className="flex flex-col items-center relative z-10">
-                <div
+                <motion.div
+                  initial={false}
+                  animate={{
+                    scale: isCurrent ? 1.1 : 1,
+                    backgroundColor: isCompleted 
+                      ? "rgb(34 197 94)" 
+                      : isCurrent 
+                        ? "hsl(var(--primary))" 
+                        : "rgba(255, 255, 255, 0.1)",
+                    borderColor: isCompleted 
+                      ? "rgb(34 197 94)" 
+                      : isCurrent 
+                        ? "hsl(var(--primary))" 
+                        : "rgba(255, 255, 255, 0.2)",
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 500,
+                    damping: 30,
+                  }}
                   className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2",
-                    isCompleted
-                      ? "bg-green-500 border-green-500 text-white"
-                      : isCurrent
-                        ? "bg-primary border-primary text-white animate-pulse"
-                        : "bg-white/10 border-white/20 text-white/40"
+                    "w-10 h-10 rounded-full flex items-center justify-center border-2 text-white",
+                    isCurrent && "shadow-lg shadow-primary/40"
                   )}
                 >
                   {isCompleted ? (
-                    <Check className="w-5 h-5" />
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 25,
+                      }}
+                    >
+                      <Check className="w-5 h-5" />
+                    </motion.div>
                   ) : (
-                    <step.icon className="w-4 h-4" />
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <step.icon className={cn(
+                        "w-4 h-4",
+                        isCurrent ? "text-white" : "text-white/40"
+                      )} />
+                    </motion.div>
                   )}
-                </div>
-                <span
-                  className={cn(
-                    "mt-2 text-xs font-medium transition-colors whitespace-nowrap",
-                    isCompleted
-                      ? "text-green-400"
+                </motion.div>
+                
+                <motion.span
+                  initial={false}
+                  animate={{
+                    color: isCompleted
+                      ? "rgb(74 222 128)"
                       : isCurrent
-                        ? "text-primary"
-                        : "text-white/40"
-                  )}
+                        ? "hsl(var(--primary))"
+                        : "rgba(255, 255, 255, 0.4)",
+                  }}
+                  transition={{ duration: 0.3 }}
+                  className="mt-2 text-xs font-medium whitespace-nowrap"
                 >
                   {step.label}
-                </span>
+                </motion.span>
               </div>
               
               {/* Connector Line */}
               {!isLast && (
-                <div className="flex-1 h-0.5 mx-2 relative -mt-6">
+                <div className="flex-1 h-0.5 mx-2 relative -mt-6 overflow-hidden">
+                  {/* Background line */}
                   <div className="absolute inset-0 bg-white/10 rounded-full" />
-                  <div
-                    className={cn(
-                      "absolute inset-0 rounded-full transition-all duration-500",
-                      isCompleted ? "bg-green-500 w-full" : "bg-transparent w-0"
-                    )}
+                  
+                  {/* Animated progress line */}
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      scaleX: isCompleted ? 1 : 0,
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30,
+                      delay: isCompleted ? 0.1 : 0,
+                    }}
+                    style={{ originX: 0 }}
+                    className="absolute inset-0 bg-green-500 rounded-full"
                   />
                 </div>
               )}

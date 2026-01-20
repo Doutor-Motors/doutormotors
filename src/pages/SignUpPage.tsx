@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { ArrowRight, Eye, EyeOff, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
+import { ProgressStepper } from "@/components/subscription/ProgressStepper";
 import logo from "@/assets/images/logo-new-car.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -128,26 +130,39 @@ const SignUpPage = () => {
 
       <div className="w-full max-w-md">
         {/* Logo sem link de redirecionamento */}
-        <div className="flex flex-col items-center mb-8 cursor-default">
-          <img src={logo} alt="Doutor Motors" className="h-[100px] w-auto object-contain" />
-          <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[29px]">DOUTOR MOTORS</span>
-        </div>
+        <motion.div 
+          className="flex flex-col items-center mb-6 cursor-default"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <img src={logo} alt="Doutor Motors" className="h-[80px] w-auto object-contain" />
+          <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[24px]">DOUTOR MOTORS</span>
+        </motion.div>
+
+        {/* Progress Stepper */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-6"
+        >
+          <ProgressStepper currentStep={1} />
+        </motion.div>
 
         {/* Card */}
-        <div className="bg-card rounded-lg shadow-2xl p-8">
+        <motion.div 
+          className="bg-card rounded-lg shadow-2xl p-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <div className="text-center mb-6">
             <h1 className="font-chakra text-2xl font-bold uppercase text-foreground mb-2">
               Criar Conta
             </h1>
             <p className="text-muted-foreground text-sm">
               Comece a diagnosticar seu veículo
-            </p>
-          </div>
-
-          {/* Aviso sobre pagamento */}
-          <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 mb-6">
-            <p className="text-sm text-center text-foreground">
-              <strong>Passo 1 de 2:</strong> Crie sua conta e depois finalize o pagamento para acessar.
             </p>
           </div>
 
@@ -251,7 +266,7 @@ const SignUpPage = () => {
               </Link>
             </p>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
