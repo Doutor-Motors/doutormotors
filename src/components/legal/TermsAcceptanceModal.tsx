@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertTriangle, Shield, FileText } from "lucide-react";
+import { AlertTriangle, Shield, FileText, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -116,6 +117,13 @@ const TermsAcceptanceModal = ({ isOpen, onAccepted, userId }: TermsAcceptanceMod
               <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
                 <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
                 Termos de Uso
+                <Link 
+                  to="/termos" 
+                  target="_blank" 
+                  className="text-xs text-primary hover:underline flex items-center gap-1 ml-auto"
+                >
+                  Ver completo <ExternalLink className="w-3 h-3" />
+                </Link>
               </h3>
               <div className="text-xs sm:text-sm text-muted-foreground space-y-1.5 pl-6 sm:pl-7">
                 <p>• <strong>Natureza Informativa:</strong> Todo conteúdo é de caráter educativo.</p>
@@ -144,6 +152,13 @@ const TermsAcceptanceModal = ({ isOpen, onAccepted, userId }: TermsAcceptanceMod
               <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
                 <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
                 Privacidade (LGPD)
+                <Link 
+                  to="/privacidade" 
+                  target="_blank" 
+                  className="text-xs text-primary hover:underline flex items-center gap-1 ml-auto"
+                >
+                  Ver completo <ExternalLink className="w-3 h-3" />
+                </Link>
               </h3>
               <div className="text-xs sm:text-sm text-muted-foreground space-y-1.5 pl-6 sm:pl-7">
                 <p>• <strong>Dados:</strong> Armazenamos dados do veículo e diagnósticos.</p>
