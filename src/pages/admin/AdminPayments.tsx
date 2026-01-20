@@ -362,7 +362,7 @@ const AdminPayments = () => {
     }).format(value);
   };
 
-  // Export to CSV
+  const exportToCSV = () => {
     const headers = ["Cliente", "Email", "CPF/CNPJ", "Valor", "Status", "Criado em", "Pago em"];
     const rows = filteredPayments.map(p => [
       p.customer_name,
