@@ -20,10 +20,10 @@ const SignUpPage = () => {
   const { signUp, user, loading } = useAuth();
   const { notifySuccess, notifyError, notifyWarning } = useNotifications();
 
-  // Redirect if already logged in
+  // Se usuário já está logado, redireciona para upgrade/checkout
   useEffect(() => {
     if (!loading && user) {
-      navigate("/dashboard");
+      navigate("/dashboard/upgrade");
     }
   }, [user, loading, navigate]);
 
@@ -81,8 +81,21 @@ const SignUpPage = () => {
       return;
     }
 
-    notifySuccess('Conta criada!', 'Verifique seu email para confirmar o cadastro.');
-    navigate("/login");
+    // IMPORTANTE: Após criar conta, redireciona para checkout de pagamento
+    // O usuário precisa pagar antes de acessar o dashboard
+    notifySuccess(
+      'Conta criada com sucesso!', 
+      'Agora finalize sua assinatura para acessar o sistema.'
+    );
+    
+    // Redireciona para página de upgrade/checkout
+    navigate("/dashboard/upgrade", { 
+      state: { 
+        fromSignup: true,
+        email: email,
+        name: name
+      } 
+    });
   };
 
   if (loading) {
@@ -128,6 +141,13 @@ const SignUpPage = () => {
             </h1>
             <p className="text-muted-foreground text-sm">
               Comece a diagnosticar seu veículo
+            </p>
+          </div>
+
+          {/* Aviso sobre pagamento */}
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 mb-6">
+            <p className="text-sm text-center text-foreground">
+              <strong>Passo 1 de 2:</strong> Crie sua conta e depois finalize o pagamento para acessar.
             </p>
           </div>
 
@@ -216,7 +236,7 @@ const SignUpPage = () => {
                 <span>Criando conta...</span>
               ) : (
                 <>
-                  <span>Criar Conta</span>
+                  <span>Criar Conta e Continuar</span>
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}

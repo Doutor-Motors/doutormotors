@@ -5,24 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Check, QrCode, Crown, CheckCircle, RefreshCw } from "lucide-react";
+import { Loader2, Copy, Check, QrCode, Crown, CheckCircle, RefreshCw, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+
+// Valor mínimo do plano PRO em reais
+const MINIMUM_PLAN_AMOUNT = 29.90;
 
 interface PixCheckoutModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   planName: string;
-  amount: number;
+  amount: number; // valor em reais (ex: 29.90)
   onSuccess?: () => void;
 }
 
 interface PixPaymentData {
   id: string;
   pix_id: string;
-  amount: number;
+  amount: number; // em centavos
   status: string;
   br_code: string;
   qr_code_url: string;
@@ -39,6 +43,7 @@ export function PixCheckoutModal({
   onSuccess 
 }: PixCheckoutModalProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<CheckoutStep>("form");
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -50,6 +55,9 @@ export function PixCheckoutModal({
     cpf: "",
     phone: "",
   });
+
+  // Valor em centavos para a API
+  const amountInCents = Math.round(amount * 100);
 
   // Reset when modal opens/closes
   useEffect(() => {
@@ -76,9 +84,11 @@ export function PixCheckoutModal({
           table: "pix_payments",
           filter: `id=eq.${pixData.id}`,
         },
-        (payload) => {
+        async (payload) => {
           const newStatus = (payload.new as any).status;
           if (newStatus === "paid") {
+            // Criar/atualizar a assinatura do usuário
+            await activateSubscription();
             setStep("success");
             toast.success("Pagamento confirmado! 🎉");
             onSuccess?.();
@@ -90,7 +100,50 @@ export function PixCheckoutModal({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [pixData?.id, onSuccess]);
+  }, [pixData?.id, onSuccess, user?.id]);
+
+  // Função para ativar a assinatura após pagamento
+  const activateSubscription = async () => {
+    if (!user?.id) return;
+
+    try {
+      // Verificar se já existe uma assinatura
+      const { data: existing } = await supabase
+        .from("user_subscriptions")
+        .select("id")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const subscriptionData = {
+        user_id: user.id,
+        plan_type: "pro",
+        status: "active",
+        payment_method: "pix",
+        started_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 dias
+        next_billing_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      if (existing?.id) {
+        // Atualizar assinatura existente
+        await supabase
+          .from("user_subscriptions")
+          .update(subscriptionData)
+          .eq("id", existing.id);
+      } else {
+        // Criar nova assinatura
+        await supabase
+          .from("user_subscriptions")
+          .insert(subscriptionData);
+      }
+
+      console.log("Subscription activated for user:", user.id);
+    } catch (error) {
+      console.error("Error activating subscription:", error);
+    }
+  };
 
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, "").slice(0, 11);
@@ -129,12 +182,18 @@ export function PixCheckoutModal({
       return;
     }
 
+    // Validar valor mínimo
+    if (amount < MINIMUM_PLAN_AMOUNT) {
+      toast.error(`Valor mínimo do plano é R$ ${MINIMUM_PLAN_AMOUNT.toFixed(2).replace('.', ',')}`);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("create-pix-qrcode", {
         body: {
-          amount,
+          amount: amountInCents, // Enviar em centavos
           customer: {
             name: formData.name,
             email: formData.email,
@@ -143,10 +202,21 @@ export function PixCheckoutModal({
           },
           description: `Assinatura ${planName}`,
           expiresIn: 3600, // 1 hora
+          metadata: {
+            planType: "pro",
+            userId: user?.id,
+          }
         },
       });
 
       if (error) throw error;
+      
+      // Verificar se houve erro na resposta
+      if (data?.error) {
+        toast.error(data.message || data.error);
+        setIsLoading(false);
+        return;
+      }
 
       // API returns data wrapper
       const paymentData = data?.data || data;
@@ -179,6 +249,12 @@ export function PixCheckoutModal({
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  const handleSuccessClose = () => {
+    onOpenChange(false);
+    // Redirecionar para o dashboard após sucesso
+    navigate("/dashboard");
   };
 
   return (
@@ -292,7 +368,7 @@ export function PixCheckoutModal({
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Total</span>
                     <span className="text-xl font-bold text-primary">
-                      {formatCurrency(pixData.amount)}
+                      {formatCurrency(pixData.amount / 100)}
                     </span>
                   </div>
                 </CardContent>
@@ -368,7 +444,7 @@ export function PixCheckoutModal({
                 </p>
               </div>
 
-              <Button onClick={() => onOpenChange(false)} className="w-full">
+              <Button onClick={handleSuccessClose} className="w-full">
                 Começar a usar
               </Button>
             </motion.div>

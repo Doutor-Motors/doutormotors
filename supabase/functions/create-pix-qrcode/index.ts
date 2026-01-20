@@ -5,8 +5,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Valor mínimo do plano PRO em centavos (R$ 29,90)
+const MINIMUM_PLAN_AMOUNT_CENTS = 2990;
+
 interface CreatePixRequest {
-  amount: number;
+  amount: number; // em centavos
   expiresIn?: number;
   description?: string;
   customer: {
@@ -17,6 +20,7 @@ interface CreatePixRequest {
   };
   metadata?: {
     externalId?: string;
+    planType?: string;
   };
 }
 
@@ -54,6 +58,21 @@ Deno.serve(async (req) => {
       });
     }
 
+    // VALIDAÇÃO CRÍTICA: Valor mínimo do plano
+    // Se o valor for menor que R$ 29,90 (2990 centavos), rejeita
+    if (body.amount < MINIMUM_PLAN_AMOUNT_CENTS) {
+      console.error(`Amount ${body.amount} is less than minimum ${MINIMUM_PLAN_AMOUNT_CENTS}`);
+      return new Response(JSON.stringify({ 
+        error: "Valor abaixo do mínimo permitido",
+        message: `O valor mínimo para assinatura do plano é R$ ${(MINIMUM_PLAN_AMOUNT_CENTS / 100).toFixed(2).replace('.', ',')}. Por favor, insira o valor correto do plano.`,
+        minAmount: MINIMUM_PLAN_AMOUNT_CENTS,
+        providedAmount: body.amount
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!body.customer?.name || !body.customer?.email || !body.customer?.taxId) {
       return new Response(JSON.stringify({ error: "Customer name, email and taxId are required" }), {
         status: 400,
@@ -65,10 +84,11 @@ Deno.serve(async (req) => {
     // This returns the brCode and brCodeBase64 for direct PIX payment
     console.log("Calling AbacatePay PIX QRCode API...");
     
+    // O valor já vem em centavos do frontend
     const pixPayload = {
-      amount: Math.round(body.amount * 100), // AbacatePay expects cents
+      amount: body.amount, // AbacatePay espera em centavos
       expiresIn: body.expiresIn || 3600, // seconds (default 1 hour)
-      description: body.description || "Pagamento PIX",
+      description: body.description || "Assinatura Doutor Motors Pro",
     };
 
     console.log("AbacatePay PIX payload:", JSON.stringify(pixPayload, null, 2));
@@ -133,7 +153,7 @@ Deno.serve(async (req) => {
       .from("pix_payments")
       .insert({
         pix_id: pixId,
-        amount: Math.round(body.amount * 100), // Store as cents (integer)
+        amount: body.amount, // Store as cents (integer)
         status: "pending",
         br_code: brCode, // Store the actual PIX brCode
         qr_code_url: qrCodeUrl,
@@ -141,11 +161,12 @@ Deno.serve(async (req) => {
         customer_email: body.customer.email,
         customer_cellphone: body.customer.cellphone,
         customer_tax_id: body.customer.taxId,
-        description: body.description,
+        description: body.description || "Assinatura Doutor Motors Pro",
         metadata: { 
           ...(body.metadata || {}),
           devMode: pix.devMode,
           originalAmount: body.amount,
+          planType: body.metadata?.planType || "pro",
         },
         expires_at: paymentExpiresAt,
       })
@@ -160,14 +181,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log("Payment created:", payment.id);
+    console.log("Payment created:", payment.id, "Amount:", body.amount, "cents");
 
     return new Response(JSON.stringify({
       success: true,
       data: {
         id: payment.id,
         pix_id: pixId,
-        amount: body.amount,
+        amount: body.amount, // Return in cents
         status: "pending",
         br_code: brCode,
         qr_code_url: qrCodeUrl,
