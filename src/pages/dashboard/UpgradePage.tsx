@@ -263,7 +263,7 @@ export default function UpgradePage() {
                               <Crown className="h-4 w-4 text-amber-500" />
                               Pro
                             </span>
-                            <span className="text-xs text-muted-foreground font-normal">R$ 29,90/mês</span>
+                            <span className="text-xs text-muted-foreground font-normal">R$ 34,90/mês</span>
                           </div>
                         </th>
                       </tr>
@@ -338,7 +338,7 @@ export default function UpgradePage() {
               disabled={currentPlan === "pro"}
             >
               <Crown className="h-5 w-5" />
-              {currentPlan === "pro" ? "Você já é Pro!" : "Assinar Pro - R$ 29,90/mês"}
+              {currentPlan === "pro" ? "Você já é Pro!" : "Assinar Pro - R$ 34,90/mês"}
             </Button>
             {currentPlan !== "pro" && (
               <p className="text-xs text-muted-foreground mt-3">
