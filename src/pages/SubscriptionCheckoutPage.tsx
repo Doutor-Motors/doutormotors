@@ -347,7 +347,7 @@ export default function SubscriptionCheckoutPage() {
             setStep("success");
             // Trigger confetti celebration
             triggerConfetti();
-            toast.success("Pagamento confirmado! Sua assinatura Pro está ativa.");
+            toast.success(`Pagamento confirmado! Sua assinatura ${planName} está ativa.`);
           }
         }
       )
@@ -1186,17 +1186,21 @@ export default function SubscriptionCheckoutPage() {
                         Pagamento Confirmado!
                       </h3>
                       <p className="text-muted-foreground">
-                        Sua assinatura Pro está ativa e pronta para uso.
+                        Sua assinatura {planName} está ativa e pronta para uso.
                       </p>
                     </div>
 
-                    <div className="bg-gradient-to-br from-primary/10 to-transparent p-4 rounded-xl border border-primary/20">
+                    <div className={`p-4 rounded-xl border ${
+                      selectedPlan === "pro" 
+                        ? "bg-gradient-to-br from-primary/10 to-transparent border-primary/20" 
+                        : "bg-gradient-to-br from-blue-500/10 to-transparent border-blue-500/20"
+                    }`}>
                       <div className="flex items-center justify-center gap-2 mb-3">
-                        <Crown className="w-5 h-5 text-primary" />
+                        <Crown className={`w-5 h-5 ${selectedPlan === "pro" ? "text-primary" : "text-blue-400"}`} />
                         <span className="font-semibold text-foreground">Benefícios desbloqueados</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        {PRO_BENEFITS.slice(0, 4).map((benefit, i) => (
+                        {(selectedPlan === "pro" ? PRO_BENEFITS : BASIC_BENEFITS).slice(0, 4).map((benefit, i) => (
                           <div key={i} className="flex items-center gap-2 text-muted-foreground">
                             <Check className="w-4 h-4 text-green-500" />
                             <span>{benefit.text}</span>
