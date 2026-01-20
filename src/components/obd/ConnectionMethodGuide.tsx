@@ -14,7 +14,9 @@ import {
   Download,
   Globe,
   ShieldAlert,
-  Info
+  Info,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,13 +35,28 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
+import { usePlatformDetection } from '@/hooks/usePlatformDetection';
 
 interface ConnectionMethodGuideProps {
   isNativePlatform?: boolean;
 }
 
-export const ConnectionMethodGuide = ({ isNativePlatform = false }: ConnectionMethodGuideProps) => {
+export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: ConnectionMethodGuideProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Use platform detection hook for accurate capability detection
+  const { 
+    platformInfo, 
+    platformDescription, 
+    connectionCapabilities,
+    canConnect,
+    recommendedAction,
+    isLoading 
+  } = usePlatformDetection();
+  
+  // Use prop if provided, otherwise use detected platform
+  const isNativePlatform = propIsNative ?? platformInfo.isNative;
 
   const methods = [
     {
@@ -197,14 +214,14 @@ export const ConnectionMethodGuide = ({ isNativePlatform = false }: ConnectionMe
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Platform Detection Banner */}
+          {/* Enhanced Platform Detection Banner */}
           <Card className={isNativePlatform ? 'bg-purple-500/10 border-purple-500/30' : 'bg-amber-500/10 border-amber-500/30'}>
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
                 {isNativePlatform ? (
                   <>
                     <Smartphone className="w-5 h-5 text-purple-500 mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-semibold text-purple-400 flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4" />
                         App Nativo Detectado
@@ -212,27 +229,64 @@ export const ConnectionMethodGuide = ({ isNativePlatform = false }: ConnectionMe
                       <p className="text-sm text-muted-foreground">
                         Você está usando o app nativo! Todas as conexões (Bluetooth e WiFi) funcionarão normalmente com dados reais.
                       </p>
+                      {/* Native capabilities */}
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <Badge variant="outline" className="border-green-500 text-green-500 gap-1">
+                          <Unlock className="w-3 h-3" />
+                          {connectionCapabilities.bluetooth.supported ? 'Bluetooth ✓' : 'Bluetooth ✗'}
+                        </Badge>
+                        <Badge variant="outline" className="border-green-500 text-green-500 gap-1">
+                          <Unlock className="w-3 h-3" />
+                          {connectionCapabilities.wifi.supported ? 'WiFi/TCP ✓' : 'WiFi/TCP ✗'}
+                        </Badge>
+                      </div>
                     </div>
                   </>
                 ) : (
                   <>
                     <Monitor className="w-5 h-5 text-amber-500 mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-semibold text-amber-400 flex items-center gap-2">
                         <Globe className="w-4 h-4" />
-                        Navegador Web Detectado
+                        {platformDescription}
                       </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Você está acessando pelo navegador. Bluetooth funciona em Chrome/Edge, mas <strong className="text-amber-400">WiFi mostrará apenas dados simulados</strong>.
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {recommendedAction}
                       </p>
-                      <Button 
-                        size="sm" 
-                        className="mt-2 bg-amber-600 hover:bg-amber-700"
-                        onClick={() => window.open('/native-app-guide', '_blank')}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Baixar App para Conexão Real
-                      </Button>
+                      
+                      {/* Browser capabilities */}
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <Badge 
+                          variant="outline" 
+                          className={connectionCapabilities.bluetooth.supported 
+                            ? "border-green-500 text-green-500 gap-1" 
+                            : "border-red-500 text-red-500 gap-1"
+                          }
+                        >
+                          {connectionCapabilities.bluetooth.supported ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                          Bluetooth {connectionCapabilities.bluetooth.supported ? '✓' : '✗'}
+                        </Badge>
+                        <Badge 
+                          variant="outline" 
+                          className="border-red-500 text-red-500 gap-1"
+                        >
+                          <Lock className="w-3 h-3" />
+                          WiFi/TCP ✗
+                        </Badge>
+                      </div>
+                      
+                      {!canConnect && (
+                        <Button 
+                          size="sm" 
+                          className="mt-3 bg-amber-600 hover:bg-amber-700"
+                          asChild
+                        >
+                          <Link to="/baixar-app">
+                            <Download className="w-4 h-4 mr-2" />
+                            Baixar App para Conexão Real
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   </>
                 )}
@@ -269,59 +323,89 @@ export const ConnectionMethodGuide = ({ isNativePlatform = false }: ConnectionMe
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-2 font-medium">Método</th>
-                      <th className="text-center py-2 font-medium">Navegador</th>
+                      <th className="text-center py-2 font-medium">Seu Dispositivo</th>
                       <th className="text-center py-2 font-medium">App Nativo</th>
-                      <th className="text-center py-2 font-medium">iPhone</th>
+                      <th className="text-center py-2 font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b">
+                    <tr className={`border-b ${connectionCapabilities.bluetooth.supported ? 'bg-green-500/5' : ''}`}>
                       <td className="py-2 flex items-center gap-2">
                         <Bluetooth className="w-4 h-4 text-blue-500" />
                         Bluetooth
                       </td>
                       <td className="text-center py-2">
-                        <span className="text-yellow-500">⚠️ Chrome/Edge</span>
+                        {connectionCapabilities.bluetooth.supported ? (
+                          <span className="text-green-500 font-medium">✅ Disponível</span>
+                        ) : (
+                          <span className="text-red-500">❌ Indisponível</span>
+                        )}
                       </td>
                       <td className="text-center py-2">
                         <span className="text-green-500">✅ Sim</span>
                       </td>
                       <td className="text-center py-2">
-                        <span className="text-red-500">❌ App apenas</span>
+                        {connectionCapabilities.bluetooth.supported ? (
+                          <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Pronto</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">Use App</Badge>
+                        )}
                       </td>
                     </tr>
-                    <tr className="border-b">
+                    <tr className={`border-b ${connectionCapabilities.wifi.supported ? 'bg-green-500/5' : ''}`}>
                       <td className="py-2 flex items-center gap-2">
                         <Wifi className="w-4 h-4 text-green-500" />
-                        WiFi
+                        WiFi/TCP
                       </td>
                       <td className="text-center py-2">
-                        <span className="text-red-500">❌ Simulado</span>
+                        {connectionCapabilities.wifi.supported ? (
+                          <span className="text-green-500 font-medium">✅ Disponível</span>
+                        ) : (
+                          <span className="text-red-500">❌ Simulado</span>
+                        )}
                       </td>
                       <td className="text-center py-2">
                         <span className="text-green-500">✅ Sim</span>
                       </td>
                       <td className="text-center py-2">
-                        <span className="text-green-500">✅ App</span>
+                        {connectionCapabilities.wifi.supported ? (
+                          <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Pronto</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-500 border-amber-500/30">Requer App</Badge>
+                        )}
                       </td>
                     </tr>
-                    <tr>
+                    <tr className={isNativePlatform ? 'bg-purple-500/5' : ''}>
                       <td className="py-2 flex items-center gap-2">
                         <Smartphone className="w-4 h-4 text-purple-500" />
                         Nativo
                       </td>
                       <td className="text-center py-2">
-                        <span className="text-muted-foreground">—</span>
+                        {isNativePlatform ? (
+                          <span className="text-purple-500 font-medium">✅ Ativo</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="text-center py-2">
                         <span className="text-green-500">✅ Melhor</span>
                       </td>
                       <td className="text-center py-2">
-                        <span className="text-green-500">✅ Melhor</span>
+                        {isNativePlatform ? (
+                          <Badge className="bg-purple-500/20 text-purple-500 border-purple-500/30">Ativo</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">Instalar</Badge>
+                        )}
                       </td>
                     </tr>
                   </tbody>
                 </table>
+                
+                {/* Current device info */}
+                <div className="mt-3 pt-3 border-t text-xs text-muted-foreground text-center">
+                  Detectado: <span className="font-medium text-foreground">{platformDescription}</span>
+                  {isLoading && <span className="ml-2">(detectando...)</span>}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -395,10 +479,12 @@ export const ConnectionMethodGuide = ({ isNativePlatform = false }: ConnectionMe
                             <Button 
                               size="sm" 
                               className="mt-3 bg-red-600 hover:bg-red-700"
-                              onClick={() => window.open('/native-app-guide', '_blank')}
+                              asChild
                             >
-                              <Download className="w-4 h-4 mr-2" />
-                              {(method.browserLimitation as { title: string; text: string; action: string }).action}
+                              <Link to="/baixar-app">
+                                <Download className="w-4 h-4 mr-2" />
+                                {(method.browserLimitation as { title: string; text: string; action: string }).action}
+                              </Link>
                             </Button>
                           </div>
                         </div>
@@ -570,10 +656,12 @@ export const ConnectionMethodGuide = ({ isNativePlatform = false }: ConnectionMe
                   </div>
                   <Button 
                     className="bg-purple-600 hover:bg-purple-700 text-white"
-                    onClick={() => window.open('/native-app-guide', '_blank')}
+                    asChild
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Baixar App Grátis
+                    <Link to="/baixar-app">
+                      <Download className="w-4 h-4 mr-2" />
+                      Baixar App Grátis
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
