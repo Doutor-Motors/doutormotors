@@ -125,7 +125,8 @@ export default function SelectPlanPage() {
       ...signupData,
       selectedPlan: plan,
     };
-    navigate("/subscription-checkout", { state: checkoutState });
+    // Também adiciona na URL para sobreviver a refresh/voltar
+    navigate(`/subscription-checkout?plan=${plan}`, { state: checkoutState });
   };
 
   const handleExitClick = () => {

@@ -91,10 +91,21 @@ Deno.serve(async (req) => {
     // Call AbacatePay PIX QRCode API with customer data (as per their documentation)
     console.log("Calling AbacatePay PIX QRCode API...");
     
+    const normalizePlanType = (value: unknown): "basic" | "pro" => {
+      const v = String(value ?? "").trim().toLowerCase();
+      if (v === "basic") return "basic";
+      return "pro";
+    };
+
+    // Fonte de verdade: metadata.planType (quando enviado) ou inferência pelo valor
+    const inferredPlanType: "basic" | "pro" = body.amount <= MINIMUM_PLAN_AMOUNT_CENTS ? "basic" : "pro";
+    const planType = body.metadata?.planType ? normalizePlanType(body.metadata.planType) : inferredPlanType;
+    const description = body.description || `Assinatura Doutor Motors ${planType === "pro" ? "Pro" : "Basic"}`;
+
     const pixPayload = {
       amount: body.amount, // AbacatePay expects cents
       expiresIn: body.expiresIn || 3600, // seconds (default 1 hour)
-      description: body.description || "Assinatura Doutor Motors Pro",
+      description,
       customer: {
         name: body.customer.name,
         cellphone: body.customer.cellphone || "",
@@ -104,7 +115,7 @@ Deno.serve(async (req) => {
       metadata: {
         externalId: externalId,
         userId: body.metadata?.userId || "",
-        planType: body.metadata?.planType || "pro",
+        planType,
       }
     };
 
@@ -175,12 +186,12 @@ Deno.serve(async (req) => {
         customer_email: body.customer.email,
         customer_cellphone: body.customer.cellphone,
         customer_tax_id: body.customer.taxId,
-        description: body.description || "Assinatura Doutor Motors Pro",
-        metadata: { 
+        description,
+        metadata: {
           externalId: externalId,
           devMode: pix.devMode,
           originalAmount: body.amount,
-          planType: body.metadata?.planType || "pro",
+          planType,
           userId: body.metadata?.userId,
         },
         expires_at: paymentExpiresAt,
@@ -209,6 +220,7 @@ Deno.serve(async (req) => {
         qr_code_url: qrCodeUrl,
         expires_at: paymentExpiresAt,
         devMode: pix.devMode || false, // Include devMode flag for UI badge
+        plan_type: planType,
       }
     }), {
       status: 200,

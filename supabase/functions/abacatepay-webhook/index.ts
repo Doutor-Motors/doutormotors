@@ -148,7 +148,10 @@ Deno.serve(async (req) => {
       // Get user ID from metadata if available
       const metadata = pixPayment.metadata as Record<string, unknown> | null;
       const userId = metadata?.userId as string | undefined;
-      const planType = (metadata?.planType as string) || "pro";
+      const planTypeRaw = metadata?.planType as string | undefined;
+      const planType = (planTypeRaw === "basic" || planTypeRaw === "pro")
+        ? planTypeRaw
+        : (pixPayment.amount <= 1990 ? "basic" : "pro");
 
       // If we have a user ID, activate their subscription
       if (userId) {
