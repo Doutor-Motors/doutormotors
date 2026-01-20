@@ -55,4 +55,4 @@ export interface VideoDetails {
   relatedVideos?: RelatedVideo[];
 }
 
-export type ViewState = "brands" | "models" | "categories" | "procedures" | "video";
+export type ViewState = "brands" | "models" | "categories" | "procedures" | "video" | "expert-chat";

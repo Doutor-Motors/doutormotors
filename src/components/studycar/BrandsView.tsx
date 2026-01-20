@@ -14,6 +14,7 @@ import {
 import { motion } from "framer-motion";
 import { getBrandImage } from "@/utils/carImages";
 import { CarBrand } from "./types";
+import ExpertCard from "./ExpertCard";
 
 interface BrandsViewProps {
   brands: CarBrand[];
@@ -21,6 +22,7 @@ interface BrandsViewProps {
   userVehicle: { brand: string; model: string; year: number } | null;
   onBrandSelect: (brand: CarBrand) => void;
   onQuickSelect: (brand: string, model: string, year: string) => void;
+  onExpertClick: () => void;
 }
 
 const BrandsView = ({
@@ -29,6 +31,7 @@ const BrandsView = ({
   userVehicle,
   onBrandSelect,
   onQuickSelect,
+  onExpertClick,
 }: BrandsViewProps) => {
   const [brandSearch, setBrandSearch] = useState("");
   const [quickSelectBrand, setQuickSelectBrand] = useState("");
@@ -167,6 +170,11 @@ const BrandsView = ({
                   </CardContent>
                 </Card>
               </motion.div>
+
+              {/* Expert Card */}
+              <div className="mt-4">
+                <ExpertCard onClick={onExpertClick} />
+              </div>
             </div>
 
             {/* Right Side - Search Brands */}

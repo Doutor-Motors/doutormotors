@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.list-orphan-users]
 verify_jwt = false
+
+[functions.automotive-expert-chat]
+verify_jwt = false
