@@ -44,6 +44,7 @@ import StudyCarPage from "./pages/StudyCarPage";
 import HowDiagnosticWorksPage from "./pages/HowDiagnosticWorksPage";
 import HowSystemWorksPage from "./pages/HowSystemWorksPage";
 import UseFromAnywherePage from "./pages/UseFromAnywherePage";
+import HowDiagnosticConnectsPage from "./pages/HowDiagnosticConnectsPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import FAQPage from "./pages/FAQPage";
@@ -106,6 +107,7 @@ const App = () => (
                 <Route path="/como-diagnosticar" element={<HowDiagnosticWorksPage />} />
                 <Route path="/como-funciona-sistema" element={<HowSystemWorksPage />} />
                 <Route path="/use-de-qualquer-lugar" element={<UseFromAnywherePage />} />
+                <Route path="/como-conecta" element={<HowDiagnosticConnectsPage />} />
                 <Route path="/instalar" element={<InstallAppPage />} />
                 <Route path="/checkout-pix" element={<PixCheckoutPage />} />
                 <Route path="/subscription-checkout" element={<SubscriptionCheckoutPage />} />
