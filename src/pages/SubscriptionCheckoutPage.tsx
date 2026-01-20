@@ -546,10 +546,13 @@ export default function SubscriptionCheckoutPage() {
           transition={{ delay: 0.2 }}
         >
           {["Dados", "Pagamento", "Ativação"].map((label, index) => {
-            const stepIndex = index + 1;
-            const currentStepIndex = step === "form" ? 1 : step === "payment" || step === "expired" ? 2 : 3;
-            const isActive = stepIndex === currentStepIndex;
-            const isCompleted = stepIndex < currentStepIndex;
+            const stepNumber = index + 1;
+            // Map step state to numeric index: form=1, payment/expired=2, success=3
+            const currentStepNumber = step === "form" ? 1 : step === "payment" || step === "expired" ? 2 : 3;
+            const isActive = stepNumber === currentStepNumber;
+            const isCompleted = stepNumber < currentStepNumber;
+            // Line should be green if the NEXT step is active or completed
+            const lineCompleted = stepNumber < currentStepNumber;
             
             return (
               <div key={label} className="flex items-center gap-3">
@@ -559,7 +562,7 @@ export default function SubscriptionCheckoutPage() {
                     isActive ? "bg-primary text-white ring-4 ring-primary/30" : 
                     "bg-white/10 text-white/50"
                   }`}>
-                    {isCompleted ? <Check className="w-5 h-5" /> : stepIndex}
+                    {isCompleted ? <Check className="w-5 h-5" /> : stepNumber}
                   </div>
                   <span className={`text-xs font-medium ${isActive || isCompleted ? "text-white" : "text-white/50"}`}>
                     {label}
@@ -567,7 +570,7 @@ export default function SubscriptionCheckoutPage() {
                 </div>
                 {index < 2 && (
                   <div className={`w-12 h-0.5 rounded mb-5 transition-all duration-300 ${
-                    isCompleted ? "bg-green-500" : "bg-white/20"
+                    lineCompleted ? "bg-green-500" : "bg-white/20"
                   }`} />
                 )}
               </div>
