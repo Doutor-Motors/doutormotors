@@ -14,7 +14,7 @@ const PrivacyPolicyPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="pt-32 pb-16">
+      <main className="pt-36 sm:pt-40 md:pt-44 pb-16">
         <div className="container mx-auto px-4 max-w-4xl">
           {/* Header */}
           <div className="mb-8">
