@@ -29,6 +29,7 @@ import UserSubscriptionStats from "@/components/admin/UserSubscriptionStats";
 import TopUsersTable from "@/components/admin/TopUsersTable";
 import PeriodComparisonCard from "@/components/admin/PeriodComparisonCard";
 import { KPIPanel } from "@/components/admin/KPIPanel";
+import { AbacatePayStatusBadge } from "@/components/admin/AbacatePayStatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -619,6 +620,9 @@ const AdminDashboard = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
+            {/* AbacatePay Status Badge */}
+            <AbacatePayStatusBadge />
+            
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {statCards.map((stat) => (
