@@ -912,19 +912,20 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                     </p>
                     
                     <p className="text-sm font-medium mb-4">Perguntas rápidas:</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
                       {QUICK_QUESTIONS.map((q, i) => (
-                        <Button
+                        <Card
                           key={i}
-                          variant="outline"
-                          size="sm"
-                          className="justify-start text-left h-auto py-3 px-4 hover:bg-primary/10 hover:border-primary/50 transition-all"
+                          className="cursor-pointer border-border/50 bg-card/50 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 group"
                           onClick={() => handleQuickQuestion(q.text)}
-                          disabled={isLoading}
                         >
-                          <q.icon className={`w-5 h-5 mr-3 shrink-0 ${q.color}`} />
-                          <span className="text-sm">{q.text}</span>
-                        </Button>
+                          <CardContent className="p-4 flex items-start gap-3">
+                            <div className={`w-10 h-10 rounded-lg bg-background/80 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${q.color}`}>
+                              <q.icon className="w-5 h-5" />
+                            </div>
+                            <span className="text-sm text-foreground/90 leading-relaxed pt-1">{q.text}</span>
+                          </CardContent>
+                        </Card>
                       ))}
                     </div>
                   </CardContent>
