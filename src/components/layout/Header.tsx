@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, ArrowRight, ArrowLeft, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import logo from "@/assets/images/logo-new-car.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -20,6 +21,16 @@ const Header = () => {
 
   const isLandingPage = location.pathname === "/";
 
+  // Scroll detection for header animation
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const handleBack = () => {
     if (window.history.length > 1) {
       navigate(-1);
@@ -29,12 +40,35 @@ const Header = () => {
   };
 
   return (
-    <header className={`absolute top-0 left-0 w-full z-40 px-4 md:px-10 ${isLandingPage ? "" : "bg-secondary"}`}>
-      <div className="container mx-auto flex items-center gap-6 lg:gap-12 py-4">
-        {/* Logo - Estilo do Footer */}
-        <Link to="/" className="flex flex-col items-start shrink-0">
-          <img src={logo} alt="Doutor Motors" className="h-[100px] w-auto object-contain -ml-1" />
-          <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[29px] ml-1">DOUTOR MOTORS</span>
+    <header 
+      className={`fixed top-0 left-0 w-full z-40 px-4 md:px-10 transition-all duration-300 ${
+        isScrolled 
+          ? "bg-secondary/95 backdrop-blur-md shadow-lg py-2" 
+          : isLandingPage 
+            ? "bg-transparent py-4" 
+            : "bg-secondary py-4"
+      }`}
+    >
+      <div className="container mx-auto flex items-center gap-6 lg:gap-12">
+        {/* Logo - Com animação de scroll */}
+        <Link 
+          to="/" 
+          className={`flex flex-col items-start shrink-0 transition-all duration-300 ${
+            isScrolled ? "scale-75 origin-left" : "scale-100"
+          }`}
+        >
+          <img 
+            src={logo} 
+            alt="Doutor Motors" 
+            className="h-[100px] w-auto object-contain -ml-1 transition-all duration-300" 
+          />
+          <span 
+            className={`font-chakra text-primary-foreground font-bold tracking-wider transition-all duration-300 ${
+              isScrolled ? "text-base -mt-[22px] ml-0.5" : "text-lg -mt-[29px] ml-1"
+            }`}
+          >
+            DOUTOR MOTORS
+          </span>
         </Link>
 
         {/* Botão Voltar - aparece em todas as páginas exceto landing */}
