@@ -74,26 +74,26 @@ const Header = () => {
       {/* Borda inferior animada */}
       <div className={`absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent transition-opacity duration-300 ${isScrolled ? "opacity-100" : "opacity-0"}`} />
       
-      <div className="container mx-auto px-4 md:px-10 flex items-center gap-2 sm:gap-4 lg:gap-8">
+      <div className="container mx-auto px-3 sm:px-4 md:px-10 flex items-center justify-between gap-2 sm:gap-4 lg:gap-8">
         {/* Logo - Com animação de scroll - Responsiva */}
         <Link 
           to="/" 
           className={`flex flex-col items-start shrink-0 transition-all duration-500 group ${
             isScrolled 
-              ? "scale-[0.6] md:scale-[0.7] origin-left -my-3 md:-my-2" 
-              : "scale-[0.7] md:scale-[0.85] lg:scale-100"
+              ? "scale-[0.55] sm:scale-[0.6] md:scale-[0.7] origin-left -my-4 sm:-my-3 md:-my-2" 
+              : "scale-[0.6] sm:scale-[0.7] md:scale-[0.85] lg:scale-100"
           }`}
         >
           <img 
             src={logo} 
             alt="Doutor Motors" 
-            className="h-[100px] w-auto object-contain -ml-1 transition-all duration-300 group-hover:brightness-110" 
+            className="h-[80px] sm:h-[100px] w-auto object-contain -ml-1 transition-all duration-300 group-hover:brightness-110" 
           />
           <span 
             className={`font-chakra text-primary-foreground font-bold tracking-wider transition-all duration-300 ${
               isScrolled 
-                ? "text-sm md:text-base -mt-[22px] ml-0.5" 
-                : "text-sm md:text-base lg:text-lg -mt-[22px] md:-mt-[26px] lg:-mt-[29px] ml-0.5 md:ml-1"
+                ? "text-xs sm:text-sm md:text-base -mt-[18px] sm:-mt-[22px] ml-0.5" 
+                : "text-xs sm:text-sm md:text-base lg:text-lg -mt-[18px] sm:-mt-[22px] md:-mt-[26px] lg:-mt-[29px] ml-0.5 md:ml-1"
             }`}
           >
             DOUTOR MOTORS
@@ -165,21 +165,21 @@ const Header = () => {
           </Link>
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Button - Always visible on mobile/tablet */}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`lg:hidden relative w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 ${
+          className={`lg:hidden relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full transition-all duration-300 shrink-0 z-50 ${
             isMenuOpen 
-              ? "bg-primary text-primary-foreground" 
-              : "bg-white/10 text-primary-foreground hover:bg-white/20"
+              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/40" 
+              : "bg-white/20 text-primary-foreground hover:bg-white/30 border border-white/20"
           }`}
           aria-label="Toggle menu"
         >
           <span className={`absolute transition-all duration-300 ${isMenuOpen ? "rotate-90 opacity-0" : "rotate-0 opacity-100"}`}>
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
           </span>
           <span className={`absolute transition-all duration-300 ${isMenuOpen ? "rotate-0 opacity-100" : "-rotate-90 opacity-0"}`}>
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </span>
         </button>
 
