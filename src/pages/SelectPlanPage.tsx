@@ -324,8 +324,12 @@ export default function SelectPlanPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
+              className="relative"
             >
-              <Card className="h-full border-primary/50 bg-gradient-to-b from-primary/20 via-primary/10 to-white/5 backdrop-blur-sm relative overflow-hidden group hover:border-primary/70 transition-all duration-300">
+              {/* Outer glow ring */}
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-orange-500 to-primary rounded-xl opacity-75 blur-sm animate-pulse" />
+              
+              <Card className="relative h-full border-primary/50 bg-gradient-to-b from-primary/20 via-primary/10 to-white/5 backdrop-blur-sm overflow-hidden group hover:border-primary/70 transition-all duration-300 pulse-glow">
                 {/* Popular Badge */}
                 <div className="absolute top-0 right-0">
                   <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl flex items-center gap-1.5 shadow-lg">
