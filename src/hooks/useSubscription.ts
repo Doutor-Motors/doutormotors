@@ -120,8 +120,8 @@ export function useSubscription() {
     if (v === "active" || v === "ativo" || v === "trialing") return "active";
     if (v === "cancelled" || v === "canceled" || v === "cancelado") return "cancelled";
     if (v === "expired" || v === "expirado") return "expired";
-    // fallback para não quebrar gating em casos não mapeados
-    return "active";
+    // fallback seguro: nunca conceder acesso por status desconhecido
+    return "expired";
   };
 
   const { data: subscription, isLoading, error } = useQuery({
@@ -142,20 +142,9 @@ export function useSubscription() {
 
       const activeRow = (rows || []).find((r) => normalizeStatus((r as any).status) === "active");
 
-      // Se não tem assinatura ativa, retorna plano básico
+      // Sem assinatura ativa: não inventa assinatura (isso quebraria o gating de pagamento)
       if (!activeRow) {
-        return {
-          id: "",
-          user_id: user.id,
-          plan_type: "basic" as PlanType,
-          status: "active" as const,
-          started_at: new Date().toISOString(),
-          expires_at: null,
-          stripe_subscription_id: null,
-          stripe_customer_id: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
+        return null;
       }
 
       return {

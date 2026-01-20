@@ -36,10 +36,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   // Verifica se tem assinatura ativa (Basic ou Pro)
-  // Não exige subscription.id porque o fallback pode ter id vazio mas plano válido
-  const hasValidSubscription = subscription && 
-    subscription.status === "active" && 
-    (subscription.plan_type === "basic" || subscription.plan_type === "pro");
+  // CRÍTICO: exige id real para evitar bypass (fallbacks/cache não podem liberar acesso)
+  const hasValidSubscription = Boolean(
+    subscription &&
+      subscription.id &&
+      subscription.status === "active" &&
+      (subscription.plan_type === "basic" || subscription.plan_type === "pro")
+  );
 
   // Se não tem assinatura válida, redireciona para página de seleção de plano
   if (!hasValidSubscription) {
