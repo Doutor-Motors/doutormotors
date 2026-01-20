@@ -11,6 +11,7 @@ import {
   CategoriesView,
   ProceduresView,
   VideoView,
+  ExpertChatView,
   CarBrand,
   CarModel,
   VideoCategory,
@@ -204,6 +205,7 @@ const StudyCarPage = () => {
         if (selectedProcedure) { setCurrentView("procedures"); setSelectedProcedure(null); setVideoDetails(null); }
         else { setCurrentView("categories"); setSelectedCategory(null); setVideoDetails(null); }
         break;
+      case "expert-chat": setCurrentView("brands"); break;
     }
   };
 
@@ -233,6 +235,7 @@ const StudyCarPage = () => {
               userVehicle={userVehicle}
               onBrandSelect={handleBrandSelect}
               onQuickSelect={handleQuickSelect}
+              onExpertClick={() => setCurrentView("expert-chat")}
             />
           )}
 
@@ -290,6 +293,14 @@ const StudyCarPage = () => {
               onBrandClick={() => { setCurrentView("brands"); setSelectedBrand(null); }}
               onModelClick={() => { setCurrentView("models"); setSelectedModel(null); }}
               onProceduresClick={() => { setCurrentView("procedures"); setSelectedProcedure(null); }}
+            />
+          )}
+
+          {currentView === "expert-chat" && (
+            <ExpertChatView
+              userVehicle={userVehicle}
+              onBack={goBack}
+              onHome={goHome}
             />
           )}
         </AnimatePresence>
