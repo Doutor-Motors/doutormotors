@@ -12,13 +12,17 @@ import {
   ArrowLeft,
   Shield,
   Zap,
-  Star
+  Star,
+  CreditCard,
+  BadgeCheck,
+  Sparkles
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -61,13 +65,21 @@ const formatPhone = (value: string) => {
   return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
 };
 
+// Utility to format cents to BRL currency
+const formatCurrency = (cents: number): string => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(cents / 100);
+};
+
 const PRO_BENEFITS = [
-  "Diagnósticos ilimitados",
-  "Gravação de dados avançada",
-  "Funções de Coding completas",
-  "Consultas IA ilimitadas",
-  "Suporte prioritário",
-  "Sem anúncios"
+  { icon: Zap, text: "Diagnósticos ilimitados" },
+  { icon: Star, text: "Gravação de dados avançada" },
+  { icon: CreditCard, text: "Funções de Coding completas" },
+  { icon: Sparkles, text: "Consultas IA ilimitadas" },
+  { icon: BadgeCheck, text: "Suporte prioritário" },
+  { icon: Shield, text: "Sem anúncios" },
 ];
 
 export default function SubscriptionCheckoutPage() {
@@ -80,6 +92,10 @@ export default function SubscriptionCheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
+  
+  // Get the plan price in cents from config
+  const planPriceInCents = PLAN_FEATURES.pro.priceValue;
+  const formattedPrice = formatCurrency(planPriceInCents);
   
   // Pre-fill with data from signup
   const signupData = location.state as { fromSignup?: boolean; email?: string; name?: string } | null;
@@ -202,11 +218,12 @@ export default function SubscriptionCheckoutPage() {
         return;
       }
 
-      const amountInCents = PLAN_FEATURES.pro.priceValue; // 2990 cents = R$ 29,90
+      console.log("Enviando para API - Valor em centavos:", planPriceInCents);
+      console.log("Valor formatado para exibição:", formattedPrice);
 
       const response = await supabase.functions.invoke("create-pix-qrcode", {
         body: {
-          amount: amountInCents,
+          amount: planPriceInCents,
           description: "Assinatura Pro - Doutor Motors",
           customer: {
             name: formData.customerName,
@@ -275,7 +292,7 @@ export default function SubscriptionCheckoutPage() {
 
   if (authLoading || subLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-secondary">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 text-primary animate-spin" />
           <p className="text-muted-foreground">Carregando...</p>
@@ -288,7 +305,7 @@ export default function SubscriptionCheckoutPage() {
     <div
       className="min-h-screen flex items-center justify-center p-4 py-12"
       style={{
-        backgroundImage: `url(${heroBg})`,
+        backgroundImage: `linear-gradient(to bottom, hsl(var(--secondary) / 0.95), hsl(var(--secondary) / 0.98)), url(${heroBg})`,
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
         backgroundPosition: "center",
@@ -297,9 +314,9 @@ export default function SubscriptionCheckoutPage() {
       {/* Back Button */}
       {step !== "success" && (
         <Button
-          variant="ghost-light"
+          variant="ghost"
           onClick={handleBack}
-          className="fixed top-4 left-4 z-50 gap-2 font-chakra uppercase text-sm"
+          className="fixed top-4 left-4 z-50 gap-2 font-chakra uppercase text-sm text-white/80 hover:text-white hover:bg-white/10"
         >
           <ArrowLeft className="w-4 h-4" />
           <span className="hidden sm:inline">Voltar</span>
@@ -308,292 +325,371 @@ export default function SubscriptionCheckoutPage() {
 
       <div className="w-full max-w-lg">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-6 cursor-default">
+        <motion.div 
+          className="flex flex-col items-center mb-8 cursor-default"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <img src={logo} alt="Doutor Motors" className="h-[80px] w-auto object-contain" />
-          <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[24px]">
+          <span className="font-chakra text-white text-lg font-bold tracking-wider -mt-[24px]">
             DOUTOR MOTORS
           </span>
-        </div>
+        </motion.div>
 
         {/* Progress Indicator */}
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-            step === "form" ? "bg-primary text-primary-foreground" : "bg-primary/20 text-primary"
-          }`}>
-            1
-          </div>
-          <div className={`w-12 h-1 rounded ${step !== "form" ? "bg-primary" : "bg-primary/20"}`} />
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-            step === "payment" ? "bg-primary text-primary-foreground" : 
-            step === "success" ? "bg-primary/20 text-primary" : "bg-primary/20 text-primary/50"
-          }`}>
-            2
-          </div>
-          <div className={`w-12 h-1 rounded ${step === "success" ? "bg-primary" : "bg-primary/20"}`} />
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-            step === "success" ? "bg-green-500 text-white" : "bg-primary/20 text-primary/50"
-          }`}>
-            {step === "success" ? <Check className="w-4 h-4" /> : "3"}
-          </div>
-        </div>
-
-        <Card className="bg-card/95 backdrop-blur-sm border-border shadow-2xl">
-          <CardHeader className="text-center border-b border-border pb-4">
-            <Badge className="w-fit mx-auto mb-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">
-              <Crown className="h-3 w-3 mr-1" />
-              Plano Pro
-            </Badge>
-            <CardTitle className="font-chakra text-2xl">
-              {step === "form" && "Finalize sua Assinatura"}
-              {step === "payment" && "Realize o Pagamento"}
-              {step === "success" && "Assinatura Ativada!"}
-            </CardTitle>
-            <CardDescription>
-              {step === "form" && "Preencha seus dados para gerar o PIX"}
-              {step === "payment" && "Escaneie o QR Code ou copie o código"}
-              {step === "success" && "Você agora tem acesso completo ao sistema"}
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="pt-6">
-            <AnimatePresence mode="wait">
-              {/* Step: Form */}
-              {step === "form" && (
-                <motion.div
-                  key="form"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                >
-                  {/* Plan Summary */}
-                  <div className="bg-primary/10 rounded-lg p-4 mb-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-semibold">Plano Pro Mensal</span>
-                      <span className="text-2xl font-bold text-primary">
-                        R$ 29,90
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {PRO_BENEFITS.map((benefit, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Check className="w-3 h-3 text-green-500 shrink-0" />
-                          <span>{benefit}</span>
-                        </div>
-                      ))}
-                    </div>
+        <motion.div 
+          className="flex items-center justify-center gap-3 mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          {["Dados", "Pagamento", "Ativação"].map((label, index) => {
+            const stepIndex = index + 1;
+            const currentStepIndex = step === "form" ? 1 : step === "payment" ? 2 : 3;
+            const isActive = stepIndex === currentStepIndex;
+            const isCompleted = stepIndex < currentStepIndex;
+            
+            return (
+              <div key={label} className="flex items-center gap-3">
+                <div className="flex flex-col items-center gap-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                    isCompleted ? "bg-green-500 text-white" :
+                    isActive ? "bg-primary text-white ring-4 ring-primary/30" : 
+                    "bg-white/10 text-white/50"
+                  }`}>
+                    {isCompleted ? <Check className="w-5 h-5" /> : stepIndex}
                   </div>
+                  <span className={`text-xs font-medium ${isActive || isCompleted ? "text-white" : "text-white/50"}`}>
+                    {label}
+                  </span>
+                </div>
+                {index < 2 && (
+                  <div className={`w-12 h-0.5 rounded mb-5 transition-all duration-300 ${
+                    isCompleted ? "bg-green-500" : "bg-white/20"
+                  }`} />
+                )}
+              </div>
+            );
+          })}
+        </motion.div>
 
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                      <Label htmlFor="customerName">Nome Completo *</Label>
-                      <Input
-                        id="customerName"
-                        value={formData.customerName}
-                        onChange={(e) => handleInputChange("customerName", e.target.value)}
-                        placeholder="Seu nome completo"
-                        className="mt-1"
-                        required
-                        disabled={loading}
-                      />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="bg-card/95 backdrop-blur-lg border-border/50 shadow-2xl overflow-hidden">
+            {/* Header with gradient */}
+            <CardHeader className="text-center pb-4 bg-gradient-to-br from-primary/10 via-transparent to-transparent">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.4, type: "spring" }}
+              >
+                <Badge className="w-fit mx-auto mb-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 px-4 py-1.5 text-sm">
+                  <Crown className="h-4 w-4 mr-2" />
+                  Plano Pro
+                </Badge>
+              </motion.div>
+              <CardTitle className="font-chakra text-2xl text-foreground">
+                {step === "form" && "Finalize sua Assinatura"}
+                {step === "payment" && "Realize o Pagamento"}
+                {step === "success" && "Assinatura Ativada!"}
+              </CardTitle>
+              <CardDescription className="text-muted-foreground">
+                {step === "form" && "Preencha seus dados para gerar o PIX"}
+                {step === "payment" && "Escaneie o QR Code ou copie o código"}
+                {step === "success" && "Você agora tem acesso completo ao sistema"}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="pt-6">
+              <AnimatePresence mode="wait">
+                {/* Step: Form */}
+                {step === "form" && (
+                  <motion.div
+                    key="form"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-6"
+                  >
+                    {/* Value Preview Card - Transparência no valor */}
+                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-5 border border-primary/20">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
+                      
+                      <div className="relative">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-1">Plano Pro Mensal</p>
+                            <p className="text-3xl font-bold text-foreground font-chakra">
+                              {formattedPrice}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {planPriceInCents} centavos • Renovação mensal
+                            </p>
+                          </div>
+                          <div className="bg-primary/20 p-3 rounded-full">
+                            <Crown className="w-8 h-8 text-primary" />
+                          </div>
+                        </div>
+                        
+                        <Separator className="my-4 bg-border/50" />
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          {PRO_BENEFITS.map((benefit, i) => (
+                            <div key={i} className="flex items-center gap-2 text-sm">
+                              <benefit.icon className="w-4 h-4 text-primary shrink-0" />
+                              <span className="text-muted-foreground">{benefit.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <Label htmlFor="customerEmail">E-mail *</Label>
-                      <Input
-                        id="customerEmail"
-                        type="email"
-                        value={formData.customerEmail}
-                        onChange={(e) => handleInputChange("customerEmail", e.target.value)}
-                        placeholder="seu@email.com"
-                        className="mt-1"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                       <div>
-                        <Label htmlFor="customerTaxId">CPF *</Label>
+                        <Label htmlFor="customerName" className="text-foreground">Nome Completo *</Label>
                         <Input
-                          id="customerTaxId"
-                          value={formData.customerTaxId}
-                          onChange={(e) => handleInputChange("customerTaxId", e.target.value)}
-                          placeholder="000.000.000-00"
-                          className="mt-1"
+                          id="customerName"
+                          value={formData.customerName}
+                          onChange={(e) => handleInputChange("customerName", e.target.value)}
+                          placeholder="Seu nome completo"
+                          className="mt-1.5 bg-background/50 border-border/50 focus:border-primary"
                           required
                           disabled={loading}
                         />
                       </div>
+
                       <div>
-                        <Label htmlFor="customerCellphone">Celular</Label>
+                        <Label htmlFor="customerEmail" className="text-foreground">E-mail *</Label>
                         <Input
-                          id="customerCellphone"
-                          value={formData.customerCellphone}
-                          onChange={(e) => handleInputChange("customerCellphone", e.target.value)}
-                          placeholder="(11) 99999-9999"
-                          className="mt-1"
+                          id="customerEmail"
+                          type="email"
+                          value={formData.customerEmail}
+                          onChange={(e) => handleInputChange("customerEmail", e.target.value)}
+                          placeholder="seu@email.com"
+                          className="mt-1.5 bg-background/50 border-border/50 focus:border-primary"
+                          required
                           disabled={loading}
                         />
                       </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="customerTaxId" className="text-foreground">CPF *</Label>
+                          <Input
+                            id="customerTaxId"
+                            value={formData.customerTaxId}
+                            onChange={(e) => handleInputChange("customerTaxId", e.target.value)}
+                            placeholder="000.000.000-00"
+                            className="mt-1.5 bg-background/50 border-border/50 focus:border-primary"
+                            required
+                            disabled={loading}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="customerCellphone" className="text-foreground">Celular</Label>
+                          <Input
+                            id="customerCellphone"
+                            value={formData.customerCellphone}
+                            onChange={(e) => handleInputChange("customerCellphone", e.target.value)}
+                            placeholder="(11) 99999-9999"
+                            className="mt-1.5 bg-background/50 border-border/50 focus:border-primary"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Summary before submit */}
+                      <div className="bg-muted/30 rounded-lg p-4 border border-border/30">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Total a pagar:</span>
+                          <span className="text-xl font-bold text-primary font-chakra">{formattedPrice}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                          <Shield className="w-3 h-3" />
+                          Pagamento via PIX • Ativação instantânea
+                        </p>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase h-12 text-base"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Gerando PIX...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="w-5 h-5 mr-2" />
+                            Gerar PIX • {formattedPrice}
+                          </>
+                        )}
+                      </Button>
+
+                      <div className="flex items-center justify-center gap-6 pt-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <Shield className="w-4 h-4 text-green-500" />
+                          <span>Pagamento Seguro</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Zap className="w-4 h-4 text-amber-500" />
+                          <span>Ativação Imediata</span>
+                        </div>
+                      </div>
+                    </form>
+                  </motion.div>
+                )}
+
+                {/* Step: Payment */}
+                {step === "payment" && pixData && (
+                  <motion.div
+                    key="payment"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="text-center space-y-6"
+                  >
+                    {/* Status indicator */}
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-primary/30 rounded-full animate-ping" />
+                        <Clock className="w-5 h-5 text-primary relative" />
+                      </div>
+                      <span className="font-chakra font-semibold text-foreground">Aguardando pagamento...</span>
                     </div>
 
-                    <Button
-                      type="submit"
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase"
-                      size="lg"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Gerando PIX...
-                        </>
-                      ) : (
-                        <>
-                          <Crown className="w-5 h-5 mr-2" />
-                          Gerar PIX - R$ 29,90
-                        </>
-                      )}
-                    </Button>
-
-                    <div className="flex items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Shield className="w-3 h-3" />
-                        <span>Pagamento Seguro</span>
+                    {/* Payment card */}
+                    <div className="bg-gradient-to-br from-muted/50 to-muted/20 rounded-xl p-6 border border-border/30">
+                      <div className="mb-4">
+                        <p className="text-sm text-muted-foreground mb-1">Valor a pagar</p>
+                        <p className="text-3xl font-bold text-primary font-chakra">
+                          {formattedPrice}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Zap className="w-3 h-3" />
-                        <span>Ativação Imediata</span>
+
+                      {/* QR Code */}
+                      <div className="bg-white p-4 rounded-xl inline-block mb-4 shadow-lg">
+                        {pixData.qr_code_url ? (
+                          <img
+                            src={`data:image/png;base64,${pixData.qr_code_url}`}
+                            alt="QR Code PIX"
+                            className="w-48 h-48 mx-auto"
+                          />
+                        ) : (
+                          <div className="w-48 h-48 bg-muted/30 rounded-lg flex items-center justify-center">
+                            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </form>
-                </motion.div>
-              )}
 
-              {/* Step: Payment */}
-              {step === "payment" && pixData && (
-                <motion.div
-                  key="payment"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="text-center space-y-6"
-                >
-                  <div className="flex items-center justify-center gap-2 text-primary">
-                    <Clock className="w-5 h-5 animate-pulse" />
-                    <span className="font-chakra font-semibold">Aguardando pagamento...</span>
-                  </div>
+                      {/* Copy button */}
+                      <Button
+                        onClick={copyToClipboard}
+                        variant="outline"
+                        className="w-full gap-2 h-12 text-base border-primary/30 hover:bg-primary/10"
+                        disabled={!pixData.br_code}
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-5 h-5 text-green-500" />
+                            <span className="text-green-500">Código copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-5 h-5" />
+                            Copiar código PIX
+                          </>
+                        )}
+                      </Button>
 
-                  <div className="bg-muted/30 rounded-xl p-6">
-                    <p className="text-2xl font-bold text-foreground mb-4">
-                      R$ 29,90
-                    </p>
-
-                    {/* QR Code */}
-                    <div className="bg-white p-4 rounded-lg inline-block mb-4">
-                      {pixData.qr_code_url ? (
-                        <img
-                          src={`data:image/png;base64,${pixData.qr_code_url}`}
-                          alt="QR Code PIX"
-                          className="w-48 h-48 mx-auto"
-                        />
-                      ) : (
-                        <div className="w-48 h-48 flex items-center justify-center text-muted-foreground">
-                          <AlertCircle className="w-8 h-8" />
+                      {/* PIX code preview */}
+                      {pixData.br_code && (
+                        <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                          <p className="text-xs text-muted-foreground font-mono break-all line-clamp-2">
+                            {pixData.br_code}
+                          </p>
                         </div>
                       )}
                     </div>
 
-                    {/* PIX Code */}
-                    <div className="space-y-3">
-                      <Label className="font-chakra text-foreground text-sm">
-                        PIX Copia e Cola
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          value={pixData.br_code || ""}
-                          readOnly
-                          className="pr-12 text-xs font-mono bg-background"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-1 top-1/2 -translate-y-1/2"
-                          onClick={copyToClipboard}
-                        >
-                          {copied ? (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>O pagamento será confirmado automaticamente</span>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Step: Success */}
+                {step === "success" && (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="text-center space-y-6 py-4"
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", delay: 0.2 }}
+                      className="w-24 h-24 mx-auto bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30"
+                    >
+                      <CheckCircle className="w-14 h-14 text-white" />
+                    </motion.div>
+
+                    <div>
+                      <h3 className="text-2xl font-bold font-chakra text-foreground mb-2">
+                        Pagamento Confirmado!
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Sua assinatura Pro está ativa e pronta para uso.
+                      </p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-primary/10 to-transparent p-4 rounded-xl border border-primary/20">
+                      <div className="flex items-center justify-center gap-2 mb-3">
+                        <Crown className="w-5 h-5 text-primary" />
+                        <span className="font-semibold text-foreground">Benefícios desbloqueados</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {PRO_BENEFITS.slice(0, 4).map((benefit, i) => (
+                          <div key={i} className="flex items-center gap-2 text-muted-foreground">
                             <Check className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
+                            <span>{benefit.text}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
 
-                  <p className="text-sm text-muted-foreground">
-                    Escaneie o QR Code ou copie o código para pagar
-                  </p>
+                    <Button
+                      onClick={handleGoToDashboard}
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase h-12 text-base"
+                    >
+                      <Zap className="w-5 h-5 mr-2" />
+                      Acessar Dashboard
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-                    <p className="text-sm text-amber-700 dark:text-amber-400">
-                      ⚠️ Não feche esta página até o pagamento ser confirmado
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step: Success */}
-              {step === "success" && (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center space-y-6 py-4"
-                >
-                  <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
-                    <CheckCircle className="w-10 h-10 text-green-500" />
-                  </div>
-
-                  <div>
-                    <h3 className="text-xl font-bold text-foreground mb-2">
-                      Pagamento Confirmado!
-                    </h3>
-                    <p className="text-muted-foreground">
-                      Sua assinatura Pro está ativa. Aproveite todos os recursos!
-                    </p>
-                  </div>
-
-                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <Crown className="w-5 h-5 text-amber-500" />
-                      <span className="font-semibold text-foreground">Plano Pro Ativo</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Válido por 30 dias a partir de hoje
-                    </p>
-                  </div>
-
-                  <Button
-                    onClick={handleGoToDashboard}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-chakra uppercase"
-                    size="lg"
-                  >
-                    <Zap className="w-5 h-5 mr-2" />
-                    Acessar o Sistema
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </CardContent>
-        </Card>
-
-        {/* Security Badge */}
-        <div className="flex items-center justify-center gap-2 mt-6 text-primary-foreground/70 text-sm">
-          <Shield className="w-4 h-4" />
-          <span>Pagamento processado com segurança via AbacatePay</span>
-        </div>
+        {/* Footer info */}
+        <motion.p 
+          className="text-center text-xs text-white/50 mt-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          Pagamento processado de forma segura via PIX
+        </motion.p>
       </div>
     </div>
   );
