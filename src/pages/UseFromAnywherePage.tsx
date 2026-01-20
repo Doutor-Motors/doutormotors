@@ -44,7 +44,7 @@ import { Link } from "react-router-dom";
 
 const UseFromAnywherePage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 pt-28">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-12">
         <div className="container mx-auto px-4">

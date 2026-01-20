@@ -158,9 +158,9 @@ const FAQPage = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <main className="flex-grow pt-20">
+      <main className="flex-grow pt-32">
         {/* Hero Section */}
-        <section className="bg-gradient-to-br from-primary/10 via-background to-background pt-24 pb-16">
+        <section className="bg-gradient-to-br from-primary/10 via-background to-background pt-8 pb-16">
           <div className="container mx-auto px-4">
             <Link 
               to="/" 
