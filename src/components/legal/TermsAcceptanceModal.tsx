@@ -79,21 +79,21 @@ const TermsAcceptanceModal = ({ isOpen, onAccepted, userId }: TermsAcceptanceMod
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent 
-        className="w-[95vw] max-w-lg sm:max-w-xl md:max-w-2xl p-4 sm:p-6 max-h-[85vh] flex flex-col" 
-        onPointerDownOutside={(e) => e.preventDefault()}
-      >
-        <DialogHeader className="flex-shrink-0 space-y-2">
-          <DialogTitle className="font-chakra text-base sm:text-lg md:text-xl uppercase flex items-center gap-2">
-            <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
-            <span>Termos de Uso</span>
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            Por favor, leia e aceite nossos termos antes de continuar.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogContent 
+          className="w-[95vw] max-w-lg sm:max-w-xl md:max-w-2xl p-4 sm:p-6 max-h-[85vh] overflow-hidden flex flex-col" 
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="flex-shrink-0 space-y-2">
+            <DialogTitle className="font-chakra text-base sm:text-lg md:text-xl uppercase flex items-center gap-2">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+              <span>Termos de Uso</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Por favor, leia e aceite nossos termos antes de continuar.
+            </DialogDescription>
+          </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 pr-2 sm:pr-4 my-2 sm:my-4">
+          <ScrollArea className="flex-1 min-h-[200px] max-h-[40vh] pr-2 sm:pr-4 my-2 sm:my-4">
           <div className="space-y-4 sm:space-y-5">
             {/* Aviso Principal */}
             <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-3 sm:p-4">
