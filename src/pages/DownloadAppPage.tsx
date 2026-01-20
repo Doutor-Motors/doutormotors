@@ -103,7 +103,7 @@ const DownloadAppPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 pt-32 pb-12">
+      <main className="container mx-auto px-4 pt-36 sm:pt-40 md:pt-44 pb-12">
         {/* Back Button */}
         <Link to="/" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-8">
           <ArrowLeft className="w-4 h-4 mr-2" />

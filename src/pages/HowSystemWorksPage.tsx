@@ -36,7 +36,7 @@ import { Link } from "react-router-dom";
 
 const HowSystemWorksPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 pt-28">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 pt-32 sm:pt-36 md:pt-40">
       {/* Header */}
       <div className="bg-primary text-primary-foreground py-12">
         <div className="container mx-auto px-4">

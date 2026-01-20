@@ -151,7 +151,7 @@ const ServicesPage = () => {
       
       {/* Hero Section */}
       <section 
-        className="relative pt-24 sm:pt-32 md:pt-40 pb-12 md:pb-20 overflow-hidden text-center"
+        className="relative pt-32 sm:pt-36 md:pt-44 pb-12 md:pb-20 overflow-hidden text-center"
         style={{ 
           backgroundImage: `url(${heroBg})`,
           backgroundRepeat: 'no-repeat',
