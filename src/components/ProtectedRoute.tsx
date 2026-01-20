@@ -35,27 +35,17 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <>{children}</>;
   }
 
-  // Verifica se tem assinatura ativa com pagamento confirmado
-  // Usuário só acessa dashboard se tiver subscription com status 'active'
-  // e um id válido (indicando que foi criada via pagamento)
+  // Verifica se tem assinatura ativa (Basic ou Pro)
+  // Aceita tanto basic quanto pro com status 'active'
   const hasValidSubscription = subscription && 
     subscription.status === "active" && 
     subscription.id && 
-    subscription.id !== "";
+    subscription.id !== "" &&
+    (subscription.plan_type === "basic" || subscription.plan_type === "pro");
 
-  // Se não tem assinatura válida, redireciona para página de checkout PIX
-  // A página de upgrade dentro do dashboard é só para usuários já assinantes
-  // Novos usuários devem usar /subscription-checkout
-  const isUpgradePage = location.pathname === "/dashboard/upgrade";
-  
+  // Se não tem assinatura válida, redireciona para página de seleção de plano
   if (!hasValidSubscription) {
-    // Se está tentando acessar /dashboard/upgrade sem assinatura, 
-    // redireciona para o checkout correto
-    if (isUpgradePage) {
-      return <Navigate to="/subscription-checkout" state={{ from: location }} replace />;
-    }
-    // Qualquer outra página do dashboard sem assinatura → checkout
-    return <Navigate to="/subscription-checkout" state={{ from: location }} replace />;
+    return <Navigate to="/select-plan" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

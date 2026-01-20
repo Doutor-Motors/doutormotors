@@ -81,16 +81,15 @@ const SignUpPage = () => {
       return;
     }
 
-    // IMPORTANTE: Após criar conta, redireciona para checkout de pagamento PIX
-    // O usuário PRECISA PAGAR antes de acessar o dashboard
+    // IMPORTANTE: Após criar conta, redireciona para seleção de plano
+    // O usuário pode escolher Basic (grátis) ou Pro (pago)
     notifySuccess(
       'Conta criada com sucesso!', 
-      'Agora finalize sua assinatura para acessar o sistema.'
+      'Agora escolha o plano que melhor atende suas necessidades.'
     );
     
-    // Redireciona para página de checkout PIX FORA do dashboard
-    // Isso garante que o usuário não acesse o sistema antes de pagar
-    navigate("/subscription-checkout", { 
+    // Redireciona para página de seleção de plano
+    navigate("/select-plan", { 
       state: { 
         fromSignup: true,
         email: email,
