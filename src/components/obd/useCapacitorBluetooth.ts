@@ -1,34 +1,13 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { OBDData, OBDDevice, SIMULATED_DTC_CODES } from './types';
 import { 
   getOBDConnectionManager, 
-  OBDConnectionInfo,
-  OBDConnectionState 
+  OBDConnectionInfo
 } from '@/services/obd/OBDConnectionManager';
-import { ELM327_COMMANDS } from '@/services/obd/elm327Protocol';
+import { getPlatformInfo } from '@/utils/platformDetector';
 
-// Capacitor plugin interfaces (will be available when running in native app)
-declare global {
-  interface Window {
-    Capacitor?: {
-      isNativePlatform: () => boolean;
-      getPlatform: () => string;
-    };
-    BluetoothSerial?: {
-      isEnabled: () => Promise<boolean>;
-      requestEnable: () => Promise<void>;
-      list: () => Promise<any[]>;
-      discoverUnpaired: (success: (device: any) => void, error: (err: any) => void) => void;
-      connect: (address: string) => Promise<void>;
-      disconnect: () => Promise<void>;
-      write: (data: string) => Promise<void>;
-      read: () => Promise<string>;
-      subscribe: (delimiter: string, success: (data: string) => void, error: (err: any) => void) => void;
-      unsubscribe: () => Promise<void>;
-    };
-  }
-}
+// Types are now defined in platformDetector.ts
 
 interface UseCapacitorBluetoothReturn {
   isNative: boolean;
@@ -61,13 +40,11 @@ export const useCapacitorBluetooth = (): UseCapacitorBluetoothReturn => {
   const [isInitializing, setIsInitializing] = useState(false);
   const [connectionInfo, setConnectionInfo] = useState<OBDConnectionInfo | null>(null);
   const [vehicleData, setVehicleData] = useState<UseCapacitorBluetoothReturn['vehicleData']>(null);
-  const [readBuffer, setReadBuffer] = useState('');
 
-  // Check if running in Capacitor native environment
-  const isNative = typeof window !== 'undefined' && 
-    window.Capacitor?.isNativePlatform?.() === true;
-
-  const isSupported = isNative && typeof window.BluetoothSerial !== 'undefined';
+  // Use platform detector for accurate capability detection
+  const platformInfo = getPlatformInfo();
+  const isNative = platformInfo.isNative;
+  const isSupported = platformInfo.supportsBluetoothNative;
 
   // Get OBD connection manager
   const connectionManager = getOBDConnectionManager((info) => {

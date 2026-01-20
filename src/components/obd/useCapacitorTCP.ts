@@ -1,17 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { OBDData, OBDDevice, DEFAULT_WIFI_CONFIG, SIMULATED_DTC_CODES } from './types';
+import { getPlatformInfo } from '@/utils/platformDetector';
 
-// Capacitor plugin interface
-declare global {
-  interface Window {
-    Capacitor?: {
-      isNativePlatform: () => boolean;
-      getPlatform: () => string;
-    };
-    TcpSockets?: any;
-  }
-}
+// Types are now defined in platformDetector.ts
 
 interface UseCapacitorTCPReturn {
   isNative: boolean;
@@ -22,6 +14,7 @@ interface UseCapacitorTCPReturn {
   readDTCCodes: () => Promise<OBDData>;
   connectionConfig: { ip: string; port: number };
   setConnectionConfig: (config: { ip: string; port: number }) => void;
+  isSimulated: boolean;
 }
 
 // ELM327 Commands
@@ -45,10 +38,11 @@ export const useCapacitorTCP = (): UseCapacitorTCPReturn => {
     port: DEFAULT_WIFI_CONFIG.defaultPort,
   });
 
-  const isNative = typeof window !== 'undefined' && 
-    window.Capacitor?.isNativePlatform?.() === true;
-
-  const isSupported = isNative;
+  // Use platform detector for accurate capability detection
+  const platformInfo = getPlatformInfo();
+  const isNative = platformInfo.isNative;
+  const isSupported = platformInfo.supportsTCPNative;
+  const isSimulated = !isSupported;
 
   // Connect via TCP socket
   const connect = useCallback(async (
@@ -215,6 +209,7 @@ export const useCapacitorTCP = (): UseCapacitorTCPReturn => {
     readDTCCodes,
     connectionConfig,
     setConnectionConfig,
+    isSimulated,
   };
 };
 

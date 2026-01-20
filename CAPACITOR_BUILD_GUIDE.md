@@ -40,15 +40,20 @@ npm install
 ### 3. Instalar Plugins Nativos OBD2
 
 ```bash
-# Plugin Bluetooth Serial (ELM327 Bluetooth)
-npm install @nicklason/capacitor-bluetooth-serial
-
-# Plugin TCP Socket (ELM327 WiFi)
+# Plugin TCP Socket (ELM327 WiFi) - já instalado via npm
 npm install capacitor-tcp-socket
+
+# Plugin Bluetooth Serial (ELM327 Bluetooth)
+# NOTA: Este plugin requer instalação manual via Cordova
+npm install cordova-plugin-bluetooth-serial
 
 # Plugins opcionais úteis
 npm install @capacitor/splash-screen @capacitor/status-bar
 ```
+
+> **⚠️ Nota sobre Bluetooth**: O plugin `cordova-plugin-bluetooth-serial` é compatível 
+> com Capacitor via bridge Cordova. Para plugins Capacitor nativos, veja a seção de 
+> alternativas abaixo.
 
 ### 4. Build do Projeto Web
 
@@ -294,8 +299,39 @@ cd ../..
 ## 📚 Recursos
 
 - [Documentação Capacitor](https://capacitorjs.com/docs)
-- [Plugin Bluetooth Serial](https://github.com/nicklason/capacitor-bluetooth-serial)
+- [Plugin TCP Socket](https://github.com/nicklason/capacitor-tcp-socket)
+- [Plugin Bluetooth Serial (Cordova)](https://github.com/nicklason/capacitor-bluetooth-serial)
 - [Documentação ELM327](https://www.elmelectronics.com/wp-content/uploads/2016/07/ELM327DS.pdf)
+
+---
+
+## 🔌 Detecção Automática de Plataforma
+
+O app detecta automaticamente em qual plataforma está rodando:
+
+| Plataforma | Bluetooth | WiFi/TCP | Notas |
+|------------|-----------|----------|-------|
+| App Android | ✅ Nativo | ✅ Nativo | Requer plugins |
+| App iOS | ✅ Nativo | ✅ Nativo | Requer plugins |
+| Chrome Android | ✅ Web Bluetooth | ❌ | Funciona sem app |
+| Chrome Desktop | ✅ Web Bluetooth | ❌ | Funciona sem app |
+| Safari iOS | ❌ | ❌ | Requer app nativo |
+| Firefox | ❌ | ❌ | Requer app nativo |
+
+### Componentes de Detecção
+
+O projeto inclui utilitários para detectar capacidades:
+
+```typescript
+import { usePlatformDetection } from '@/hooks/usePlatformDetection';
+import { PlatformCapabilityBadge } from '@/components/obd';
+
+// No seu componente
+const { platformInfo, canConnect } = usePlatformDetection();
+
+// Badge visual
+<PlatformCapabilityBadge showDetails />
+```
 
 ---
 
