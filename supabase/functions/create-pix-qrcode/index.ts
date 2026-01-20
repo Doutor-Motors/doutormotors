@@ -61,96 +61,81 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Call AbacatePay API
-    console.log("Calling AbacatePay API...");
-    const abacatePayload = {
-      frequency: "ONE_TIME",
-      methods: ["PIX"],
-      products: [
-        {
-          externalId: body.metadata?.externalId || `pix-${Date.now()}`,
-          name: body.description || "Pagamento PIX",
-          description: body.description || "Pagamento via PIX",
-          quantity: 1,
-          price: Math.round(body.amount * 100), // AbacatePay expects cents
-        }
-      ],
-      returnUrl: "https://txxgmxxssnogumcwsfvn.supabase.co/functions/v1/abacatepay-webhook",
-      completionUrl: "https://txxgmxxssnogumcwsfvn.supabase.co/functions/v1/abacatepay-webhook",
-      customer: {
-        name: body.customer.name,
-        cellphone: body.customer.cellphone?.replace(/\D/g, "") || "",
-        email: body.customer.email,
-        taxId: body.customer.taxId.replace(/\D/g, ""),
-      }
+    // Call AbacatePay PIX QRCode API directly (not billing)
+    // This returns the brCode and brCodeBase64 for direct PIX payment
+    console.log("Calling AbacatePay PIX QRCode API...");
+    
+    const pixPayload = {
+      amount: Math.round(body.amount * 100), // AbacatePay expects cents
+      expiresIn: body.expiresIn || 3600, // seconds (default 1 hour)
+      description: body.description || "Pagamento PIX",
     };
 
-    console.log("AbacatePay payload:", JSON.stringify(abacatePayload, null, 2));
+    console.log("AbacatePay PIX payload:", JSON.stringify(pixPayload, null, 2));
 
-    const abacateResponse = await fetch("https://api.abacatepay.com/v1/billing/create", {
+    const pixResponse = await fetch("https://api.abacatepay.com/v1/pixQrCode/create", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(abacatePayload),
+      body: JSON.stringify(pixPayload),
     });
 
-    const abacateData = await abacateResponse.json();
-    console.log("AbacatePay response:", JSON.stringify(abacateData, null, 2));
+    const pixData = await pixResponse.json();
+    console.log("AbacatePay PIX response:", JSON.stringify(pixData, null, 2));
 
-    if (!abacateResponse.ok || abacateData.error) {
-      console.error("AbacatePay error:", abacateData);
+    if (!pixResponse.ok || pixData.error) {
+      console.error("AbacatePay PIX error:", pixData);
       return new Response(JSON.stringify({ 
-        error: abacateData.error || "Failed to create PIX payment",
-        details: abacateData
+        error: pixData.error || "Failed to create PIX QRCode",
+        details: pixData
       }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Extract data from response
-    const billing = abacateData.data;
+    // Extract data from PIX response
+    const pix = pixData.data;
     
-    // AbacatePay returns URL for payment - we'll use their hosted page for now
-    // The pixQrCode field might not be available in all API modes
-    const billingId = billing?.id;
-    const billingUrl = billing?.url;
+    const pixId = pix?.id;
+    const brCode = pix?.brCode;
+    const brCodeBase64 = pix?.brCodeBase64;
+    const pixExpiresAt = pix?.expiresAt;
     
-    if (!billingId) {
-      console.error("No billing ID in response:", abacateData);
+    if (!pixId || !brCode) {
+      console.error("No PIX data in response:", pixData);
       return new Response(JSON.stringify({ 
-        error: "No billing data returned from payment provider",
-        details: abacateData
+        error: "No PIX data returned from payment provider",
+        details: pixData
       }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Generate QR code URL for the payment page (using a QR code API)
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(billingUrl)}`;
+    // Use the base64 QR code from AbacatePay or generate one
+    const qrCodeUrl = brCodeBase64 || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brCode)}`;
     
-    console.log("Billing created:", billingId, "URL:", billingUrl);
+    console.log("PIX created:", pixId, "brCode length:", brCode.length);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Calculate expiration
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + (body.expiresIn || 30));
+    // Use expiration from AbacatePay response or calculate
+    const paymentExpiresAt = pixExpiresAt || new Date(Date.now() + (body.expiresIn || 3600) * 1000).toISOString();
 
     // Save to database
     const { data: payment, error: dbError } = await supabase
       .from("pix_payments")
       .insert({
-        pix_id: billingId,
+        pix_id: pixId,
         amount: Math.round(body.amount * 100), // Store as cents (integer)
         status: "pending",
-        br_code: billingUrl, // Store the payment URL as br_code for now
+        br_code: brCode, // Store the actual PIX brCode
         qr_code_url: qrCodeUrl,
         customer_name: body.customer.name,
         customer_email: body.customer.email,
@@ -159,11 +144,10 @@ Deno.serve(async (req) => {
         description: body.description,
         metadata: { 
           ...(body.metadata || {}),
-          abacatepay_url: billingUrl,
-          devMode: billing.devMode,
+          devMode: pix.devMode,
           originalAmount: body.amount,
         },
-        expires_at: expiresAt.toISOString(),
+        expires_at: paymentExpiresAt,
       })
       .select()
       .single();
@@ -182,13 +166,12 @@ Deno.serve(async (req) => {
       success: true,
       data: {
         id: payment.id,
-        pix_id: billingId,
+        pix_id: pixId,
         amount: body.amount,
         status: "pending",
-        br_code: billingUrl,
+        br_code: brCode,
         qr_code_url: qrCodeUrl,
-        payment_url: billingUrl,
-        expires_at: expiresAt.toISOString(),
+        expires_at: paymentExpiresAt,
       }
     }), {
       status: 200,
