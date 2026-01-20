@@ -19,7 +19,8 @@ import {
   Users,
   TrendingUp,
   Timer,
-  AlertTriangle
+  AlertTriangle,
+  Play
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -125,6 +126,7 @@ export default function SubscriptionCheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
+  const [simulatingPayment, setSimulatingPayment] = useState(false);
   
   // Timer state
   const [timeRemaining, setTimeRemaining] = useState(PIX_TIMEOUT_SECONDS);
@@ -298,6 +300,36 @@ export default function SubscriptionCheckoutPage() {
       }
     } catch (error) {
       console.error("Error activating subscription:", error);
+    }
+  };
+
+  // Simulate payment (DevMode only)
+  const handleSimulatePayment = async () => {
+    if (!pixData?.pix_id) {
+      toast.error("Nenhum PIX para simular");
+      return;
+    }
+
+    setSimulatingPayment(true);
+    try {
+      const response = await supabase.functions.invoke("simulate-pix-payment", {
+        body: { pixId: pixData.pix_id },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Erro ao simular pagamento");
+      }
+
+      if (response.data?.success) {
+        toast.success("Pagamento simulado! Aguardando confirmação do webhook...");
+      } else {
+        throw new Error(response.data?.error || "Erro ao simular pagamento");
+      }
+    } catch (error) {
+      console.error("Error simulating payment:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao simular pagamento");
+    } finally {
+      setSimulatingPayment(false);
     }
   };
 
@@ -880,6 +912,27 @@ export default function SubscriptionCheckoutPage() {
                         </motion.div>
                       )}
                     </AnimatePresence>
+
+                    {/* DevMode Simulate Button */}
+                    {pixData.devMode && (
+                      <Button
+                        onClick={handleSimulatePayment}
+                        disabled={simulatingPayment}
+                        className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                      >
+                        {simulatingPayment ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Simulando...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4" />
+                            Simular Pagamento (DevMode)
+                          </>
+                        )}
+                      </Button>
+                    )}
 
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                       <AlertCircle className="w-4 h-4" />
