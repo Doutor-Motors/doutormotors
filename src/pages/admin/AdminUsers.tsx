@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserCog, Shield, User, Trash2, RefreshCw, AlertTriangle, Users } from "lucide-react";
+import { Search, UserCog, Shield, User, Trash2, RefreshCw, AlertTriangle, Users, History } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

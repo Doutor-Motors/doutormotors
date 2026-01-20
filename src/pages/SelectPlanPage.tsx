@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
@@ -38,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription, PLAN_FEATURES } from "@/hooks/useSubscription";
 import { ProgressStepper } from "@/components/subscription/ProgressStepper";
+import PaymentGuard from "@/components/subscription/PaymentGuard";
 import logo from "@/assets/images/logo-new-car.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -81,44 +82,14 @@ const PRO_FEATURES = [
 export default function SelectPlanPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading: authLoading } = useAuth();
-  const { subscription, isLoading: subLoading, isPro, isAdmin } = useSubscription();
   const [isExiting, setIsExiting] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const signupData = location.state as SignupState | null;
 
-  // Get user display info
-  const userName = signupData?.name || user?.user_metadata?.name || "";
-  const userEmail = signupData?.email || user?.email || "";
-
-  // Redirect if user already has active subscription
-  useEffect(() => {
-    // Aguarda o carregamento terminar antes de qualquer redirecionamento
-    if (authLoading || subLoading) return;
-    
-    if (isPro || isAdmin) {
-      navigate("/dashboard", { replace: true });
-      return;
-    }
-    // Se já tem assinatura basic ativa, vai pro dashboard
-    // IMPORTANTE: o hook pode retornar um "Basic ativo" de fallback com id vazio.
-    // Só consideramos assinatura válida quando existe um id.
-    if (
-      subscription &&
-      subscription.status === "active" &&
-      subscription.plan_type === "basic" &&
-      subscription.id &&
-      subscription.id !== ""
-    ) {
-      navigate("/dashboard", { replace: true });
-      return;
-    }
-    // Se não está autenticado, vai para signup
-    if (!user) {
-      navigate("/signup", { replace: true });
-    }
-  }, [authLoading, subLoading, isPro, isAdmin, subscription, user, navigate]);
+  // Get user display info from state (PaymentGuard already handles redirects)
+  const userName = signupData?.name || "";
+  const userEmail = signupData?.email || "";
 
   const handleSelectPlan = (plan: "basic" | "pro") => {
     const checkoutState: CheckoutState = {
@@ -147,28 +118,18 @@ export default function SelectPlanPage() {
     }
   };
 
-  if (authLoading || subLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-12 h-12 text-primary animate-spin" />
-          <p className="text-white/70">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div 
-      className="min-h-screen flex flex-col relative"
-      style={{
-        backgroundImage: `linear-gradient(to bottom, hsl(var(--secondary) / 0.95), hsl(var(--secondary) / 0.98)), url(${heroBg})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-      }}
-    >
-      {/* Exit Confirmation Dialog */}
+    <PaymentGuard>
+      <div
+        className="min-h-screen flex flex-col relative"
+        style={{
+          backgroundImage: `linear-gradient(to bottom, hsl(var(--secondary) / 0.95), hsl(var(--secondary) / 0.98)), url(${heroBg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
+        }}
+      >
+        {/* Exit Confirmation Dialog */}
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
@@ -413,5 +374,6 @@ export default function SelectPlanPage() {
         </div>
       </main>
     </div>
+    </PaymentGuard>
   );
 }
