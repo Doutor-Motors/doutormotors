@@ -52,6 +52,7 @@ import TicketDetail from "./pages/dashboard/TicketDetail";
 import AdminTickets from "./pages/admin/AdminTickets";
 import NativeAppGuide from "./pages/NativeAppGuide";
 import InstallAppPage from "./pages/InstallAppPage";
+import DownloadAppPage from "./pages/DownloadAppPage";
 import UpgradePage from "./pages/dashboard/UpgradePage";
 import DataRecordingPage from "./pages/dashboard/DataRecordingPage";
 import OBDSettingsPage from "./pages/dashboard/OBDSettingsPage";
@@ -107,6 +108,7 @@ const App = () => (
                 <Route path="/como-funciona-sistema" element={<HowSystemWorksPage />} />
                 <Route path="/use-de-qualquer-lugar" element={<UseFromAnywherePage />} />
                 <Route path="/instalar" element={<InstallAppPage />} />
+                <Route path="/baixar-app" element={<DownloadAppPage />} />
                 <Route path="/checkout-pix" element={<PixCheckoutPage />} />
                 <Route path="/subscription-checkout" element={<SubscriptionCheckoutPage />} />
                 <Route path="/select-plan" element={<SelectPlanPage />} />
