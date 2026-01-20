@@ -70,23 +70,23 @@ export default function SelectPlanPage() {
 
   // Redirect if user already has active subscription
   useEffect(() => {
-    if (!authLoading && !subLoading) {
-      if (isPro || isAdmin) {
-        navigate("/dashboard");
-      }
-      // Se já tem assinatura basic ativa, vai pro dashboard
-      if (subscription && subscription.status === "active" && subscription.plan_type === "basic") {
-        navigate("/dashboard");
-      }
+    // Aguarda o carregamento terminar antes de qualquer redirecionamento
+    if (authLoading || subLoading) return;
+    
+    if (isPro || isAdmin) {
+      navigate("/dashboard", { replace: true });
+      return;
     }
-  }, [authLoading, subLoading, isPro, isAdmin, subscription, navigate]);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/signup");
+    // Se já tem assinatura basic ativa, vai pro dashboard
+    if (subscription && subscription.status === "active" && subscription.plan_type === "basic") {
+      navigate("/dashboard", { replace: true });
+      return;
     }
-  }, [authLoading, user, navigate]);
+    // Se não está autenticado, vai para signup
+    if (!user) {
+      navigate("/signup", { replace: true });
+    }
+  }, [authLoading, subLoading, isPro, isAdmin, subscription, user, navigate]);
 
   const handleSelectPlan = (plan: "basic" | "pro") => {
     const checkoutState: CheckoutState = {

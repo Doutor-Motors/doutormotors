@@ -20,10 +20,10 @@ const SignUpPage = () => {
   const { signUp, user, loading } = useAuth();
   const { notifySuccess, notifyError, notifyWarning } = useNotifications();
 
-  // Se usuário já está logado, redireciona para upgrade/checkout
+  // Se usuário já está logado, redireciona para seleção de plano
   useEffect(() => {
     if (!loading && user) {
-      navigate("/dashboard/upgrade");
+      navigate("/select-plan", { replace: true });
     }
   }, [user, loading, navigate]);
 
