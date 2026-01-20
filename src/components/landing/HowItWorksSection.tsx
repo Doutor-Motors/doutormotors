@@ -29,25 +29,25 @@ const steps = [
 
 const HowItWorksSection = () => {
   return (
-    <section id="how-it-works" className="py-20 bg-background">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <p className="flex items-center justify-center gap-2 font-chakra text-sm uppercase text-primary mb-3">
-            <img src={textBarsDark} alt="" className="w-7 h-4" />
+    <section id="how-it-works" className="py-12 sm:py-16 md:py-20 bg-background">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="text-center mb-8 sm:mb-10 md:mb-12">
+          <p className="flex items-center justify-center gap-2 font-chakra text-xs sm:text-sm uppercase text-primary mb-2 sm:mb-3">
+            <img src={textBarsDark} alt="" className="w-5 h-3 sm:w-7 sm:h-4" />
             Como Funciona
           </p>
           
-          <h2 className="font-chakra text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-foreground">
+          <h2 className="font-chakra text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-foreground px-2">
             Diagnóstico em 3 Passos Simples
           </h2>
         </div>
 
         {/* Steps Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
           {steps.map((item, index) => (
             <div 
               key={index}
-              className="w-full"
+              className={`w-full ${index === 2 ? "sm:col-span-2 sm:max-w-[50%] sm:mx-auto md:col-span-1 md:max-w-full" : ""}`}
             >
               <div className="relative group h-full">
                 <figure className="aspect-[4/5] overflow-hidden rounded-lg">
@@ -58,21 +58,21 @@ const HowItWorksSection = () => {
                   />
                 </figure>
                 
-                <div className="bg-card shadow-lg p-5 mx-3 -mt-14 relative text-center rounded-lg">
-                  <p className="font-chakra text-sm uppercase text-primary font-bold mb-1">
+                <div className="bg-card shadow-lg p-4 sm:p-5 mx-2 sm:mx-3 -mt-12 sm:-mt-14 relative text-center rounded-lg">
+                  <p className="font-chakra text-xs sm:text-sm uppercase text-primary font-bold mb-1">
                     {item.step}
                   </p>
-                  <h3 className="font-chakra text-base font-semibold uppercase text-foreground mb-2">
+                  <h3 className="font-chakra text-sm sm:text-base font-semibold uppercase text-foreground mb-1 sm:mb-2">
                     {item.title}
                   </h3>
-                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                  <p className="text-muted-foreground text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">
                     {item.description}
                   </p>
                   <Link 
                     to="/signup"
-                    className="bg-primary text-primary-foreground w-9 h-9 rounded-full flex items-center justify-center mx-auto hover:bg-dm-blue-3 transition-colors"
+                    className="bg-primary text-primary-foreground w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mx-auto hover:bg-dm-blue-3 transition-colors"
                   >
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Link>
                 </div>
               </div>
@@ -80,14 +80,14 @@ const HowItWorksSection = () => {
           ))}
         </div>
 
-        <div className="text-center mt-10">
+        <div className="text-center mt-8 sm:mt-10">
           <Link to="/signup">
             <Button 
               size="lg"
-              className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 mx-auto border border-transparent hover:border-foreground transition-all hover:-translate-y-1"
+              className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 mx-auto border border-transparent hover:border-foreground transition-all hover:-translate-y-1 text-sm sm:text-base px-6 sm:px-8"
             >
               <span>Comece Agora</span>
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </Link>
         </div>

@@ -12,6 +12,19 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // Tier badges - high contrast for legibility
+        basic: "bg-sky-600 text-white border-sky-500",
+        pro: "bg-emerald-600 text-white border-emerald-500",
+        admin: "bg-violet-600 text-white border-violet-500",
+        // Status badges
+        success: "bg-green-600 text-white border-green-500",
+        warning: "bg-amber-500 text-white border-amber-400",
+        info: "bg-blue-600 text-white border-blue-500",
+        // Priority badges
+        critical: "bg-red-600 text-white border-red-500",
+        attention: "bg-orange-500 text-white border-orange-400",
+        preventive: "bg-yellow-500 text-slate-900 border-yellow-400",
+        ok: "bg-green-600 text-white border-green-500",
       },
     },
     defaultVariants: {
