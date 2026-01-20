@@ -380,7 +380,7 @@ const DiagnosticCenter = () => {
                   <strong>Conexão OBD limitada neste dispositivo</strong>
                   <p className="text-sm mt-1">{recommendedAction}</p>
                 </div>
-                <Link to="/instalar">
+                <Link to="/baixar-app">
                   <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
                     <Download className="h-4 w-4 mr-2" />
                     Baixar App
