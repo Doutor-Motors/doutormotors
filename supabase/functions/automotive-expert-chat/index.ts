@@ -337,6 +337,7 @@ serve(async (req) => {
                   user_id: userId,
                   title,
                   vehicle_context: vehicleContext,
+                  last_message_preview: fullResponse.substring(0, 100),
                 })
                 .select("id")
                 .single();
@@ -351,6 +352,15 @@ serve(async (req) => {
                 })}\n\n`;
                 await writer.write(encoder.encode(convEvent));
               }
+            } else {
+              // Update last message preview for existing conversation
+              await supabase
+                .from("expert_conversations")
+                .update({ 
+                  last_message_preview: fullResponse.substring(0, 100),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", convId);
             }
 
             // Save messages
