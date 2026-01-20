@@ -24,6 +24,7 @@ import {
   KeyRound,
   Database,
   Mail,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,6 +39,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: Users, label: "Usuários", path: "/admin/users" },
   { icon: CreditCard, label: "Assinaturas", path: "/admin/subscriptions" },
+  { icon: DollarSign, label: "Pagamentos PIX", path: "/admin/payments" },
   { icon: KeyRound, label: "Permissões", path: "/admin/permissions" },
   { icon: Car, label: "Veículos", path: "/admin/vehicles" },
   { icon: Activity, label: "Diagnósticos", path: "/admin/diagnostics" },
