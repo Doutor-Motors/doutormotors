@@ -81,7 +81,7 @@ const TermsAcceptanceModal = ({ isOpen, onAccepted, userId }: TermsAcceptanceMod
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
         <DialogContent 
-          className="w-[95vw] max-w-lg sm:max-w-xl md:max-w-2xl p-4 sm:p-6 max-h-[85vh] overflow-hidden flex flex-col" 
+          className="w-[95vw] max-w-lg sm:max-w-xl md:max-w-2xl p-4 sm:p-6 max-h-[90vh] flex flex-col gap-0" 
           onPointerDownOutside={(e) => e.preventDefault()}
         >
           <DialogHeader className="flex-shrink-0 space-y-2">
@@ -94,7 +94,7 @@ const TermsAcceptanceModal = ({ isOpen, onAccepted, userId }: TermsAcceptanceMod
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-[200px] max-h-[40vh] pr-2 sm:pr-4 my-2 sm:my-4">
+          <ScrollArea className="flex-1 overflow-auto min-h-[150px] max-h-[35vh] pr-2 sm:pr-4 my-2 sm:my-4">
           <div className="space-y-4 sm:space-y-5">
             {/* Aviso Principal */}
             <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-3 sm:p-4">
@@ -226,11 +226,12 @@ const TermsAcceptanceModal = ({ isOpen, onAccepted, userId }: TermsAcceptanceMod
             </label>
           </div>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter className="pt-2 pb-1">
             <Button
               onClick={handleAccept}
               disabled={!canProceed || isLoading}
-              className="w-full font-chakra uppercase text-sm sm:text-base py-2 sm:py-2.5"
+              className="w-full font-chakra uppercase text-sm sm:text-base py-3 sm:py-3"
+              type="button"
             >
               {isLoading ? "Salvando..." : "Aceitar e Continuar"}
             </Button>
