@@ -45,6 +45,7 @@ interface PixPaymentData {
   br_code: string;
   qr_code_url: string;
   expires_at: string;
+  devMode?: boolean;
 }
 
 interface FormData {
@@ -805,6 +806,18 @@ export default function SubscriptionCheckoutPage() {
 
                     {/* Payment card */}
                     <div className="bg-gradient-to-br from-muted/50 to-muted/20 rounded-xl p-5 border border-border/30">
+                      {/* DevMode Badge */}
+                      {pixData.devMode !== undefined && (
+                        <div className={`mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          pixData.devMode 
+                            ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" 
+                            : "bg-green-500/20 text-green-400 border border-green-500/30"
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${pixData.devMode ? "bg-amber-400" : "bg-green-400"}`} />
+                          {pixData.devMode ? "Modo Teste (DevMode)" : "Produção"}
+                        </div>
+                      )}
+                      
                       <div className="mb-3">
                         <p className="text-sm text-muted-foreground mb-1">Valor a pagar</p>
                         <p className="text-3xl font-bold text-primary font-chakra">

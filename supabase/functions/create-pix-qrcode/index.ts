@@ -208,6 +208,7 @@ Deno.serve(async (req) => {
         br_code: brCode,
         qr_code_url: qrCodeUrl,
         expires_at: paymentExpiresAt,
+        devMode: pix.devMode || false, // Include devMode flag for UI badge
       }
     }), {
       status: 200,
