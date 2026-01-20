@@ -69,6 +69,7 @@ import AdminPayments from "./pages/admin/AdminPayments";
 import PixCheckoutPage from "./pages/PixCheckoutPage";
 import SubscriptionCheckoutPage from "./pages/SubscriptionCheckoutPage";
 import SelectPlanPage from "./pages/SelectPlanPage";
+import MyPaymentsPage from "./pages/dashboard/MyPaymentsPage";
 
 const queryClient = new QueryClient();
 
@@ -125,6 +126,7 @@ const App = () => (
                 <Route path="/dashboard/coding" element={<ProtectedRoute><CodingFunctionsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/coding/history" element={<ProtectedRoute><CodingHistoryPage /></ProtectedRoute>} />
                 <Route path="/dashboard/permissions" element={<ProtectedRoute><PermissionsDiagnostic /></ProtectedRoute>} />
+                <Route path="/dashboard/payments" element={<ProtectedRoute><MyPaymentsPage /></ProtectedRoute>} />
                 <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
                 

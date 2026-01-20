@@ -19,6 +19,7 @@ import {
   Crown,
   Code2,
   Lock,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,7 @@ const baseMenuItems: MenuItem[] = [
   { icon: Database, label: "Gravação de Dados", path: "/dashboard/data-recording", isPro: true },
   { icon: Code2, label: "Funções Coding", path: "/dashboard/coding", isPro: true },
   { icon: Settings2, label: "Config. OBD", path: "/dashboard/obd-settings", isPro: true },
+  { icon: CreditCard, label: "Meus Pagamentos", path: "/dashboard/payments" },
   { icon: GraduationCap, label: "Estude seu Carro", path: "/estude-seu-carro" },
   { icon: User, label: "Perfil", path: "/profile" },
   { icon: Headphones, label: "Suporte", path: "/dashboard/support" },
