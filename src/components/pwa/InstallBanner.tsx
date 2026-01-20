@@ -121,7 +121,7 @@ const InstallBanner = () => {
                     
                     {/* Manual instructions link (for iOS or when native not available) */}
                     {(isIOS || !isInstallable) && (
-                      <Link to="/instalar" onClick={handleDismiss}>
+                      <Link to="/baixar-app" onClick={handleDismiss}>
                         <Button 
                           size="sm" 
                           className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase text-xs gap-2"

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Download } from "lucide-react";
+import { Phone, Mail, MapPin, Smartphone } from "lucide-react";
 import logo from "@/assets/images/logo-new-car.png";
 import footerShape1 from "@/assets/images/footer-shape-1.png";
 import footerShape2 from "@/assets/images/footer-shape-2.png";
@@ -39,9 +39,9 @@ const Footer = () => {
                 <Link to="/contato" className="hover:text-primary transition-colors">Contato</Link>
               </li>
               <li>
-                <Link to="/instalar" className="hover:text-primary transition-colors flex items-center gap-2 text-primary">
-                  <Download className="w-4 h-4" />
-                  Instalar App
+                <Link to="/baixar-app" className="hover:text-primary transition-colors flex items-center gap-2 text-primary">
+                  <Smartphone className="w-4 h-4" />
+                  Baixar App
                 </Link>
               </li>
             </ul>

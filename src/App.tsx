@@ -50,8 +50,6 @@ import FAQPage from "./pages/FAQPage";
 import SupportCenter from "./pages/dashboard/SupportCenter";
 import TicketDetail from "./pages/dashboard/TicketDetail";
 import AdminTickets from "./pages/admin/AdminTickets";
-import NativeAppGuide from "./pages/NativeAppGuide";
-import InstallAppPage from "./pages/InstallAppPage";
 import DownloadAppPage from "./pages/DownloadAppPage";
 import UpgradePage from "./pages/dashboard/UpgradePage";
 import DataRecordingPage from "./pages/dashboard/DataRecordingPage";
@@ -103,12 +101,13 @@ const App = () => (
                 <Route path="/termos" element={<TermsPage />} />
                 <Route path="/privacidade" element={<PrivacyPolicyPage />} />
                 <Route path="/faq" element={<FAQPage />} />
-                <Route path="/app-nativo" element={<NativeAppGuide />} />
                 <Route path="/como-diagnosticar" element={<HowDiagnosticWorksPage />} />
                 <Route path="/como-funciona-sistema" element={<HowSystemWorksPage />} />
                 <Route path="/use-de-qualquer-lugar" element={<UseFromAnywherePage />} />
-                <Route path="/instalar" element={<InstallAppPage />} />
                 <Route path="/baixar-app" element={<DownloadAppPage />} />
+                {/* Redirects from old routes */}
+                <Route path="/app-nativo" element={<DownloadAppPage />} />
+                <Route path="/instalar" element={<DownloadAppPage />} />
                 <Route path="/checkout-pix" element={<PixCheckoutPage />} />
                 <Route path="/subscription-checkout" element={<SubscriptionCheckoutPage />} />
                 <Route path="/select-plan" element={<SelectPlanPage />} />
