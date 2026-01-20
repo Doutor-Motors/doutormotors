@@ -138,6 +138,13 @@ const TermsAcceptanceModal = ({ isOpen, onAccepted, userId }: TermsAcceptanceMod
               <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
                 <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 flex-shrink-0" />
                 Isenção de Responsabilidade
+                <Link 
+                  to="/termos#isencao" 
+                  target="_blank" 
+                  className="text-xs text-primary hover:underline flex items-center gap-1 ml-auto"
+                >
+                  Ver completo <ExternalLink className="w-3 h-3" />
+                </Link>
               </h3>
               <div className="text-xs sm:text-sm text-muted-foreground space-y-1.5 pl-6 sm:pl-7">
                 <p>• <strong>Sem Garantia:</strong> Não garantimos precisão para seu veículo específico.</p>
