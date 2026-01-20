@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -29,6 +29,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,6 +43,7 @@ import { useAdminNotification } from "@/contexts/AdminNotificationContext";
 import {
   DollarSign,
   TrendingUp,
+  TrendingDown,
   Clock,
   CheckCircle2,
   XCircle,
@@ -50,17 +57,19 @@ import {
   FileText,
   Undo2,
   Loader2,
+  CalendarIcon,
 } from "lucide-react";
-import { format, subDays, parseISO } from "date-fns";
+import { format, subDays, subMonths, parseISO, startOfMonth, endOfMonth, isSameMonth, isWithinInterval, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, ComposedChart, Area } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { cn } from "@/lib/utils";
 
 interface PixPayment {
   id: string;
@@ -90,14 +99,44 @@ const AdminPayments = () => {
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PixPayment | null>(null);
   
+  // Custom date range state
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(undefined);
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
+  const [isCustomRange, setIsCustomRange] = useState(false);
+  
   const queryClient = useQueryClient();
   const { addNotification } = useAdminNotification();
 
+  // Calculate effective date range
+  const effectiveDateRange = useMemo(() => {
+    if (isCustomRange && customDateFrom && customDateTo) {
+      return { from: customDateFrom, to: customDateTo };
+    }
+    const days = parseInt(dateRange);
+    return { from: subDays(new Date(), days), to: new Date() };
+  }, [dateRange, isCustomRange, customDateFrom, customDateTo]);
+
   // Fetch PIX payments
   const { data: pixPayments, isLoading: pixLoading, refetch: refetchPix } = useQuery({
-    queryKey: ["admin-pix-payments", dateRange],
+    queryKey: ["admin-pix-payments", effectiveDateRange.from.toISOString(), effectiveDateRange.to.toISOString()],
     queryFn: async () => {
-      const fromDate = subDays(new Date(), parseInt(dateRange));
+      const { data, error } = await supabase
+        .from("pix_payments")
+        .select("*")
+        .gte("created_at", effectiveDateRange.from.toISOString())
+        .lte("created_at", effectiveDateRange.to.toISOString())
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data as PixPayment[];
+    },
+  });
+
+  // Fetch all-time payments for monthly trend (last 12 months)
+  const { data: allPayments } = useQuery({
+    queryKey: ["admin-pix-payments-all"],
+    queryFn: async () => {
+      const fromDate = subMonths(new Date(), 12);
       const { data, error } = await supabase
         .from("pix_payments")
         .select("*")
@@ -108,6 +147,26 @@ const AdminPayments = () => {
       return data as PixPayment[];
     },
   });
+
+  // Handle custom date range change
+  const handleCustomDateChange = (type: 'from' | 'to', date: Date | undefined) => {
+    if (type === 'from') {
+      setCustomDateFrom(date);
+    } else {
+      setCustomDateTo(date);
+    }
+    if (date) {
+      setIsCustomRange(true);
+    }
+  };
+
+  // Reset to preset range
+  const handlePresetRangeChange = (value: string) => {
+    setDateRange(value);
+    setIsCustomRange(false);
+    setCustomDateFrom(undefined);
+    setCustomDateTo(undefined);
+  };
 
   // Real-time subscription for new paid payments
   useEffect(() => {
@@ -197,9 +256,10 @@ const AdminPayments = () => {
     { name: "Reembolsados", value: metrics.refundedPayments, color: "#a855f7" },
   ].filter(d => d.value > 0);
 
-  // Chart data - Daily revenue (last 7 days)
-  const dailyData = Array.from({ length: 7 }, (_, i) => {
-    const date = subDays(new Date(), 6 - i);
+  // Chart data - Daily revenue (last 7 days of selected range)
+  const daysToShow = Math.min(7, differenceInDays(effectiveDateRange.to, effectiveDateRange.from) + 1);
+  const dailyData = Array.from({ length: daysToShow }, (_, i) => {
+    const date = subDays(effectiveDateRange.to, daysToShow - 1 - i);
     const dateStr = format(date, "yyyy-MM-dd");
     const dayPayments = pixPayments?.filter(p => 
       p.status === "paid" && 
@@ -213,6 +273,77 @@ const AdminPayments = () => {
       count: dayPayments.length,
     };
   });
+
+  // Monthly revenue trend data (last 6 months with comparison)
+  const monthlyTrendData = useMemo(() => {
+    if (!allPayments) return [];
+    
+    const months: { 
+      month: string; 
+      monthKey: string;
+      revenue: number; 
+      previousRevenue: number;
+      count: number;
+      previousCount: number;
+      variation: number;
+    }[] = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const currentMonth = subMonths(new Date(), i);
+      const previousMonth = subMonths(currentMonth, 1);
+      
+      const currentMonthStart = startOfMonth(currentMonth);
+      const currentMonthEnd = endOfMonth(currentMonth);
+      const previousMonthStart = startOfMonth(previousMonth);
+      const previousMonthEnd = endOfMonth(previousMonth);
+      
+      const currentMonthPayments = allPayments.filter(p => 
+        p.status === "paid" && 
+        p.paid_at && 
+        isWithinInterval(parseISO(p.paid_at), { start: currentMonthStart, end: currentMonthEnd })
+      );
+      
+      const previousMonthPayments = allPayments.filter(p => 
+        p.status === "paid" && 
+        p.paid_at && 
+        isWithinInterval(parseISO(p.paid_at), { start: previousMonthStart, end: previousMonthEnd })
+      );
+      
+      const currentRevenue = currentMonthPayments.reduce((sum, p) => sum + p.amount, 0) / 100;
+      const previousRevenue = previousMonthPayments.reduce((sum, p) => sum + p.amount, 0) / 100;
+      const variation = previousRevenue === 0 
+        ? (currentRevenue > 0 ? 100 : 0)
+        : ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+      
+      months.push({
+        month: format(currentMonth, "MMM", { locale: ptBR }),
+        monthKey: format(currentMonth, "yyyy-MM"),
+        revenue: currentRevenue,
+        previousRevenue: previousRevenue,
+        count: currentMonthPayments.length,
+        previousCount: previousMonthPayments.length,
+        variation: variation,
+      });
+    }
+    
+    return months;
+  }, [allPayments]);
+
+  // Calculate month-over-month metrics
+  const momMetrics = useMemo(() => {
+    if (monthlyTrendData.length < 2) return null;
+    
+    const currentMonth = monthlyTrendData[monthlyTrendData.length - 1];
+    const previousMonth = monthlyTrendData[monthlyTrendData.length - 2];
+    
+    return {
+      currentRevenue: currentMonth.revenue,
+      previousRevenue: previousMonth.revenue,
+      variation: currentMonth.variation,
+      currentCount: currentMonth.count,
+      previousCount: previousMonth.count,
+    };
+  }, [monthlyTrendData]);
 
   // Filter payments
   const filteredPayments = pixPayments?.filter(payment => {
@@ -232,7 +363,6 @@ const AdminPayments = () => {
   };
 
   // Export to CSV
-  const exportToCSV = () => {
     const headers = ["Cliente", "Email", "CPF/CNPJ", "Valor", "Status", "Criado em", "Pago em"];
     const rows = filteredPayments.map(p => [
       p.customer_name,
@@ -334,17 +464,80 @@ const AdminPayments = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
+            {/* Preset Range Selector */}
+            <Select value={isCustomRange ? "custom" : dateRange} onValueChange={(val) => {
+              if (val === "custom") {
+                setIsCustomRange(true);
+              } else {
+                handlePresetRangeChange(val);
+              }
+            }}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="7">Últimos 7 dias</SelectItem>
                 <SelectItem value="30">Últimos 30 dias</SelectItem>
                 <SelectItem value="90">Últimos 90 dias</SelectItem>
                 <SelectItem value="365">Último ano</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Custom Date Range Pickers */}
+            {isCustomRange && (
+              <>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[130px] justify-start text-left font-normal",
+                        !customDateFrom && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateFrom ? format(customDateFrom, "dd/MM/yyyy") : "De"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={customDateFrom}
+                      onSelect={(date) => handleCustomDateChange('from', date)}
+                      disabled={(date) => date > new Date() || (customDateTo ? date > customDateTo : false)}
+                      initialFocus
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[130px] justify-start text-left font-normal",
+                        !customDateTo && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateTo ? format(customDateTo, "dd/MM/yyyy") : "Até"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={customDateTo}
+                      onSelect={(date) => handleCustomDateChange('to', date)}
+                      disabled={(date) => date > new Date() || (customDateFrom ? date < customDateFrom : false)}
+                      initialFocus
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </>
+            )}
+
             <Button variant="outline" size="icon" onClick={() => refetchPix()}>
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -536,6 +729,144 @@ const AdminPayments = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Monthly Trend Chart with MoM Comparison */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-chakra flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Tendência de Receita Mensal
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Comparativo mês a mês dos últimos 6 meses
+                </p>
+              </div>
+              {momMetrics && (
+                <div className="text-right">
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-2xl font-bold">
+                      {formatCurrency(momMetrics.currentRevenue)}
+                    </span>
+                    <Badge 
+                      variant={momMetrics.variation >= 0 ? "default" : "destructive"}
+                      className="gap-1"
+                    >
+                      {momMetrics.variation >= 0 ? (
+                        <ArrowUpRight className="h-3 w-3" />
+                      ) : (
+                        <ArrowDownRight className="h-3 w-3" />
+                      )}
+                      {momMetrics.variation >= 0 ? '+' : ''}{momMetrics.variation.toFixed(1)}%
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    vs {formatCurrency(momMetrics.previousRevenue)} mês anterior
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-[280px] w-full" />
+            ) : monthlyTrendData.length > 0 ? (
+              <ChartContainer
+                config={{
+                  revenue: { label: "Receita", color: "hsl(var(--primary))" },
+                  previousRevenue: { label: "Mês Anterior", color: "hsl(var(--muted-foreground))" },
+                }}
+                className="h-[280px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={monthlyTrendData}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis 
+                      dataKey="month" 
+                      fontSize={12} 
+                      tickLine={false} 
+                      axisLine={false}
+                      className="capitalize"
+                    />
+                    <YAxis 
+                      fontSize={12} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tickFormatter={(value) => `R$${value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}`}
+                    />
+                    <ChartTooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-popover border rounded-lg p-3 shadow-lg">
+                              <p className="font-medium capitalize">{label}</p>
+                              <div className="mt-2 space-y-1">
+                                <p className="text-sm">
+                                  <span className="text-primary">Receita:</span>{' '}
+                                  <span className="font-medium">{formatCurrency(data.revenue)}</span>
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  <span>Mês anterior:</span>{' '}
+                                  <span>{formatCurrency(data.previousRevenue)}</span>
+                                </p>
+                                <p className="text-sm">
+                                  <span>Variação:</span>{' '}
+                                  <span className={data.variation >= 0 ? 'text-green-500' : 'text-red-500'}>
+                                    {data.variation >= 0 ? '+' : ''}{data.variation.toFixed(1)}%
+                                  </span>
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {data.count} pagamentos ({data.previousCount} anterior)
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="hsl(var(--primary))"
+                      fill="url(#colorRevenue)"
+                      strokeWidth={0}
+                      name="Receita"
+                    />
+                    <Bar
+                      dataKey="previousRevenue"
+                      fill="hsl(var(--muted-foreground))"
+                      radius={[4, 4, 0, 0]}
+                      opacity={0.3}
+                      name="Mês Anterior"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={3}
+                      dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, strokeWidth: 2 }}
+                      name="Receita"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                Sem dados para exibir
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Payments Table */}
         <Card>
