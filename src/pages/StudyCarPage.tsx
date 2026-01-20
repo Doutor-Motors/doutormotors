@@ -98,6 +98,11 @@ const StudyCarPage = () => {
     setIsLoading(false);
   };
 
+  // Verifica se há vídeos disponíveis nas categorias
+  const hasVideosAvailable = categories.some(
+    (cat) => cat.procedures && cat.procedures.length > 0
+  );
+
   const handleModelSelect = async (model: CarModel) => {
     setSelectedModel(model);
     setIsLoading(true);
@@ -256,7 +261,9 @@ const StudyCarPage = () => {
               selectedModel={selectedModel}
               categories={categories}
               isLoading={isLoading}
+              hasVideosAvailable={hasVideosAvailable}
               onCategorySelect={handleCategorySelect}
+              onExpertClick={() => setCurrentView("expert-chat")}
               onBack={goBack}
               onHome={goHome}
               onBrandClick={() => { setCurrentView("brands"); setSelectedBrand(null); }}
