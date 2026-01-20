@@ -358,11 +358,10 @@ export default function SubscriptionCheckoutPage() {
 
           if (newData.status === "paid") {
             setWebhookStatus("processed");
-            setStep("success");
-            triggerConfetti();
-            // Invalida cache de subscription para garantir que ProtectedRoute permita acesso
-            queryClient.invalidateQueries({ queryKey: ["subscription"] });
-            toast.success(`Pagamento confirmado! Sua assinatura ${PLAN_FEATURES[paidPlan].name} está ativa.`);
+            // Não vai direto para success - vai para awaiting_activation
+            // que monitora user_subscriptions até ter id + status=active
+            setStep("awaiting_activation");
+            toast.success("Pagamento confirmado! Aguardando ativação da assinatura...");
           }
         }
       )
@@ -769,12 +768,14 @@ export default function SubscriptionCheckoutPage() {
               <CardTitle className="font-chakra text-2xl text-foreground">
                 {step === "form" && "Finalize sua Assinatura"}
                 {step === "payment" && "Realize o Pagamento"}
+                {step === "awaiting_activation" && "Ativando sua Assinatura..."}
                 {step === "success" && "Assinatura Ativada!"}
                 {step === "expired" && "Tempo Expirado"}
               </CardTitle>
               <CardDescription className="text-muted-foreground">
                 {step === "form" && "Preencha seus dados para gerar o PIX"}
                 {step === "payment" && "Escaneie o QR Code ou copie o código"}
+                {step === "awaiting_activation" && "Aguarde enquanto processamos sua assinatura"}
                 {step === "success" && "Você agora tem acesso completo ao sistema"}
                 {step === "expired" && "O QR Code expirou. Gere um novo para continuar."}
               </CardDescription>
@@ -1198,6 +1199,32 @@ export default function SubscriptionCheckoutPage() {
                       <CreditCard className="w-5 h-5 mr-2" />
                       Gerar Novo QR Code
                     </Button>
+                  </motion.div>
+                )}
+
+                {/* Step: Awaiting Activation - usa componente dedicado */}
+                {step === "awaiting_activation" && pixData?.id && (
+                  <motion.div
+                    key="awaiting_activation"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="py-4"
+                  >
+                    <AwaitingActivation
+                      pixPaymentId={pixData.id}
+                      planType={selectedPlan}
+                      inline={true}
+                      onActivated={() => {
+                        triggerConfetti();
+                        queryClient.invalidateQueries({ queryKey: ["subscription"] });
+                        setStep("success");
+                      }}
+                      onExpired={() => {
+                        toast.error("Não foi possível ativar sua assinatura. Entre em contato com o suporte.");
+                        setStep("expired");
+                      }}
+                    />
                   </motion.div>
                 )}
 
