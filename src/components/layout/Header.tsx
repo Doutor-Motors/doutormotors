@@ -23,17 +23,17 @@ const Header = () => {
 
   const isLandingPage = location.pathname === "/";
 
-  // Scroll detection for header animation - hide on scroll down, show on scroll up
+  // Scroll detection - hide on scroll down, show only at top
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      const scrollingDown = currentScrollY > lastScrollY.current;
       
-      // Only hide after scrolling past 100px
-      if (currentScrollY > 100) {
-        setIsVisible(!scrollingDown);
-      } else {
+      // Só mostra o header quando estiver no topo (< 100px)
+      // Esconde assim que começar a rolar para baixo
+      if (currentScrollY < 100) {
         setIsVisible(true);
+      } else {
+        setIsVisible(false);
       }
       
       setIsScrolled(currentScrollY > 50);
