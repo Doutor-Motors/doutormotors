@@ -20,7 +20,15 @@ import {
   ExternalLink,
   Trash2,
   FileDown,
-  Activity
+  Activity,
+  Pin,
+  PinOff,
+  Edit2,
+  Check,
+  FileText,
+  Paperclip,
+  Search,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,9 +37,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { generateExpertConversationPDF, downloadExpertConversationPDF } from "@/services/pdf/expertConversationPDFGenerator";
 import ExpertLogo from "./ExpertLogo";
@@ -42,6 +62,8 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   imageBase64?: string;
+  documentName?: string;
+  documentUrl?: string;
   suggestedTutorials?: Tutorial[];
 }
 
@@ -61,6 +83,8 @@ interface Conversation {
   title: string;
   updated_at: string;
   vehicle_context?: any;
+  is_pinned?: boolean;
+  last_message_preview?: string;
 }
 
 interface DiagnosticCode {
@@ -80,7 +104,7 @@ const QUICK_QUESTIONS = [
   { icon: AlertTriangle, text: "Meu carro está fazendo um barulho estranho", color: "text-amber-500" },
   { icon: Wrench, text: "Qual manutenção devo fazer agora?", color: "text-primary" },
   { icon: Car, text: "Essa peça é compatível com meu carro?", color: "text-green-500" },
-  { icon: HelpCircle, text: "Como esse sistema funciona?", color: "text-blue-500" },
+  { icon: HelpCircle, text: "Como funciona o sistema de injeção?", color: "text-blue-500" },
 ];
 
 const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) => {
@@ -90,16 +114,22 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [selectedOBDCodes, setSelectedOBDCodes] = useState<DiagnosticCode[]>([]);
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [historyTab, setHistoryTab] = useState<"all" | "pinned">("all");
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
 
   // Load conversation history
   const loadConversations = useCallback(async () => {
@@ -109,10 +139,11 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     try {
       const { data } = await supabase
         .from("expert_conversations")
-        .select("id, title, updated_at, vehicle_context")
+        .select("id, title, updated_at, vehicle_context, is_pinned, last_message_preview")
         .eq("user_id", user.id)
+        .order("is_pinned", { ascending: false })
         .order("updated_at", { ascending: false })
-        .limit(20);
+        .limit(50);
       
       if (data) {
         setConversations(data);
@@ -130,7 +161,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     try {
       const { data: messagesData } = await supabase
         .from("expert_messages")
-        .select("role, content, image_url, suggested_tutorials")
+        .select("role, content, image_url, document_url, document_name, suggested_tutorials")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
       
@@ -139,6 +170,8 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           role: m.role,
           content: m.content,
           imageBase64: m.image_url === "image_uploaded" ? undefined : m.image_url,
+          documentName: m.document_name,
+          documentUrl: m.document_url,
           suggestedTutorials: m.suggested_tutorials || undefined,
         }));
         setMessages(loadedMessages);
@@ -156,6 +189,13 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
   const deleteConversation = async (conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
+      // Delete messages first
+      await supabase
+        .from("expert_messages")
+        .delete()
+        .eq("conversation_id", conversationId);
+      
+      // Then delete conversation
       await supabase
         .from("expert_conversations")
         .delete()
@@ -167,8 +207,67 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
         setMessages([]);
         setCurrentConversationId(null);
       }
+      
+      notifySuccess("Excluída", "Conversa excluída com sucesso");
     } catch (error) {
       console.error("Error deleting conversation:", error);
+      notifyError("Erro", "Não foi possível excluir a conversa");
+    }
+  };
+
+  // Pin/Unpin conversation
+  const togglePinConversation = async (conversationId: string, isPinned: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await supabase
+        .from("expert_conversations")
+        .update({ is_pinned: !isPinned })
+        .eq("id", conversationId);
+      
+      setConversations(prev => 
+        prev.map(c => 
+          c.id === conversationId ? { ...c, is_pinned: !isPinned } : c
+        ).sort((a, b) => {
+          if (a.is_pinned && !b.is_pinned) return -1;
+          if (!a.is_pinned && b.is_pinned) return 1;
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        })
+      );
+      
+      notifySuccess(isPinned ? "Desafixada" : "Fixada", 
+        isPinned ? "Conversa desafixada" : "Conversa fixada no topo");
+    } catch (error) {
+      console.error("Error toggling pin:", error);
+    }
+  };
+
+  // Rename conversation
+  const startEditingTitle = (conv: Conversation, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingConversationId(conv.id);
+    setEditingTitle(conv.title);
+  };
+
+  const saveTitle = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editingTitle.trim()) return;
+    
+    try {
+      await supabase
+        .from("expert_conversations")
+        .update({ title: editingTitle.trim() })
+        .eq("id", conversationId);
+      
+      setConversations(prev => 
+        prev.map(c => 
+          c.id === conversationId ? { ...c, title: editingTitle.trim() } : c
+        )
+      );
+      setEditingConversationId(null);
+      notifySuccess("Renomeada", "Conversa renomeada com sucesso");
+    } catch (error) {
+      console.error("Error renaming:", error);
+      notifyError("Erro", "Não foi possível renomear");
     }
   };
 
@@ -177,6 +276,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     setMessages([]);
     setCurrentConversationId(null);
     setSelectedImage(null);
+    setSelectedDocument(null);
     setSelectedOBDCodes([]);
     setIsHistoryOpen(false);
   };
@@ -231,50 +331,100 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("A imagem deve ter no máximo 5MB");
+      notifyError("Erro", "A imagem deve ter no máximo 5MB");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
       setSelectedImage(event.target?.result as string);
+      setSelectedDocument(null);
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
-  const streamChat = useCallback(async (userMessage: string, imageBase64?: string) => {
+  // Handle document selection
+  const handleDocumentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = [
+      "application/pdf",
+      "text/plain",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      notifyError("Erro", "Formato não suportado. Use PDF, TXT ou DOC");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      notifyError("Erro", "O documento deve ter no máximo 10MB");
+      return;
+    }
+
+    setSelectedDocument(file);
+    setSelectedImage(null);
+    e.target.value = "";
+  };
+
+  const streamChat = useCallback(async (userMessage: string, imageBase64?: string, documentFile?: File) => {
+    let documentContent = "";
+    let documentName = "";
+    
+    // Read document content if provided
+    if (documentFile) {
+      documentName = documentFile.name;
+      if (documentFile.type === "text/plain") {
+        documentContent = await documentFile.text();
+      } else {
+        // For other document types, just mention the file
+        documentContent = `[Documento anexado: ${documentFile.name}]`;
+      }
+    }
+
+    const finalMessage = documentContent 
+      ? `${userMessage}\n\n--- Documento anexado: ${documentName} ---\n${documentContent}`
+      : userMessage;
+
     const userMsg: Message = { 
       role: "user", 
       content: userMessage,
-      imageBase64: imageBase64 
+      imageBase64: imageBase64,
+      documentName: documentName || undefined,
     };
     const allMessages = [...messages, userMsg];
     
     setMessages(allMessages);
     setIsLoading(true);
     setSelectedImage(null);
+    setSelectedDocument(null);
 
     let assistantContent = "";
     let newConversationId = currentConversationId;
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/automotive-expert-chat`,
+        `https://txxgmxxssnogumcwsfvn.supabase.co/functions/v1/automotive-expert-chat`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4eGdteHhzc25vZ3VtY3dzZnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MDY3OTcsImV4cCI6MjA4NDE4Mjc5N30.CpsvNMco1a5E3TjzWh37aUwcBvKjKi3WSlbjOKbx6w0`,
           },
           body: JSON.stringify({
             messages: allMessages.map(m => ({ 
               role: m.role, 
-              content: m.content,
+              content: m.role === "user" && m === userMsg ? finalMessage : m.content,
               imageBase64: m.imageBase64 
             })),
             vehicleContext: userVehicle,
             conversationId: currentConversationId,
             obdCodes: selectedOBDCodes,
+            documentName: documentName || undefined,
           }),
         }
       );
@@ -358,7 +508,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
       }
 
       // Refresh conversation list
-      if (newConversationId && newConversationId !== currentConversationId) {
+      if (newConversationId) {
         loadConversations();
       }
     } catch (error) {
@@ -377,9 +527,13 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
 
   const handleSend = () => {
     const trimmed = input.trim();
-    if ((!trimmed && !selectedImage) || isLoading) return;
+    if ((!trimmed && !selectedImage && !selectedDocument) || isLoading) return;
     setInput("");
-    streamChat(trimmed || "Analise esta imagem", selectedImage || undefined);
+    streamChat(
+      trimmed || (selectedImage ? "Analise esta imagem" : "Analise este documento"), 
+      selectedImage || undefined,
+      selectedDocument || undefined
+    );
   };
 
   const handleQuickQuestion = (question: string) => {
@@ -395,24 +549,36 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     }
   };
 
+  // Filter conversations
+  const filteredConversations = conversations.filter(conv => {
+    const matchesSearch = searchQuery === "" || 
+      conv.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab = historyTab === "all" || 
+      (historyTab === "pinned" && conv.is_pinned);
+    return matchesSearch && matchesTab;
+  });
+
+  const currentConversation = conversations.find(c => c.id === currentConversationId);
+
   return (
     <motion.div
       key="expert-chat"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3 }}
       className="min-h-[calc(100vh-8rem)] flex flex-col"
     >
-      {/* Header */}
-      <section className="bg-gradient-to-br from-primary/10 via-background to-secondary/10 py-4 sm:py-6 border-b border-border">
+      {/* Header - Design atualizado */}
+      <section className="bg-gradient-to-br from-primary/10 via-background to-primary/5 py-4 sm:py-6 border-b border-border/50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Button variant="ghost" size="icon" onClick={onBack}>
+          {/* Top bar */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={onBack} className="hover:bg-primary/10">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={onHome}>
+              <Button variant="ghost" size="icon" onClick={onHome} className="hover:bg-primary/10">
                 <Home className="w-5 h-5" />
               </Button>
             </div>
@@ -424,14 +590,14 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                   size="sm"
                   onClick={exportToPDF}
                   disabled={isExportingPDF}
-                  className="gap-1"
+                  className="gap-1.5 border-primary/30 hover:bg-primary/10"
                 >
                   {isExportingPDF ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <FileDown className="w-4 h-4" />
                   )}
-                  <span className="hidden sm:inline">PDF</span>
+                  <span className="hidden sm:inline">Exportar PDF</span>
                 </Button>
               )}
               
@@ -441,71 +607,213 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                     variant="outline" 
                     size="sm"
                     onClick={startNewConversation}
-                    className="gap-1"
+                    className="gap-1.5 border-primary/30 hover:bg-primary/10"
                   >
                     <Plus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Nova</span>
+                    <span className="hidden sm:inline">Nova Conversa</span>
                   </Button>
                   
                   <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
                     <SheetTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-1" onClick={() => loadConversations()}>
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="gap-1.5" 
+                        onClick={() => loadConversations()}
+                      >
                         <History className="w-4 h-4" />
                         <span className="hidden sm:inline">Histórico</span>
+                        {conversations.length > 0 && (
+                          <Badge variant="secondary" className="ml-1 text-xs bg-background/20">
+                            {conversations.length}
+                          </Badge>
+                        )}
                       </Button>
                     </SheetTrigger>
-                    <SheetContent side="right" className="w-full sm:max-w-md">
-                      <SheetHeader>
+                    <SheetContent side="right" className="w-full sm:max-w-md p-0">
+                      <SheetHeader className="p-4 border-b">
                         <SheetTitle className="flex items-center gap-2">
-                          <History className="w-5 h-5" />
-                          Conversas Anteriores
+                          <History className="w-5 h-5 text-primary" />
+                          Minhas Conversas
                         </SheetTitle>
+                        
+                        {/* Search */}
+                        <div className="relative mt-3">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar conversas..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9"
+                          />
+                        </div>
+                        
+                        {/* Tabs */}
+                        <Tabs value={historyTab} onValueChange={(v) => setHistoryTab(v as "all" | "pinned")} className="mt-3">
+                          <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="all" className="gap-1.5">
+                              <MessageCircle className="w-4 h-4" />
+                              Todas
+                            </TabsTrigger>
+                            <TabsTrigger value="pinned" className="gap-1.5">
+                              <Pin className="w-4 h-4" />
+                              Fixadas
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
                       </SheetHeader>
-                      <ScrollArea className="h-[calc(100vh-8rem)] mt-4">
-                        {isLoadingHistory ? (
-                          <div className="space-y-3">
-                            {[...Array(5)].map((_, i) => (
-                              <Skeleton key={i} className="h-16 w-full" />
-                            ))}
-                          </div>
-                        ) : conversations.length === 0 ? (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                            <p>Nenhuma conversa ainda</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {conversations.map((conv) => (
-                              <Card 
-                                key={conv.id}
-                                className={`cursor-pointer hover:bg-muted/50 transition-colors ${
-                                  currentConversationId === conv.id ? "border-primary" : ""
-                                }`}
-                                onClick={() => loadConversation(conv.id)}
-                              >
-                                <CardContent className="p-3 flex items-center justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm truncate">{conv.title}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {formatDistanceToNow(new Date(conv.updated_at), { 
-                                        addSuffix: true, 
-                                        locale: ptBR 
-                                      })}
-                                    </p>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="shrink-0 text-muted-foreground hover:text-destructive"
-                                    onClick={(e) => deleteConversation(conv.id, e)}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        )}
+                      
+                      <ScrollArea className="h-[calc(100vh-14rem)]">
+                        <div className="p-4">
+                          {isLoadingHistory ? (
+                            <div className="space-y-3">
+                              {[...Array(5)].map((_, i) => (
+                                <Skeleton key={i} className="h-20 w-full rounded-lg" />
+                              ))}
+                            </div>
+                          ) : filteredConversations.length === 0 ? (
+                            <div className="text-center py-12">
+                              <MessageCircle className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+                              <p className="text-muted-foreground">
+                                {searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Inicie uma nova conversa para começar
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {filteredConversations.map((conv) => (
+                                <Card 
+                                  key={conv.id}
+                                  className={`cursor-pointer hover:bg-muted/50 transition-all group ${
+                                    currentConversationId === conv.id ? "border-primary ring-1 ring-primary/30" : ""
+                                  } ${conv.is_pinned ? "bg-primary/5" : ""}`}
+                                  onClick={() => loadConversation(conv.id)}
+                                >
+                                  <CardContent className="p-3">
+                                    <div className="flex items-start gap-3">
+                                      {/* Icon */}
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                                        conv.is_pinned ? "bg-primary/20" : "bg-muted"
+                                      }`}>
+                                        {conv.is_pinned ? (
+                                          <Pin className="w-4 h-4 text-primary" />
+                                        ) : (
+                                          <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                                        )}
+                                      </div>
+                                      
+                                      {/* Content */}
+                                      <div className="flex-1 min-w-0">
+                                        {editingConversationId === conv.id ? (
+                                          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                            <Input
+                                              value={editingTitle}
+                                              onChange={(e) => setEditingTitle(e.target.value)}
+                                              className="h-7 text-sm"
+                                              autoFocus
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter") saveTitle(conv.id, e as any);
+                                                if (e.key === "Escape") setEditingConversationId(null);
+                                              }}
+                                            />
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-7 w-7"
+                                              onClick={(e) => saveTitle(conv.id, e)}
+                                            >
+                                              <Check className="w-3 h-3" />
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <p className="font-medium text-sm truncate">{conv.title}</p>
+                                        )}
+                                        
+                                        {conv.last_message_preview && (
+                                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                            {conv.last_message_preview}
+                                          </p>
+                                        )}
+                                        
+                                        <div className="flex items-center gap-2 mt-1.5">
+                                          <span className="text-xs text-muted-foreground">
+                                            {format(new Date(conv.updated_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                                          </span>
+                                          {conv.vehicle_context && (
+                                            <Badge variant="outline" className="text-xs py-0 h-5">
+                                              <Car className="w-3 h-3 mr-1" />
+                                              {conv.vehicle_context.brand}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Actions */}
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={(e) => togglePinConversation(conv.id, conv.is_pinned || false, e)}
+                                          title={conv.is_pinned ? "Desafixar" : "Fixar"}
+                                        >
+                                          {conv.is_pinned ? (
+                                            <PinOff className="w-4 h-4 text-primary" />
+                                          ) : (
+                                            <Pin className="w-4 h-4" />
+                                          )}
+                                        </Button>
+                                        
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={(e) => startEditingTitle(conv, e)}
+                                          title="Renomear"
+                                        >
+                                          <Edit2 className="w-4 h-4" />
+                                        </Button>
+                                        
+                                        <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8 hover:text-destructive"
+                                              onClick={(e) => e.stopPropagation()}
+                                              title="Excluir"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                Esta ação não pode ser desfeita. A conversa será permanentemente excluída.
+                                              </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                              <AlertDialogAction
+                                                onClick={(e) => deleteConversation(conv.id, e)}
+                                                className="bg-destructive hover:bg-destructive/90"
+                                              >
+                                                Excluir
+                                              </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </ScrollArea>
                     </SheetContent>
                   </Sheet>
@@ -514,26 +822,42 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4">
-            <ExpertLogo size="md" />
-            <div className="min-w-0">
-              <h1 className="font-chakra text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 flex-wrap">
-                Especialista Automotivo
-                <Badge variant="secondary" className="text-xs">IA</Badge>
-              </h1>
-              <p className="text-muted-foreground text-xs sm:text-sm md:text-base line-clamp-2">
-                Converse, envie fotos e analise códigos OBD para tirar dúvidas.
+          {/* Title Section */}
+          <div className="flex items-center gap-4">
+            <ExpertLogo size="lg" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="font-chakra text-xl sm:text-2xl md:text-3xl font-bold text-foreground">
+                  Especialista Automotivo
+                </h1>
+                <Badge className="bg-primary/20 text-primary border-primary/30">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  IA
+                </Badge>
+              </div>
+              <p className="text-muted-foreground text-sm mt-1">
+                Converse, envie fotos e documentos, analise códigos OBD
               </p>
+              
+              {/* Current conversation indicator */}
+              {currentConversation && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="outline" className="text-xs">
+                    <MessageCircle className="w-3 h-3 mr-1" />
+                    {currentConversation.title}
+                  </Badge>
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Vehicle badge */}
           {userVehicle && (
-            <div className="mt-3 sm:mt-4 flex items-center gap-2 text-sm">
-              <Car className="w-4 h-4 text-primary shrink-0" />
-              <span className="text-muted-foreground">Seu veículo:</span>
-              <Badge variant="outline" className="truncate">
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+              <Car className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">
                 {userVehicle.brand} {userVehicle.model} {userVehicle.year}
-              </Badge>
+              </span>
             </div>
           )}
         </div>
@@ -559,7 +883,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
             className="mb-3 flex items-center gap-2 flex-wrap"
           >
             <Activity className="w-4 h-4 text-primary" />
-            <span className="text-xs text-muted-foreground">Analisando:</span>
+            <span className="text-xs text-muted-foreground">Códigos selecionados:</span>
             {selectedOBDCodes.map(code => (
               <Badge key={code.code} variant="secondary" className="text-xs font-mono">
                 {code.code}
@@ -574,32 +898,32 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="py-4 sm:py-8"
+                className="py-6"
               >
-                <Card className="bg-muted/30 border-dashed">
-                  <CardContent className="p-4 sm:p-6 text-center">
+                <Card className="bg-gradient-to-br from-muted/50 to-muted/30 border-dashed border-2">
+                  <CardContent className="p-6 text-center">
                     <ExpertLogo size="lg" className="mx-auto mb-4" />
-                    <h3 className="font-chakra font-bold text-base sm:text-lg mb-2">
+                    <h3 className="font-chakra font-bold text-lg mb-2">
                       Olá! Sou seu Especialista Automotivo
                     </h3>
-                    <p className="text-muted-foreground text-sm mb-4 sm:mb-6 max-w-md mx-auto">
-                      Posso ajudar com dúvidas sobre mecânica, manutenção preventiva, 
-                      diagnóstico de problemas, <strong>analisar fotos</strong> e <strong>interpretar códigos OBD</strong>.
+                    <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
+                      Posso ajudar com dúvidas sobre mecânica, manutenção, diagnóstico, 
+                      <strong> analisar fotos</strong>, <strong>documentos</strong> e <strong>códigos OBD</strong>.
                     </p>
                     
-                    <p className="text-sm font-medium mb-3 sm:mb-4">Perguntas rápidas:</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg mx-auto">
+                    <p className="text-sm font-medium mb-4">Perguntas rápidas:</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
                       {QUICK_QUESTIONS.map((q, i) => (
                         <Button
                           key={i}
                           variant="outline"
                           size="sm"
-                          className="justify-start text-left h-auto py-2 px-3"
+                          className="justify-start text-left h-auto py-3 px-4 hover:bg-primary/10 hover:border-primary/50 transition-all"
                           onClick={() => handleQuickQuestion(q.text)}
                           disabled={isLoading}
                         >
-                          <q.icon className={`w-4 h-4 mr-2 shrink-0 ${q.color}`} />
-                          <span className="text-xs">{q.text}</span>
+                          <q.icon className={`w-5 h-5 mr-3 shrink-0 ${q.color}`} />
+                          <span className="text-sm">{q.text}</span>
                         </Button>
                       ))}
                     </div>
@@ -612,17 +936,22 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                   key={idx}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`flex gap-2 sm:gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.role === "assistant" && (
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                      <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                      <Bot className="w-4 h-4 text-primary" />
                     </div>
                   )}
                   
                   <div className="max-w-[85%] space-y-2">
-                    <Card className={`${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card"}`}>
-                      <CardContent className="p-2.5 sm:p-3">
+                    <Card className={`${
+                      msg.role === "user" 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-card border-border/50"
+                    }`}>
+                      <CardContent className="p-3">
+                        {/* Image preview */}
                         {msg.imageBase64 && (
                           <img 
                             src={msg.imageBase64} 
@@ -630,7 +959,18 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                             className="max-w-[200px] rounded-md mb-2"
                           />
                         )}
-                        <div className={`text-sm whitespace-pre-wrap ${msg.role === "assistant" ? "prose prose-sm dark:prose-invert max-w-none" : ""}`}>
+                        
+                        {/* Document indicator */}
+                        {msg.documentName && (
+                          <div className="flex items-center gap-2 mb-2 p-2 rounded bg-background/20">
+                            <FileText className="w-4 h-4" />
+                            <span className="text-sm">{msg.documentName}</span>
+                          </div>
+                        )}
+                        
+                        <div className={`text-sm whitespace-pre-wrap ${
+                          msg.role === "assistant" ? "prose prose-sm dark:prose-invert max-w-none" : ""
+                        }`}>
                           {msg.content || (
                             <span className="flex items-center gap-2">
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -643,32 +983,32 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
 
                     {/* Tutorial Suggestions */}
                     {msg.suggestedTutorials && msg.suggestedTutorials.length > 0 && (
-                      <Card className="bg-muted/50">
-                        <CardContent className="p-2.5 sm:p-3">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                      <Card className="bg-primary/5 border-primary/20">
+                        <CardContent className="p-3">
+                          <p className="text-xs font-medium text-primary mb-2 flex items-center gap-1">
                             <Play className="w-3 h-3" />
                             Tutoriais Relacionados:
                           </p>
-                          <div className="space-y-1.5">
+                          <div className="space-y-2">
                             {msg.suggestedTutorials.map((tutorial, i) => (
                               <a
                                 key={i}
                                 href={tutorial.url || "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 p-1.5 rounded hover:bg-muted transition-colors text-xs group"
+                                className="flex items-center gap-2 p-2 rounded-md hover:bg-primary/10 transition-colors text-xs group"
                               >
                                 {tutorial.thumbnail && (
                                   <img 
                                     src={tutorial.thumbnail} 
                                     alt="" 
-                                    className="w-10 h-7 object-cover rounded"
+                                    className="w-12 h-8 object-cover rounded"
                                   />
                                 )}
                                 <span className="flex-1 truncate group-hover:text-primary transition-colors">
                                   {tutorial.name}
                                 </span>
-                                <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
+                                <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary shrink-0" />
                               </a>
                             ))}
                           </div>
@@ -678,8 +1018,8 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                   </div>
                   
                   {msg.role === "user" && (
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                      <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                      <User className="w-4 h-4" />
                     </div>
                   )}
                 </motion.div>
@@ -688,36 +1028,60 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           </div>
         </ScrollArea>
 
-        {/* Image Preview */}
+        {/* Attachments Preview */}
         <AnimatePresence>
-          {selectedImage && (
+          {(selectedImage || selectedDocument) && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="mb-2"
+              className="mb-3"
             >
-              <div className="relative inline-block">
-                <img 
-                  src={selectedImage} 
-                  alt="Preview" 
-                  className="max-h-24 rounded-md border"
-                />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute -top-2 -right-2 w-6 h-6"
-                  onClick={() => setSelectedImage(null)}
-                >
-                  <X className="w-3 h-3" />
-                </Button>
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border">
+                {selectedImage && (
+                  <div className="relative">
+                    <img 
+                      src={selectedImage} 
+                      alt="Preview" 
+                      className="h-16 rounded-md border"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 w-5 h-5"
+                      onClick={() => setSelectedImage(null)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+                
+                {selectedDocument && (
+                  <div className="relative flex items-center gap-2 px-3 py-2 rounded-md bg-background border">
+                    <FileText className="w-5 h-5 text-primary" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{selectedDocument.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(selectedDocument.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => setSelectedDocument(null)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Input Area */}
-        <div className="pt-3 sm:pt-4 border-t border-border">
+        <div className="pt-4 border-t border-border/50">
           <div className="flex gap-2">
             <input
               ref={fileInputRef}
@@ -726,25 +1090,52 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
               onChange={handleImageSelect}
               className="hidden"
             />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-              title="Enviar foto"
-            >
-              <ImageIcon className="w-4 h-4" />
-            </Button>
+            <input
+              ref={documentInputRef}
+              type="file"
+              accept=".pdf,.txt,.doc,.docx"
+              onChange={handleDocumentSelect}
+              className="hidden"
+            />
+            
+            {/* Attachment buttons */}
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+                title="Enviar foto"
+                className="hover:bg-primary/10 hover:border-primary/50"
+              >
+                <ImageIcon className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => documentInputRef.current?.click()}
+                disabled={isLoading}
+                title="Enviar documento"
+                className="hover:bg-primary/10 hover:border-primary/50"
+              >
+                <Paperclip className="w-4 h-4" />
+              </Button>
+            </div>
+            
             <Input
               ref={inputRef}
-              placeholder="Digite sua pergunta ou envie uma foto..."
+              placeholder="Digite sua pergunta..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
               className="flex-1"
             />
-            <Button onClick={handleSend} disabled={isLoading || (!input.trim() && !selectedImage)}>
+            <Button 
+              onClick={handleSend} 
+              disabled={isLoading || (!input.trim() && !selectedImage && !selectedDocument)}
+              className="px-4"
+            >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
@@ -753,7 +1144,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            Este assistente oferece orientações gerais. Para diagnósticos definitivos, consulte um mecânico.
+            Orientações gerais. Para diagnósticos definitivos, consulte um mecânico.
           </p>
         </div>
       </div>

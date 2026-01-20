@@ -547,6 +547,8 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_pinned: boolean
+          last_message_preview: string | null
           title: string
           updated_at: string
           user_id: string
@@ -555,6 +557,8 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_pinned?: boolean
+          last_message_preview?: string | null
           title?: string
           updated_at?: string
           user_id: string
@@ -563,6 +567,8 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_pinned?: boolean
+          last_message_preview?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -575,6 +581,9 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          document_name: string | null
+          document_type: string | null
+          document_url: string | null
           id: string
           image_url: string | null
           role: string
@@ -584,6 +593,9 @@ export type Database = {
           content: string
           conversation_id: string
           created_at?: string
+          document_name?: string | null
+          document_type?: string | null
+          document_url?: string | null
           id?: string
           image_url?: string | null
           role: string
@@ -593,6 +605,9 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          document_name?: string | null
+          document_type?: string | null
+          document_url?: string | null
           id?: string
           image_url?: string | null
           role?: string
