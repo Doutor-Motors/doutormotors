@@ -707,13 +707,54 @@ export default function SubscriptionCheckoutPage() {
 
         {/* Progress Stepper */}
         <motion.div 
-          className="mb-6"
+          className="mb-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
           <ProgressStepper currentStep={3} />
         </motion.div>
+
+        {/* Fixed Plan Summary */}
+        {step !== "success" && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="mb-4"
+          >
+            <div className={`flex items-center justify-between px-4 py-3 rounded-xl border backdrop-blur-sm ${
+              selectedPlan === "pro"
+                ? "bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30"
+                : "bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/30"
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${
+                  selectedPlan === "pro" ? "bg-amber-500/20" : "bg-blue-500/20"
+                }`}>
+                  <Crown className={`w-5 h-5 ${
+                    selectedPlan === "pro" ? "text-amber-400" : "text-blue-400"
+                  }`} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Plano {planName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Assinatura mensal
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`text-lg font-bold ${
+                  selectedPlan === "pro" ? "text-amber-400" : "text-blue-400"
+                }`}>
+                  {formattedPrice}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
