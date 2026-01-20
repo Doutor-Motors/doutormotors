@@ -70,6 +70,7 @@ import PixCheckoutPage from "./pages/PixCheckoutPage";
 import SubscriptionCheckoutPage from "./pages/SubscriptionCheckoutPage";
 import SelectPlanPage from "./pages/SelectPlanPage";
 import MyPaymentsPage from "./pages/dashboard/MyPaymentsPage";
+import UserAuditTimeline from "./pages/admin/UserAuditTimeline";
 
 const queryClient = new QueryClient();
 
@@ -149,6 +150,7 @@ const App = () => (
                 <Route path="/admin/implementation-guide" element={<ProtectedRoute><AdminProtectedRoute><ImplementationGuidePage /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/carcare-data" element={<ProtectedRoute><AdminProtectedRoute><AdminCarCareData /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/contact-analytics" element={<ProtectedRoute><AdminProtectedRoute><ContactAnalytics /></AdminProtectedRoute></ProtectedRoute>} />
+                <Route path="/admin/users/:userId/timeline" element={<ProtectedRoute><AdminProtectedRoute><UserAuditTimeline /></AdminProtectedRoute></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>

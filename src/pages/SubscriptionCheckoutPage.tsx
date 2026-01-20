@@ -48,6 +48,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription, PLAN_FEATURES } from "@/hooks/useSubscription";
 import { ProgressStepper } from "@/components/subscription/ProgressStepper";
+import PaymentGuard from "@/components/subscription/PaymentGuard";
 import logo from "@/assets/images/logo-new-car.png";
 import heroBg from "@/assets/images/hero-bg.jpg";
 
@@ -320,22 +321,7 @@ export default function SubscriptionCheckoutPage() {
   const timerProgress = (timeRemaining / PIX_TIMEOUT_SECONDS) * 100;
   const isTimerCritical = timeRemaining <= 120; // 2 minutes or less
 
-  // Redirect if user already has active subscription
-  useEffect(() => {
-    if (!authLoading && !subLoading) {
-      if (isPro || isAdmin) {
-        toast.success("Você já possui uma assinatura ativa!");
-        navigate("/dashboard");
-      }
-    }
-  }, [authLoading, subLoading, isPro, isAdmin, navigate]);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/signup");
-    }
-  }, [authLoading, user, navigate]);
+  // PaymentGuard already handles redirects for active subscriptions and unauthenticated users
 
   // Listen for payment updates
   useEffect(() => {
@@ -581,6 +567,7 @@ export default function SubscriptionCheckoutPage() {
   const currentSubscriber = recentSubscribers[currentSubscriberIndex];
 
   return (
+    <PaymentGuard>
     <div
       className="min-h-screen flex items-center justify-center p-4 py-12"
       style={{
@@ -1284,5 +1271,6 @@ export default function SubscriptionCheckoutPage() {
         </motion.p>
       </div>
     </div>
+    </PaymentGuard>
   );
 }
