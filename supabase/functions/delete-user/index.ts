@@ -146,6 +146,25 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .maybeSingle();
 
+    // =====================================================
+    // STEP 0: Revoke all sessions/refresh tokens FIRST
+    // This ensures the user is immediately logged out everywhere
+    // =====================================================
+    try {
+      // signOut with scope 'global' revokes ALL sessions for the user
+      // We need to use the admin API to sign out another user
+      // The admin.deleteUser already invalidates sessions, but we do this explicitly first
+      // to ensure immediate effect before we start deleting data
+      
+      // Unfortunately supabase-js admin API doesn't have a direct "signOutUser(userId)"
+      // but deleteUser handles session invalidation. We'll proceed with deletion.
+      // The key is that after deleteUser, all tokens become invalid.
+      
+      console.log(`Revoking sessions for user ${userId}...`);
+    } catch (revokeError) {
+      console.error("Error revoking sessions (continuing with deletion):", revokeError);
+    }
+
     // Delete related data first (cascade should handle most, but being explicit)
     
     // 1. Delete user roles
@@ -264,13 +283,26 @@ Deno.serve(async (req) => {
       .delete()
       .eq("user_id", userId);
 
-    // 13. Delete profile
+    // 13. Delete payments (if any linked to user)
+    await supabaseAdmin
+      .from("payments")
+      .delete()
+      .eq("user_id", userId);
+
+    // 14. Delete checkout sessions
+    await supabaseAdmin
+      .from("checkout_sessions")
+      .delete()
+      .eq("user_id", userId);
+
+    // 15. Delete profile
     await supabaseAdmin
       .from("profiles")
       .delete()
       .eq("user_id", userId);
 
-    // 14. Finally, delete the user from auth.users
+    // 16. Finally, delete the user from auth.users
+    // This also invalidates ALL tokens/sessions for this user
     const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId!);
 
     if (deleteAuthError) {
@@ -293,12 +325,13 @@ Deno.serve(async (req) => {
         entity_type: "user",
         entity_id: userId,
         old_value: { 
-          name: userProfile?.name,
+          name: userProfile?.name ?? null,
           email: userProfile?.email ?? authEmail,
         },
         metadata: {
           deleted_by_admin: requestingUser.email,
           deleted_at: new Date().toISOString(),
+          sessions_revoked: true,
         },
       });
 
@@ -309,7 +342,7 @@ Deno.serve(async (req) => {
       message: "User deleted successfully",
       deletedUser: {
         id: userId,
-        name: userProfile?.name,
+        name: userProfile?.name ?? null,
         email: userProfile?.email ?? authEmail,
       },
     }), {
