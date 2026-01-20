@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
@@ -27,6 +27,10 @@ interface SignupState {
   fromSignup?: boolean;
   email?: string;
   name?: string;
+}
+
+interface CheckoutState extends SignupState {
+  selectedPlan: "basic" | "pro";
 }
 
 const BASIC_FEATURES = [
@@ -62,8 +66,6 @@ export default function SelectPlanPage() {
   const { user, loading: authLoading } = useAuth();
   const { subscription, isLoading: subLoading, isPro, isAdmin } = useSubscription();
   
-  const [activatingBasic, setActivatingBasic] = useState(false);
-  
   const signupData = location.state as SignupState | null;
 
   // Redirect if user already has active subscription
@@ -86,45 +88,12 @@ export default function SelectPlanPage() {
     }
   }, [authLoading, user, navigate]);
 
-  const handleSelectBasic = async () => {
-    if (!user) return;
-    
-    setActivatingBasic(true);
-    try {
-      // Ativar assinatura Basic gratuita
-      const { error } = await supabase
-        .from("user_subscriptions")
-        .upsert({
-          user_id: user.id,
-          plan_type: "basic",
-          status: "active",
-          started_at: new Date().toISOString(),
-          expires_at: null, // Basic não expira
-          payment_method: "free",
-        }, {
-          onConflict: "user_id"
-        });
-
-      if (error) {
-        console.error("Error activating basic subscription:", error);
-        toast.error("Erro ao ativar plano. Tente novamente.");
-        return;
-      }
-
-      toast.success("Plano Basic ativado com sucesso!");
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Erro ao ativar plano. Tente novamente.");
-    } finally {
-      setActivatingBasic(false);
-    }
-  };
-
-  const handleSelectPro = () => {
-    navigate("/subscription-checkout", { 
-      state: signupData 
-    });
+  const handleSelectPlan = (plan: "basic" | "pro") => {
+    const checkoutState: CheckoutState = {
+      ...signupData,
+      selectedPlan: plan,
+    };
+    navigate("/subscription-checkout", { state: checkoutState });
   };
 
   if (authLoading || subLoading) {
@@ -188,7 +157,7 @@ export default function SelectPlanPage() {
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between mb-2">
                     <Badge variant="secondary" className="text-sm">
-                      Gratuito
+                      Econômico
                     </Badge>
                   </div>
                   <CardTitle className="text-2xl font-chakra">Basic</CardTitle>
@@ -196,7 +165,7 @@ export default function SelectPlanPage() {
                     Perfeito para começar a explorar
                   </CardDescription>
                   <div className="pt-2">
-                    <span className="text-4xl font-bold font-chakra text-foreground">R$ 0</span>
+                    <span className="text-4xl font-bold font-chakra text-foreground">R$ 19,90</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                 </CardHeader>
@@ -229,22 +198,12 @@ export default function SelectPlanPage() {
 
                   {/* Button */}
                   <Button 
-                    onClick={handleSelectBasic}
-                    disabled={activatingBasic}
+                    onClick={() => handleSelectPlan("basic")}
                     variant="outline"
                     className="w-full h-12 text-base gap-2"
                   >
-                    {activatingBasic ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Ativando...
-                      </>
-                    ) : (
-                      <>
-                        Começar Grátis
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
+                    Assinar Basic
+                    <ArrowRight className="w-4 h-4" />
                   </Button>
                 </CardContent>
               </Card>
@@ -300,7 +259,7 @@ export default function SelectPlanPage() {
 
                   {/* Button */}
                   <Button 
-                    onClick={handleSelectPro}
+                    onClick={() => handleSelectPlan("pro")}
                     className="w-full h-12 text-base gap-2 bg-primary hover:bg-primary/90"
                   >
                     <Crown className="w-4 h-4" />

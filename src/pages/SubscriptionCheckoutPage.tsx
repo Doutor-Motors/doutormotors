@@ -138,12 +138,20 @@ export default function SubscriptionCheckoutPage() {
   const [currentSubscriberIndex, setCurrentSubscriberIndex] = useState(0);
   const [subscriberCount, setSubscriberCount] = useState(0);
   
-  // Get the plan price in cents from config
-  const planPriceInCents = PLAN_FEATURES.pro.priceValue;
-  const formattedPrice = formatCurrency(planPriceInCents);
+  // Pre-fill with data from signup, including selected plan
+  const signupData = location.state as { 
+    fromSignup?: boolean; 
+    email?: string; 
+    name?: string;
+    selectedPlan?: "basic" | "pro";
+  } | null;
   
-  // Pre-fill with data from signup
-  const signupData = location.state as { fromSignup?: boolean; email?: string; name?: string } | null;
+  // Get the selected plan (default to pro if not specified)
+  const selectedPlan = signupData?.selectedPlan || "pro";
+  const planConfig = PLAN_FEATURES[selectedPlan];
+  const planPriceInCents = planConfig.priceValue;
+  const formattedPrice = formatCurrency(planPriceInCents);
+  const planName = planConfig.name;
   
   const [formData, setFormData] = useState<FormData>({
     customerName: signupData?.name || "",
@@ -291,7 +299,7 @@ export default function SubscriptionCheckoutPage() {
         .from("user_subscriptions")
         .upsert({
           user_id: user.id,
-          plan_type: "pro",
+          plan_type: selectedPlan,
           status: "active",
           started_at: new Date().toISOString(),
           expires_at: expiresAt.toISOString(),
@@ -381,7 +389,7 @@ export default function SubscriptionCheckoutPage() {
       const response = await supabase.functions.invoke("create-pix-qrcode", {
         body: {
           amount: planPriceInCents,
-          description: "Assinatura Pro - Doutor Motors",
+          description: `Assinatura ${planName} - Doutor Motors`,
           customer: {
             name: formData.customerName,
             email: formData.customerEmail,
@@ -390,7 +398,7 @@ export default function SubscriptionCheckoutPage() {
           },
           metadata: {
             userId: user?.id,
-            planType: "pro",
+            planType: selectedPlan,
             source: "subscription_checkout",
           },
         },
@@ -622,9 +630,13 @@ export default function SubscriptionCheckoutPage() {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.4, type: "spring" }}
               >
-                <Badge className="w-fit mx-auto mb-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 px-4 py-1.5 text-sm">
+                <Badge className={`w-fit mx-auto mb-3 border-0 px-4 py-1.5 text-sm ${
+                  selectedPlan === "pro" 
+                    ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white" 
+                    : "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                }`}>
                   <Crown className="h-4 w-4 mr-2" />
-                  Plano Pro
+                  Plano {planName}
                 </Badge>
               </motion.div>
               <CardTitle className="font-chakra text-2xl text-foreground">
@@ -659,7 +671,7 @@ export default function SubscriptionCheckoutPage() {
                       <div className="relative">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-muted-foreground mb-1">Plano Pro Mensal</p>
+                            <p className="text-sm text-muted-foreground mb-1">Plano {planName} Mensal</p>
                             <p className="text-3xl font-bold text-foreground font-chakra">
                               {formattedPrice}
                             </p>

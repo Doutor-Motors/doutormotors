@@ -5,8 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Valor mínimo do plano PRO em centavos (R$ 29,90)
-const MINIMUM_PLAN_AMOUNT_CENTS = 2990;
+// Valor mínimo do plano BASIC em centavos (R$ 19,90)
+const MINIMUM_PLAN_AMOUNT_CENTS = 1990;
 
 interface CreatePixRequest {
   amount: number; // em centavos
