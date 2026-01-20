@@ -11,11 +11,14 @@ import {
   Activity,
   ChevronRight,
   RefreshCw,
-  Car
+  Car,
+  Smartphone,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -33,6 +36,8 @@ import { analyzeDTCCodes, saveDiagnostic, runDemoDiagnostic } from "@/services/d
 import { generateMockDTCCodes } from "@/services/diagnostics/dtcDatabase";
 import { OBDConnectionSelector } from "@/components/obd/OBDConnectionSelector";
 import { useOBDConnection } from "@/components/obd/useOBDConnection";
+import { PlatformCapabilityBadge } from "@/components/obd/PlatformCapabilityBadge";
+import { usePlatformDetection } from "@/hooks/usePlatformDetection";
 
 type DiagnosticStatus = "idle" | "running" | "completed";
 
@@ -51,6 +56,9 @@ const DiagnosticCenter = () => {
 
   // Use the new OBD connection hook
   const obd = useOBDConnection();
+  
+  // Platform detection for capability warnings
+  const { platformInfo, canConnect, recommendedAction, connectionCapabilities } = usePlatformDetection();
 
   const [diagnosticStatus, setDiagnosticStatus] = useState<DiagnosticStatus>("idle");
   const [progress, setProgress] = useState(0);
@@ -360,6 +368,41 @@ const DiagnosticCenter = () => {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Platform Capability Warning - Show if connection is limited */}
+        {!canConnect && (
+          <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800 dark:text-amber-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <strong>Conexão OBD limitada neste dispositivo</strong>
+                  <p className="text-sm mt-1">{recommendedAction}</p>
+                </div>
+                <Link to="/instalar">
+                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar App
+                  </Button>
+                </Link>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Platform Badge - Show current capabilities */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Seu dispositivo:</span>
+            <PlatformCapabilityBadge />
+          </div>
+          {platformInfo.isNative && (
+            <div className="flex items-center gap-2 text-sm">
+              <Smartphone className="h-4 w-4 text-green-500" />
+              <span className="text-green-600 dark:text-green-400">App Nativo - Todas as conexões disponíveis</span>
+            </div>
+          )}
         </div>
 
         {/* Connection Card - Now with Bluetooth, WiFi and Native options */}
