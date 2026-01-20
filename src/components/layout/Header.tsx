@@ -74,12 +74,14 @@ const Header = () => {
       {/* Borda inferior animada */}
       <div className={`absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent transition-opacity duration-300 ${isScrolled ? "opacity-100" : "opacity-0"}`} />
       
-      <div className="container mx-auto px-4 md:px-10 flex items-center gap-4 lg:gap-8">
-        {/* Logo - Com animação de scroll */}
+      <div className="container mx-auto px-4 md:px-10 flex items-center gap-2 sm:gap-4 lg:gap-8">
+        {/* Logo - Com animação de scroll - Responsiva */}
         <Link 
           to="/" 
           className={`flex flex-col items-start shrink-0 transition-all duration-500 group ${
-            isScrolled ? "scale-[0.7] origin-left -my-2" : "scale-100"
+            isScrolled 
+              ? "scale-[0.6] md:scale-[0.7] origin-left -my-3 md:-my-2" 
+              : "scale-[0.7] md:scale-[0.85] lg:scale-100"
           }`}
         >
           <img 
@@ -89,7 +91,9 @@ const Header = () => {
           />
           <span 
             className={`font-chakra text-primary-foreground font-bold tracking-wider transition-all duration-300 ${
-              isScrolled ? "text-base -mt-[22px] ml-0.5" : "text-lg -mt-[29px] ml-1"
+              isScrolled 
+                ? "text-sm md:text-base -mt-[22px] ml-0.5" 
+                : "text-sm md:text-base lg:text-lg -mt-[22px] md:-mt-[26px] lg:-mt-[29px] ml-0.5 md:ml-1"
             }`}
           >
             DOUTOR MOTORS
@@ -101,16 +105,16 @@ const Header = () => {
           <Button
             variant="ghost"
             onClick={handleBack}
-            className="gap-2 font-chakra uppercase text-xs text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 border border-transparent hover:border-white/20 transition-all duration-300"
+            className="gap-1 sm:gap-2 font-chakra uppercase text-[10px] sm:text-xs text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 border border-transparent hover:border-white/20 transition-all duration-300 px-2 sm:px-3"
             size="sm"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Voltar</span>
           </Button>
         )}
 
         {/* Spacer */}
-        <div className="flex-1" />
+        <div className="flex-1 min-w-0" />
 
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center">

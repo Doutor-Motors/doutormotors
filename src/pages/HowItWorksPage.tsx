@@ -79,7 +79,7 @@ const HowItWorksPage = () => {
       
       {/* Hero Section */}
       <section 
-        className="relative pt-40 pb-20 overflow-hidden text-center"
+        className="relative pt-24 sm:pt-32 md:pt-40 pb-12 md:pb-20 overflow-hidden text-center"
         style={{ 
           backgroundImage: `url(${heroBg})`,
           backgroundRepeat: 'no-repeat',
@@ -87,17 +87,17 @@ const HowItWorksPage = () => {
           backgroundPosition: 'center'
         }}
       >
-        <div className="container mx-auto px-4">
-          <p className="flex items-center justify-center gap-2 font-chakra text-sm uppercase text-primary-foreground mb-3 fade-in-up">
-            <img src={textBarsLight} alt="" className="w-7 h-4" />
+        <div className="container mx-auto px-4 sm:px-6">
+          <p className="flex items-center justify-center gap-2 font-chakra text-xs sm:text-sm uppercase text-primary-foreground mb-2 sm:mb-3 fade-in-up">
+            <img src={textBarsLight} alt="" className="w-5 h-3 sm:w-7 sm:h-4" />
             Como Funciona
           </p>
           
-          <h1 className="font-chakra text-3xl md:text-4xl lg:text-5xl font-bold uppercase text-primary-foreground leading-tight mb-4 fade-in-up">
+          <h1 className="font-chakra text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold uppercase text-primary-foreground leading-tight mb-3 md:mb-4 fade-in-up">
             Diagnóstico em 3 Passos Simples
           </h1>
           
-          <p className="text-white/90 text-base md:text-lg mb-8 leading-relaxed max-w-2xl mx-auto fade-in-up">
+          <p className="text-white/90 text-sm sm:text-base md:text-lg mb-6 md:mb-8 leading-relaxed max-w-2xl mx-auto fade-in-up">
             Entenda como o Doutor Motors transforma dados técnicos complexos 
             em informações claras e acionáveis.
           </p>
