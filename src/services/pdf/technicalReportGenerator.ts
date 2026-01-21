@@ -449,7 +449,6 @@ class TechnicalReportGenerator extends PDFBaseGenerator {
         ["useAuth", "Autenticação e dados do usuário logado"],
         ["useSubscription", "Assinatura e limites do plano atual"],
         ["useUsageTracking", "Rastreamento de uso mensal"],
-        ["useAuditLog", "Registro de ações para auditoria"],
         ["useAdmin", "Verificação de permissão admin"],
         ["useOBDSettings", "Configurações de conexão OBD"],
         ["useDataRecording", "Gravação de dados OBD em tempo real"],

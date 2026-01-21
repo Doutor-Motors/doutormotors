@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Download, ArrowLeft, FileText, AlertTriangle, CheckCircle, Info, Lightbulb } from "lucide-react";
+import { Download, ArrowLeft, AlertTriangle, CheckCircle, Info, Lightbulb } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const TechnicalReport = () => {
@@ -198,7 +198,6 @@ const TechnicalReport = () => {
           <ul className="list-disc list-inside space-y-1 text-sm">
             <li><strong>dtcDatabase.ts</strong> - Base de códigos DTC com descrições em português</li>
             <li><strong>engine.ts</strong> - Motor de análise com fallback para banco local</li>
-            <li><strong>priorityClassifier.ts</strong> - Classificação por severidade (crítico/atenção/preventivo)</li>
             <li><strong>recommender.ts</strong> - Recomendador de soluções DIY</li>
           </ul>
 
@@ -755,7 +754,6 @@ date-fns: ^3.6.0`}</pre>
 │   ├── obd/                # OBDConnector
 │   ├── profile/            # NotificationSettings, DataDeletionSection
 │   ├── solutions/          # SolutionSteps, GlossaryPanel, SourceSelector
-│   ├── tutorials/          # CategoryCard, TutorialCard, TutorialViewer
 │   └── ui/                 # shadcn/ui components (40+ componentes)
 ├── contexts/
 │   ├── AdminNotificationContext.tsx
@@ -780,15 +778,14 @@ date-fns: ^3.6.0`}</pre>
 ├── services/
 │   ├── diagnostics/
 │   │   ├── dtcDatabase.ts      # Base de códigos DTC
-│   │   ├── engine.ts           # Motor de diagnóstico
-│   │   └── priorityClassifier.ts
+│   │   └── engine.ts           # Motor de diagnóstico
 │   ├── solutions/
 │   │   ├── api.ts              # API de soluções
 │   │   ├── cache.ts            # Cache de soluções
 │   │   ├── glossary.ts         # Glossário técnico
 │   │   └── recommender.ts      # Recomendador
-│   └── tutorials/
-│       └── api.ts              # API de tutoriais
+│   └── carcare/
+│       └── api.ts              # API de cuidados com veículos
 ├── store/
 │   └── useAppStore.ts      # Zustand store
 ├── lib/
