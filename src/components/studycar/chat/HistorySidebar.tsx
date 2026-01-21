@@ -92,12 +92,12 @@ const HistorySidebar = ({
       transition={{ delay: index * 0.03 }}
     >
       <Card 
-        className={`cursor-pointer hover:bg-muted/50 transition-all group ${
+        className={`cursor-pointer hover:bg-muted/50 transition-all group relative z-0 overflow-visible ${
           currentConversationId === conv.id ? "border-primary bg-primary/5" : ""
         }`} 
         onClick={() => onLoadConversation(conv.id)}
       >
-        <CardContent className="p-2">
+        <CardContent className="p-3">
           <div className="flex items-start gap-2">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
               conv.is_pinned ? "bg-primary/20" : "bg-muted"
@@ -209,7 +209,7 @@ const HistorySidebar = ({
       initial={false}
       animate={{ width: isCollapsed ? 48 : 280 }}
       transition={{ duration: 0.2, ease: "easeInOut" }}
-      className="h-full bg-card border-r border-border flex flex-col shrink-0"
+      className="h-full bg-card border-r border-border flex flex-col shrink-0 relative z-10"
     >
       {/* Header */}
       <div className="p-2 border-b border-border flex items-center justify-between gap-2">
@@ -285,8 +285,8 @@ const HistorySidebar = ({
             </div>
 
             {/* Conversations List */}
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-1.5">
+            <ScrollArea className="flex-1 overflow-visible">
+              <div className="p-2 space-y-2">
                 {isLoading ? (
                   <div className="space-y-2">
                     {[...Array(5)].map((_, i) => (
