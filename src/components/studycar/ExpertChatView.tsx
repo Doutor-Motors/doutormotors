@@ -204,16 +204,13 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           conversationsCount={conversations.length}
           messagesCount={messages.length}
           isExportingPDF={isExportingPDF}
-          onBack={onBack}
-          onHome={onHome}
           onNewConversation={handleNewConversation}
-          onOpenHistory={() => loadConversations()}
           onExportPDF={exportToPDF}
           onOpenRanking={() => { loadPopularQuestions(); setIsRankingOpen(true); }}
         />
 
       {/* Main Chat Area */}
-      <div className="flex-1 min-h-0 flex flex-col max-w-3xl mx-auto w-full px-3 py-3">
+      <div className="flex-1 min-h-0 flex flex-col max-w-4xl mx-auto w-full px-4 py-4">
         {/* OBD Context Panel - Compact */}
         {user && (
           <div className="mb-3">
