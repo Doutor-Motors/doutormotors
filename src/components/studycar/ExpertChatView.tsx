@@ -530,6 +530,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           </div>
         </div>
       </div>
+      </div>
       <PopularQuestionsSheet 
         isOpen={isRankingOpen} 
         onClose={() => setIsRankingOpen(false)} 
