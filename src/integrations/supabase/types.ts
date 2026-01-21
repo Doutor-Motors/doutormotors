@@ -692,6 +692,80 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_reminders: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string
+          due_mileage: number | null
+          id: string
+          interval_km: number | null
+          interval_months: number | null
+          is_completed: boolean
+          last_service_date: string | null
+          last_service_mileage: number | null
+          notification_sent: boolean
+          notification_sent_at: string | null
+          priority: string
+          reminder_type: string
+          title: string
+          updated_at: string
+          user_id: string
+          vehicle_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date: string
+          due_mileage?: number | null
+          id?: string
+          interval_km?: number | null
+          interval_months?: number | null
+          is_completed?: boolean
+          last_service_date?: string | null
+          last_service_mileage?: number | null
+          notification_sent?: boolean
+          notification_sent_at?: string | null
+          priority?: string
+          reminder_type: string
+          title: string
+          updated_at?: string
+          user_id: string
+          vehicle_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          due_mileage?: number | null
+          id?: string
+          interval_km?: number | null
+          interval_months?: number | null
+          is_completed?: boolean
+          last_service_date?: string | null
+          last_service_mileage?: number | null
+          notification_sent?: boolean
+          notification_sent_at?: string | null
+          priority?: string
+          reminder_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_reminders_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obd_settings: {
         Row: {
           atst_mode: string

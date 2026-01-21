@@ -12,14 +12,19 @@ import {
   Shield,
   Globe,
   ArrowLeft,
-  QrCode
+  Bell,
+  Clock,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { usePlatformDetection } from "@/hooks/usePlatformDetection";
+import PWAInstallSection from "@/components/pwa/PWAInstallSection";
+import { PlayStoreQRCode, AppStoreQRCode, PWAInstallQRCode } from "@/components/download/QRCodeDisplay";
 
 // Android icon component
 const AndroidIcon = ({ className }: { className?: string }) => (
@@ -51,6 +56,16 @@ const DownloadAppPage = () => {
       icon: Shield,
       title: "Mais Estável",
       description: "Conexões que não são interrompidas por atualizações do navegador",
+    },
+    {
+      icon: Bell,
+      title: "Notificações Inteligentes",
+      description: "Alertas de diagnóstico e lembretes de manutenção diretamente no celular",
+    },
+    {
+      icon: Clock,
+      title: "Lembretes de Manutenção",
+      description: "Agende lembretes para troca de óleo, revisões e outras manutenções",
     },
   ];
 
@@ -96,6 +111,30 @@ const DownloadAppPage = () => {
       bluetooth: false,
       wifi: false,
       recommended: false,
+    },
+  ];
+
+  const notificationChannels = [
+    {
+      id: 'critical',
+      name: 'Diagnósticos Críticos',
+      description: 'Problemas que requerem ação imediata',
+      color: 'bg-red-500',
+      icon: '🚨',
+    },
+    {
+      id: 'attention',
+      name: 'Atenção Necessária',
+      description: 'Problemas que precisam de atenção em breve',
+      color: 'bg-amber-500',
+      icon: '⚠️',
+    },
+    {
+      id: 'preventive',
+      name: 'Manutenção Preventiva',
+      description: 'Lembretes de manutenção programada',
+      color: 'bg-blue-500',
+      icon: '🔧',
     },
   ];
 
@@ -160,111 +199,188 @@ const DownloadAppPage = () => {
           </CardContent>
         </Card>
 
-        {/* Download Cards */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          {/* Android Card */}
-          <Card className="relative overflow-hidden border-2 hover:border-green-500 transition-colors">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
-                  <AndroidIcon className="w-8 h-8 text-green-600" />
-                </div>
-                <div>
-                  <CardTitle className="font-chakra">Android</CardTitle>
-                  <CardDescription>Google Play Store</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>Bluetooth ELM327 completo</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>WiFi/TCP nativo</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>Android 7.0+ (API 24)</span>
-                </div>
-              </div>
-              
-              {/* QR Code Placeholder */}
-              <div className="flex items-center justify-center p-4 bg-muted rounded-lg">
-                <div className="text-center">
-                  <QrCode className="w-24 h-24 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground">QR Code - Em breve</p>
-                </div>
-              </div>
-
-              <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" disabled>
-                <Download className="w-4 h-4 mr-2" />
-                Em breve na Play Store
-              </Button>
-              <p className="text-xs text-center text-muted-foreground">
-                Versão APK disponível para beta testers
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* iOS Card */}
-          <Card className="relative overflow-hidden border-2 hover:border-blue-500 transition-colors">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                  <Apple className="w-8 h-8 text-blue-600" />
-                </div>
-                <div>
-                  <CardTitle className="font-chakra">iOS</CardTitle>
-                  <CardDescription>App Store</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>Bluetooth ELM327 completo</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>WiFi/TCP nativo</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>iOS 13.0+</span>
-                </div>
-              </div>
-              
-              {/* QR Code Placeholder */}
-              <div className="flex items-center justify-center p-4 bg-muted rounded-lg">
-                <div className="text-center">
-                  <QrCode className="w-24 h-24 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground">QR Code - Em breve</p>
-                </div>
-              </div>
-
-              <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg" disabled>
-                <Download className="w-4 h-4 mr-2" />
-                Em breve na App Store
-              </Button>
-              <p className="text-xs text-center text-muted-foreground">
-                Versão TestFlight disponível para beta testers
-              </p>
-            </CardContent>
-          </Card>
+        {/* PWA Install Section - Quick Install Option */}
+        <div className="mb-12">
+          <h2 className="font-chakra text-2xl font-bold text-center text-foreground mb-6">
+            Instalação Rápida
+          </h2>
+          <div className="max-w-2xl mx-auto">
+            <PWAInstallSection />
+          </div>
         </div>
+
+        <Separator className="my-12" />
+
+        {/* Native App Download Cards */}
+        <div className="mb-12">
+          <h2 className="font-chakra text-2xl font-bold text-center text-foreground mb-2">
+            Apps Nativos (Em Breve)
+          </h2>
+          <p className="text-center text-muted-foreground mb-8">
+            Para acesso completo a Bluetooth e WiFi, baixe o app nativo
+          </p>
+          
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Android Card */}
+            <Card className="relative overflow-hidden border-2 hover:border-green-500 transition-colors">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                    <AndroidIcon className="w-8 h-8 text-green-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-chakra">Android</CardTitle>
+                    <CardDescription>Google Play Store</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Bluetooth ELM327 completo</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>WiFi/TCP nativo</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Notificações de diagnóstico</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Android 7.0+ (API 24)</span>
+                  </div>
+                </div>
+                
+                {/* QR Code */}
+                <div className="flex items-center justify-center py-2">
+                  <PlayStoreQRCode size={140} />
+                </div>
+
+                <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" disabled>
+                  <Download className="w-4 h-4 mr-2" />
+                  Em breve na Play Store
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Versão APK disponível para beta testers
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* iOS Card */}
+            <Card className="relative overflow-hidden border-2 hover:border-blue-500 transition-colors">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                    <Apple className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-chakra">iOS</CardTitle>
+                    <CardDescription>App Store</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Bluetooth ELM327 completo</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>WiFi/TCP nativo</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Notificações de diagnóstico</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>iOS 13.0+</span>
+                  </div>
+                </div>
+                
+                {/* QR Code */}
+                <div className="flex items-center justify-center py-2">
+                  <AppStoreQRCode size={140} />
+                </div>
+
+                <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg" disabled>
+                  <Download className="w-4 h-4 mr-2" />
+                  Em breve na App Store
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Versão TestFlight disponível para beta testers
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Notification Channels Info */}
+        <div className="mb-12">
+          <h2 className="font-chakra text-2xl font-bold text-center text-foreground mb-2">
+            Notificações Inteligentes
+          </h2>
+          <p className="text-center text-muted-foreground mb-8">
+            Canais de notificação personalizados para cada tipo de alerta
+          </p>
+          
+          <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+            {notificationChannels.map((channel) => (
+              <Card key={channel.id} className="text-center">
+                <CardContent className="pt-6">
+                  <div className={`w-12 h-12 ${channel.color} rounded-full flex items-center justify-center text-2xl mx-auto mb-3`}>
+                    {channel.icon}
+                  </div>
+                  <h3 className="font-chakra font-bold text-foreground mb-1">{channel.name}</h3>
+                  <p className="text-xs text-muted-foreground">{channel.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Maintenance Reminders Feature */}
+        <Card className="mb-12 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="p-6 md:p-8">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="p-4 bg-primary/10 rounded-2xl">
+                <Wrench className="w-12 h-12 text-primary" />
+              </div>
+              <div className="text-center md:text-left flex-1">
+                <h3 className="font-chakra text-xl font-bold text-foreground mb-2">
+                  Lembretes de Manutenção Preventiva
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Nunca mais esqueça a troca de óleo, revisão dos freios ou outras manutenções importantes. 
+                  Configure lembretes por tempo ou quilometragem e receba notificações quando estiver na hora.
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  <Badge variant="outline">Troca de Óleo</Badge>
+                  <Badge variant="outline">Rodízio de Pneus</Badge>
+                  <Badge variant="outline">Revisão de Freios</Badge>
+                  <Badge variant="outline">Filtros</Badge>
+                  <Badge variant="outline">+6 tipos</Badge>
+                </div>
+              </div>
+              <div className="hidden md:block">
+                <PWAInstallQRCode size={120} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Benefits */}
         <div className="mb-12">
           <h2 className="font-chakra text-2xl font-bold text-center text-foreground mb-8">
             Por que usar o App Nativo?
           </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {benefits.map((benefit, index) => (
               <Card key={index} className="text-center">
                 <CardContent className="pt-6">
