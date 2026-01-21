@@ -41,10 +41,10 @@ export interface MaintenanceReminder {
 
 export interface CreateReminderInput {
   vehicle_id: string;
-  reminder_type: ReminderType;
+  reminder_type: ReminderType | string;
   title: string;
   description?: string;
-  due_date: Date;
+  due_date: Date | string;
   due_mileage?: number;
   last_service_date?: Date;
   last_service_mileage?: number;
@@ -138,6 +138,7 @@ interface UseMaintenanceRemindersReturn {
   upcomingReminders: MaintenanceReminder[];
   overdueReminders: MaintenanceReminder[];
   isLoading: boolean;
+  isCreating: boolean;
   error: Error | null;
   createReminder: (input: CreateReminderInput) => Promise<MaintenanceReminder | null>;
   updateReminder: (id: string, updates: Partial<CreateReminderInput>) => Promise<boolean>;
@@ -147,13 +148,14 @@ interface UseMaintenanceRemindersReturn {
   refresh: () => Promise<void>;
 }
 
-export function useMaintenanceReminders(): UseMaintenanceRemindersReturn {
+export function useMaintenanceReminders(vehicleId?: string): UseMaintenanceRemindersReturn {
   const { user } = useAuth();
   const [reminders, setReminders] = useState<MaintenanceReminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Fetch all reminders for the user
+  // Fetch reminders for the user (optionally filtered by vehicle)
   const fetchReminders = useCallback(async () => {
     if (!user?.id) {
       setReminders([]);
@@ -165,11 +167,17 @@ export function useMaintenanceReminders(): UseMaintenanceRemindersReturn {
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('maintenance_reminders')
         .select('*')
         .eq('user_id', user.id)
         .order('due_date', { ascending: true });
+
+      if (vehicleId) {
+        query = query.eq('vehicle_id', vehicleId);
+      }
+
+      const { data, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
 
@@ -180,7 +188,7 @@ export function useMaintenanceReminders(): UseMaintenanceRemindersReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, vehicleId]);
 
   // Initial fetch
   useEffect(() => {
@@ -195,7 +203,13 @@ export function useMaintenanceReminders(): UseMaintenanceRemindersReturn {
     }
 
     try {
-      const typeInfo = MAINTENANCE_TYPES[input.reminder_type];
+      setIsCreating(true);
+      const reminderType = input.reminder_type as ReminderType;
+      const typeInfo = MAINTENANCE_TYPES[reminderType] || MAINTENANCE_TYPES.custom;
+      
+      const dueDate = typeof input.due_date === 'string' 
+        ? input.due_date 
+        : input.due_date.toISOString();
       
       const { data, error: insertError } = await supabase
         .from('maintenance_reminders')
@@ -205,7 +219,7 @@ export function useMaintenanceReminders(): UseMaintenanceRemindersReturn {
           reminder_type: input.reminder_type,
           title: input.title,
           description: input.description || typeInfo.description,
-          due_date: input.due_date.toISOString(),
+          due_date: dueDate,
           due_mileage: input.due_mileage || null,
           last_service_date: input.last_service_date?.toISOString() || null,
           last_service_mileage: input.last_service_mileage || null,
@@ -229,6 +243,8 @@ export function useMaintenanceReminders(): UseMaintenanceRemindersReturn {
       console.error('[MaintenanceReminders] Create error:', err);
       toast.error('Erro ao criar lembrete');
       return null;
+    } finally {
+      setIsCreating(false);
     }
   }, [user?.id]);
 
@@ -239,7 +255,11 @@ export function useMaintenanceReminders(): UseMaintenanceRemindersReturn {
       
       if (updates.title) updateData.title = updates.title;
       if (updates.description) updateData.description = updates.description;
-      if (updates.due_date) updateData.due_date = updates.due_date.toISOString();
+      if (updates.due_date) {
+        updateData.due_date = typeof updates.due_date === 'string' 
+          ? updates.due_date 
+          : updates.due_date.toISOString();
+      }
       if (updates.due_mileage !== undefined) updateData.due_mileage = updates.due_mileage;
       if (updates.interval_months !== undefined) updateData.interval_months = updates.interval_months;
       if (updates.interval_km !== undefined) updateData.interval_km = updates.interval_km;
@@ -354,6 +374,7 @@ export function useMaintenanceReminders(): UseMaintenanceRemindersReturn {
     upcomingReminders,
     overdueReminders,
     isLoading,
+    isCreating,
     error,
     createReminder,
     updateReminder,
