@@ -225,13 +225,15 @@ const StudyCarPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="container mx-auto px-4 py-3">
-          <BackButton variant="ghost" label="Voltar" />
+      {currentView !== "expert-chat" && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+          <div className="container mx-auto px-4 py-3">
+            <BackButton variant="ghost" label="Voltar" />
+          </div>
         </div>
-      </div>
+      )}
 
-      <main className="flex-1 pt-20 sm:pt-24">
+      <main className={currentView === "expert-chat" ? "flex-1" : "flex-1 pt-20 sm:pt-24"}>
         <AnimatePresence mode="wait">
           {currentView === "brands" && (
             <BrandsView
@@ -313,7 +315,7 @@ const StudyCarPage = () => {
         </AnimatePresence>
       </main>
 
-      <Footer />
+      {currentView !== "expert-chat" && <Footer />}
     </div>
   );
 };
