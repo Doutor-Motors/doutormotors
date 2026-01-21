@@ -92,6 +92,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cache_statistics: {
+        Row: {
+          cache_type: string
+          created_at: string
+          id: string
+          key_identifier: string | null
+          metadata: Json | null
+          operation: string
+        }
+        Insert: {
+          cache_type: string
+          created_at?: string
+          id?: string
+          key_identifier?: string | null
+          metadata?: Json | null
+          operation: string
+        }
+        Update: {
+          cache_type?: string
+          created_at?: string
+          id?: string
+          key_identifier?: string | null
+          metadata?: Json | null
+          operation?: string
+        }
+        Relationships: []
+      }
       carcare_categories: {
         Row: {
           category_id: string
@@ -1672,6 +1699,19 @@ export type Database = {
       }
     }
     Views: {
+      cache_statistics_summary: {
+        Row: {
+          cache_type: string | null
+          date: string | null
+          evicted: number | null
+          expired: number | null
+          hit_rate_percent: number | null
+          hits: number | null
+          misses: number | null
+          total_operations: number | null
+        }
+        Relationships: []
+      }
       contact_analytics_summary: {
         Row: {
           count: number | null
@@ -1699,6 +1739,7 @@ export type Database = {
         Args: { p_email?: string; p_ip_address: string }
         Returns: Json
       }
+      cleanup_old_data: { Args: never; Returns: Json }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       has_role: {
         Args: {
