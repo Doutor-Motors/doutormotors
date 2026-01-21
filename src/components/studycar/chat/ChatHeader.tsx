@@ -9,11 +9,11 @@ import {
   MessageCircle,
   Sparkles,
   Car,
-  TrendingUp
+  TrendingUp,
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import ExpertLogo from "../ExpertLogo";
 import type { Conversation } from "../hooks/useConversationHistory";
 
 interface ChatHeaderProps {
@@ -44,77 +44,93 @@ const ChatHeader = ({
   onOpenRanking,
 }: ChatHeaderProps) => {
   return (
-    <section className="bg-gradient-to-br from-primary/10 via-background to-primary/5 py-4 sm:py-6 border-b border-border/50 relative overflow-hidden">
-      {/* Tech pattern background */}
-      <div className="absolute inset-0 opacity-5">
-        <div 
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-          }}
-        />
-      </div>
+    <section className="relative overflow-hidden">
+      {/* Background with gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(222,47%,12%)] via-[hsl(222,44%,14%)] to-[hsl(222,50%,11%)]" />
       
-      <div className="container mx-auto px-4 relative z-10">
-        {/* Top bar */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onBack} className="hover:bg-primary/10">
+      {/* Glowing orb effects */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 bg-green-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+      
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `linear-gradient(hsl(var(--primary)/0.1) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)/0.1) 1px, transparent 1px)`,
+          backgroundSize: "40px 40px"
+        }}
+      />
+      
+      <div className="relative z-10 container mx-auto px-4 py-5">
+        {/* Top Navigation Bar */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onBack} 
+              className="text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={onHome} className="hover:bg-primary/10">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onHome} 
+              className="text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            >
               <Home className="w-5 h-5" />
             </Button>
           </div>
 
+          {/* Action Buttons */}
           <div className="flex items-center gap-2">
             {messagesCount > 0 && (
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm"
                 onClick={onExportPDF}
                 disabled={isExportingPDF}
-                className="gap-1.5 border-primary/30 hover:bg-primary/10"
+                className="gap-1.5 text-white/70 hover:text-white hover:bg-white/10 border border-white/10"
               >
                 {isExportingPDF ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <FileDown className="w-4 h-4" />
                 )}
-                <span className="hidden sm:inline">PDF</span>
+                <span className="hidden sm:inline text-xs">PDF</span>
               </Button>
             )}
             
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="sm"
               onClick={onOpenRanking}
-              className="gap-1.5 border-amber-500/30 hover:bg-amber-500/10 text-amber-500"
+              className="gap-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/30"
             >
               <TrendingUp className="w-4 h-4" />
-              <span className="hidden sm:inline">Ranking</span>
+              <span className="hidden sm:inline text-xs font-semibold">Ranking</span>
             </Button>
             
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="sm"
               onClick={onNewConversation}
-              className="gap-1.5 border-green-500/30 hover:bg-green-500/10 text-green-500"
+              className="gap-1.5 text-green-400 hover:text-green-300 hover:bg-green-500/10 border border-green-500/30"
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nova</span>
+              <span className="hidden sm:inline text-xs font-semibold">Nova</span>
             </Button>
             
             <Button 
-              variant="default" 
               size="sm" 
-              className="gap-1.5" 
+              className="gap-1.5 bg-primary hover:bg-primary/90 text-white font-semibold shadow-lg shadow-primary/30" 
               onClick={onOpenHistory}
             >
               <History className="w-4 h-4" />
-              <span className="hidden sm:inline">Histórico</span>
+              <span className="hidden sm:inline text-xs">Histórico</span>
               {conversationsCount > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs bg-background/20">
+                <Badge variant="secondary" className="ml-1 text-[10px] h-5 px-1.5 bg-white/20 text-white border-0">
                   {conversationsCount}
                 </Badge>
               )}
@@ -126,29 +142,35 @@ const ChatHeader = ({
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4"
+          className="flex items-start gap-4"
         >
-          <div className="relative">
-            <ExpertLogo size="lg" />
-            {/* Pulse animation */}
+          {/* Expert Icon */}
+          <div className="relative shrink-0">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-orange-600 flex items-center justify-center shadow-xl shadow-primary/30">
+              <Zap className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+            </div>
+            {/* Online indicator */}
             <motion.div
-              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+              animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="absolute -inset-1 rounded-full bg-primary/20"
-            />
+              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-500 border-2 border-[hsl(222,44%,14%)] flex items-center justify-center"
+            >
+              <div className="w-2 h-2 rounded-full bg-white" />
+            </motion.div>
           </div>
+          
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="font-chakra text-xl sm:text-2xl md:text-3xl font-bold text-foreground">
-                Especialista Automotivo
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <h1 className="font-chakra text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-wide">
+                ESPECIALISTA AUTOMOTIVO
               </h1>
-              <Badge className="bg-gradient-to-r from-primary/30 to-primary/10 text-primary border-primary/30">
+              <Badge className="bg-gradient-to-r from-primary to-orange-500 text-white border-0 text-[10px] font-bold shadow-lg">
                 <Sparkles className="w-3 h-3 mr-1" />
-                IA
+                IA PRO
               </Badge>
             </div>
-            <p className="text-muted-foreground text-sm mt-1">
-              Converse, envie fotos e documentos, analise códigos OBD
+            <p className="text-white/60 text-sm leading-relaxed max-w-xl">
+              Converse, envie <span className="text-green-400 font-medium">fotos</span> e <span className="text-amber-400 font-medium">documentos</span>, analise <span className="text-primary font-medium">códigos OBD</span>
             </p>
             
             {/* Current conversation indicator */}
@@ -156,10 +178,10 @@ const ChatHeader = ({
               <motion.div 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2 mt-2"
+                className="mt-3"
               >
-                <Badge variant="outline" className="text-xs border-primary/30 bg-primary/5">
-                  <MessageCircle className="w-3 h-3 mr-1" />
+                <Badge variant="outline" className="text-xs border-white/20 bg-white/5 text-white/80 font-normal">
+                  <MessageCircle className="w-3 h-3 mr-1.5 text-primary" />
                   {currentConversation.title}
                 </Badge>
               </motion.div>
@@ -173,12 +195,14 @@ const ChatHeader = ({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/30 shadow-lg shadow-primary/10"
+            className="mt-4"
           >
-            <Car className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold text-primary">
-              {userVehicle.brand} {userVehicle.model} {userVehicle.year}
-            </span>
+            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-green-500/20 to-green-500/5 border border-green-500/30 shadow-lg">
+              <Car className="w-5 h-5 text-green-400" />
+              <span className="text-sm font-bold text-green-300 font-chakra tracking-wide">
+                {userVehicle.brand.toUpperCase()} {userVehicle.model.toUpperCase()} {userVehicle.year}
+              </span>
+            </div>
           </motion.div>
         )}
       </div>
