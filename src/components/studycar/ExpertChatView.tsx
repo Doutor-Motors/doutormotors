@@ -16,8 +16,6 @@ import {
   Video,
   Activity,
   Bug,
-  Zap,
-  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +30,7 @@ import ChatHeader from "./chat/ChatHeader";
 import PopularQuestionsSheet from "./chat/PopularQuestionsSheet";
 import ConversationHistorySheet from "./chat/ConversationHistorySheet";
 import DiagnosticPanel from "./chat/DiagnosticPanel";
+import ExpertLogo from "./ExpertLogo";
 import { useExpertChat } from "./hooks/useExpertChat";
 import { useConversationHistory } from "./hooks/useConversationHistory";
 import { useFavoriteQuestions } from "./hooks/useFavoriteQuestions";
@@ -54,12 +53,12 @@ interface ExpertChatViewProps {
   onHome: () => void;
 }
 
-// Base questions always shown
+// Compact base questions
 const BASE_QUESTIONS = [
-  { icon: AlertTriangle, text: "Meu carro está fazendo um barulho estranho", color: "text-amber-400", gradient: "from-amber-500/20 to-orange-500/10" },
-  { icon: Wrench, text: "Qual manutenção devo fazer agora?", color: "text-primary", gradient: "from-primary/20 to-primary/5" },
-  { icon: Car, text: "Essa peça é compatível com meu carro?", color: "text-green-400", gradient: "from-green-500/20 to-emerald-500/10" },
-  { icon: HelpCircle, text: "Como funciona o sistema de injeção?", color: "text-blue-400", gradient: "from-blue-500/20 to-cyan-500/10" },
+  { icon: AlertTriangle, text: "Barulho estranho no carro", color: "text-amber-500", gradient: "from-amber-500/20 to-orange-500/10" },
+  { icon: Wrench, text: "Manutenção preventiva", color: "text-primary", gradient: "from-primary/20 to-primary/5" },
+  { icon: Car, text: "Compatibilidade de peças", color: "text-green-500", gradient: "from-green-500/20 to-emerald-500/10" },
+  { icon: HelpCircle, text: "Como funciona injeção?", color: "text-blue-500", gradient: "from-blue-500/20 to-cyan-500/10" },
 ];
 
 // Vehicle-specific contextual questions
@@ -70,13 +69,13 @@ const getContextualQuestions = (vehicle: { brand: string; model: string; year: n
   const questions: Array<{ icon: typeof Car; text: string; color: string; gradient: string }> = [];
   
   if (vehicleAge >= 10) {
-    questions.push({ icon: Wrench, text: `Quais peças devo verificar em um ${vehicle.brand} com ${vehicleAge} anos?`, color: "text-orange-400", gradient: "from-orange-500/20 to-red-500/10" });
+    questions.push({ icon: Wrench, text: `Peças para verificar (${vehicleAge} anos)`, color: "text-orange-500", gradient: "from-orange-500/20 to-red-500/10" });
   }
   if (vehicleAge >= 5) {
-    questions.push({ icon: Activity, text: `Quando trocar a correia dentada do ${vehicle.model}?`, color: "text-rose-400", gradient: "from-rose-500/20 to-pink-500/10" });
+    questions.push({ icon: Activity, text: `Correia dentada ${vehicle.model}`, color: "text-rose-500", gradient: "from-rose-500/20 to-pink-500/10" });
   }
-  questions.push({ icon: Sparkles, text: `Dicas para manter meu ${vehicle.brand} ${vehicle.model} em perfeito estado`, color: "text-purple-400", gradient: "from-purple-500/20 to-violet-500/10" });
-  return questions.slice(0, 4);
+  questions.push({ icon: Sparkles, text: `Manter ${vehicle.brand} em dia`, color: "text-purple-500", gradient: "from-purple-500/20 to-violet-500/10" });
+  return questions.slice(0, 3);
 };
 
 const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) => {
@@ -184,7 +183,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }} 
-      className="min-h-screen flex flex-col bg-[hsl(222,47%,15%)]"
+      className="min-h-screen flex flex-col bg-background"
     >
       <ChatHeader
         userVehicle={userVehicle}
@@ -201,26 +200,26 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
       />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 py-4">
-        {/* OBD Context Panel */}
+      <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-3 py-3">
+        {/* OBD Context Panel - Compact */}
         {user && (
-          <div className="mb-4">
+          <div className="mb-3">
             <OBDContextPanel onCodesSelected={setSelectedOBDCodes} selectedCodes={selectedOBDCodes} />
           </div>
         )}
         
-        {/* Selected OBD Codes Display */}
+        {/* Selected OBD Codes Display - Compact */}
         {selectedOBDCodes.length > 0 && (
           <motion.div 
-            initial={{ opacity: 0, y: -10 }} 
+            initial={{ opacity: 0, y: -5 }} 
             animate={{ opacity: 1, y: 0 }} 
-            className="mb-4 p-3 rounded-xl bg-gradient-to-r from-primary/10 to-transparent border border-primary/20"
+            className="mb-3 p-2 rounded-lg bg-primary/10 border border-primary/20"
           >
-            <div className="flex items-center gap-2 flex-wrap">
-              <Activity className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Códigos OBD:</span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Activity className="w-3 h-3 text-primary" />
+              <span className="text-[10px] font-medium text-muted-foreground">OBD:</span>
               {selectedOBDCodes.map(code => (
-                <Badge key={code.code} className="text-xs font-mono bg-primary/20 text-primary border-primary/30 hover:bg-primary/30">
+                <Badge key={code.code} className="text-[10px] font-mono px-1.5 py-0 h-5 bg-primary/20 text-primary border-primary/30">
                   {code.code}
                 </Badge>
               ))}
@@ -229,66 +228,60 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
         )}
 
         {/* Messages Area */}
-        <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 -mr-4">
-          <div className="space-y-5 pb-4">
+        <ScrollArea ref={scrollAreaRef} className="flex-1 pr-2 -mr-2">
+          <div className="space-y-4 pb-3">
             {messages.length === 0 ? (
               <motion.div 
-                initial={{ opacity: 0, y: 20 }} 
+                initial={{ opacity: 0, y: 10 }} 
                 animate={{ opacity: 1, y: 0 }} 
-                className="py-6"
+                className="py-4"
               >
-                {/* Welcome Card */}
-                <div className="rounded-2xl bg-gradient-to-br from-[hsl(222,44%,18%)] via-[hsl(222,44%,16%)] to-[hsl(222,50%,12%)] border border-white/10 p-6 sm:p-8 shadow-2xl">
-                  {/* Header */}
-                  <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-orange-600 mb-4 shadow-xl shadow-primary/30">
-                      <Zap className="w-10 h-10 text-white" />
+                {/* Compact Welcome Card */}
+                <div className="rounded-xl bg-card border border-border p-4 shadow-sm">
+                  {/* Header - Compact */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <ExpertLogo size="md" />
+                    <div>
+                      <h3 className="font-semibold text-foreground text-base">
+                        Especialista Automotivo
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="text-green-500">Fotos</span> · <span className="text-amber-500">Docs</span> · <span className="text-primary">OBD</span>
+                      </p>
                     </div>
-                    <h3 className="font-chakra font-bold text-2xl text-white mb-2 tracking-wide">
-                      ESPECIALISTA AUTOMOTIVO
-                    </h3>
-                    <p className="text-white/60 text-sm max-w-md mx-auto leading-relaxed">
-                      Posso ajudar com dúvidas sobre mecânica, manutenção, diagnóstico, 
-                      <span className="text-green-400 font-medium"> analisar fotos</span>, 
-                      <span className="text-amber-400 font-medium"> documentos</span> e 
-                      <span className="text-primary font-medium"> códigos OBD</span>.
-                    </p>
                   </div>
                   
-                  {/* Favorite Questions */}
+                  {/* Favorite Questions - Compact Grid */}
                   {favoriteQuestions.length > 0 && (
-                    <div className="mb-8">
-                      <div className="flex items-center gap-2 justify-center mb-4">
-                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        <p className="text-sm font-bold text-yellow-400 uppercase tracking-wider">Suas Favoritas</p>
+                    <div className="mb-4">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                        <span className="text-[10px] font-semibold text-yellow-500 uppercase tracking-wider">Favoritas</span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-2">
                         {favoriteQuestions.slice(0, 4).map((fav) => {
                           const IconComponent = ICON_MAP[fav.question_icon] || HelpCircle;
                           return (
                             <motion.div 
                               key={fav.id} 
-                              whileHover={{ scale: 1.02, y: -2 }} 
+                              whileHover={{ scale: 1.02 }} 
                               whileTap={{ scale: 0.98 }} 
                               className="relative group"
                             >
-                              <div className={`absolute inset-0 bg-gradient-to-r ${fav.question_gradient} rounded-xl blur-xl opacity-0 group-hover:opacity-50 transition-all duration-500`} />
                               <button
                                 onClick={() => handleQuickQuestion(fav.question_text, fav.question_icon, fav.question_color, fav.question_gradient)}
-                                className={`relative w-full text-left p-4 rounded-xl bg-[hsl(222,44%,14%)] border border-yellow-500/20 hover:border-yellow-500/40 transition-all flex items-start gap-3`}
+                                className="w-full text-left p-2.5 rounded-lg bg-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/40 transition-all flex items-center gap-2"
                               >
-                                <div className={`w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0 ${fav.question_color}`}>
-                                  <IconComponent className="w-5 h-5" />
-                                </div>
-                                <span className="text-sm text-white/80 leading-relaxed pt-0.5">{fav.question_text}</span>
+                                <IconComponent className={`w-4 h-4 shrink-0 ${fav.question_color}`} />
+                                <span className="text-xs text-foreground/80 line-clamp-1">{fav.question_text}</span>
                               </button>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="absolute top-2 right-2 w-6 h-6 opacity-0 group-hover:opacity-100 text-white/40 hover:text-white hover:bg-white/10" 
+                                className="absolute top-1 right-1 w-5 h-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted" 
                                 onClick={(e) => { e.stopPropagation(); removeFavorite(fav.id); }}
                               >
-                                <X className="w-3 h-3" />
+                                <X className="w-2.5 h-2.5" />
                               </Button>
                             </motion.div>
                           );
@@ -297,64 +290,50 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                     </div>
                   )}
                   
-                  {/* Vehicle-specific Questions */}
+                  {/* Vehicle-specific Questions - Compact */}
                   {contextualQuestions.length > 0 && userVehicle && (
-                    <div className="mb-8">
-                      <div className="flex items-center gap-2 justify-center mb-4">
-                        <Car className="w-4 h-4 text-green-400" />
-                        <p className="text-sm font-bold text-green-400 uppercase tracking-wider">
-                          Sobre seu {userVehicle.brand}
-                        </p>
+                    <div className="mb-4">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Car className="w-3 h-3 text-green-500" />
+                        <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">
+                          {userVehicle.brand}
+                        </span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex flex-wrap gap-2">
                         {contextualQuestions.map((q, i) => (
-                          <motion.div 
+                          <motion.button 
                             key={`ctx-${i}`} 
-                            whileHover={{ scale: 1.02, y: -2 }} 
-                            whileTap={{ scale: 0.98 }} 
-                            className="relative group"
+                            whileHover={{ scale: 1.02 }} 
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleQuickQuestion(q.text, q.icon.name || "HelpCircle", q.color, q.gradient)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-500/5 border border-green-500/20 hover:border-green-500/40 transition-all"
                           >
-                            <div className={`absolute inset-0 bg-gradient-to-r ${q.gradient} rounded-xl blur-xl opacity-0 group-hover:opacity-50 transition-all duration-500`} />
-                            <button
-                              onClick={() => handleQuickQuestion(q.text, q.icon.name || "HelpCircle", q.color, q.gradient)}
-                              className="relative w-full text-left p-4 rounded-xl bg-[hsl(222,44%,14%)] border border-green-500/20 hover:border-green-500/40 transition-all flex items-start gap-3"
-                            >
-                              <div className={`w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0 ${q.color}`}>
-                                <q.icon className="w-5 h-5" />
-                              </div>
-                              <span className="text-sm text-white/80 leading-relaxed pt-0.5">{q.text}</span>
-                            </button>
-                          </motion.div>
+                            <q.icon className={`w-3.5 h-3.5 ${q.color}`} />
+                            <span className="text-xs text-foreground/80">{q.text}</span>
+                          </motion.button>
                         ))}
                       </div>
                     </div>
                   )}
                   
-                  {/* General Questions */}
+                  {/* General Questions - Compact Chips */}
                   <div>
-                    <div className="flex items-center gap-2 justify-center mb-4">
-                      <MessageSquare className="w-4 h-4 text-white/60" />
-                      <p className="text-sm font-bold text-white/60 uppercase tracking-wider">Perguntas Gerais</p>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Sparkles className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Perguntas</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex flex-wrap gap-2">
                       {BASE_QUESTIONS.map((q, i) => (
-                        <motion.div 
+                        <motion.button 
                           key={`base-${i}`} 
-                          whileHover={{ scale: 1.02, y: -2 }} 
-                          whileTap={{ scale: 0.98 }} 
-                          className="relative group"
+                          whileHover={{ scale: 1.02 }} 
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleQuickQuestion(q.text, q.icon.name || "HelpCircle", q.color, q.gradient)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border hover:border-primary/30 transition-all"
                         >
-                          <div className={`absolute inset-0 bg-gradient-to-r ${q.gradient} rounded-xl blur-xl opacity-0 group-hover:opacity-40 transition-all duration-500`} />
-                          <button
-                            onClick={() => handleQuickQuestion(q.text, q.icon.name || "HelpCircle", q.color, q.gradient)}
-                            className="relative w-full text-left p-4 rounded-xl bg-[hsl(222,44%,14%)] border border-white/10 hover:border-white/20 transition-all flex items-start gap-3"
-                          >
-                            <div className={`w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0 ${q.color}`}>
-                              <q.icon className="w-5 h-5" />
-                            </div>
-                            <span className="text-sm text-white/80 leading-relaxed pt-0.5">{q.text}</span>
-                          </button>
-                        </motion.div>
+                          <q.icon className={`w-3.5 h-3.5 ${q.color}`} />
+                          <span className="text-xs text-foreground/80">{q.text}</span>
+                        </motion.button>
                       ))}
                     </div>
                   </div>
@@ -373,49 +352,44 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           </div>
         </ScrollArea>
 
-        {/* Tutorial Suggestions */}
+        {/* Tutorial Suggestions - Compact */}
         <AnimatePresence>
           {showTutorialSuggestions && relatedTutorials.length > 0 && (
             <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
+              initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: 20 }} 
-              className="mb-4"
+              exit={{ opacity: 0, y: 10 }} 
+              className="mb-3"
             >
-              <div className="rounded-xl bg-gradient-to-r from-green-500/15 to-green-500/5 border border-green-500/20 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Video className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-bold text-green-400 uppercase tracking-wider">Tutoriais Relacionados</span>
+              <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Video className="w-3 h-3 text-green-500" />
+                    <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">Tutoriais</span>
                   </div>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="w-6 h-6 text-white/40 hover:text-white hover:bg-white/10" 
+                    className="w-5 h-5 text-muted-foreground hover:text-foreground" 
                     onClick={closeSuggestions}
                   >
                     <X className="w-3 h-3" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {relatedTutorials.map((t) => (
                     <motion.a 
                       key={t.id} 
                       href={`/tutoriais/${t.slug}`} 
-                      whileHover={{ scale: 1.03 }} 
-                      className="block p-2.5 rounded-lg bg-[hsl(222,44%,14%)] hover:bg-[hsl(222,44%,18%)] border border-white/10 hover:border-green-500/30 transition-all group"
+                      whileHover={{ scale: 1.02 }} 
+                      className="block p-2 rounded-lg bg-card border border-border hover:border-green-500/30 transition-all group"
                     >
                       {t.thumbnail && (
-                        <img src={t.thumbnail} alt="" className="w-full h-16 object-cover rounded-lg mb-2 border border-white/10" />
+                        <img src={t.thumbnail} alt="" className="w-full h-12 object-cover rounded mb-1.5" />
                       )}
-                      <span className="text-xs text-white/70 line-clamp-2 group-hover:text-green-300 transition-colors font-medium">
+                      <span className="text-[10px] text-muted-foreground line-clamp-2 group-hover:text-green-500 transition-colors font-medium">
                         {t.title}
                       </span>
-                      {t.category && (
-                        <Badge variant="outline" className="text-[10px] mt-1.5 border-white/10 text-white/50">
-                          {t.category}
-                        </Badge>
-                      )}
                     </motion.a>
                   ))}
                 </div>
@@ -424,43 +398,43 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           )}
         </AnimatePresence>
 
-        {/* Attachments Preview */}
+        {/* Attachments Preview - Compact */}
         <AnimatePresence>
           {(selectedImage || selectedDocument) && (
             <motion.div 
               initial={{ opacity: 0, height: 0 }} 
               animate={{ opacity: 1, height: "auto" }} 
               exit={{ opacity: 0, height: 0 }} 
-              className="mb-3"
+              className="mb-2"
             >
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-[hsl(222,44%,18%)] border border-white/10">
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted border border-border">
                 {selectedImage && (
                   <div className="relative">
-                    <img src={selectedImage} alt="Preview" className="h-16 rounded-lg border border-white/10" />
+                    <img src={selectedImage} alt="Preview" className="h-12 rounded border border-border" />
                     <Button 
                       variant="destructive" 
                       size="icon" 
-                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full" 
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full" 
                       onClick={() => setSelectedImage(null)}
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-2.5 h-2.5" />
                     </Button>
                   </div>
                 )}
                 {selectedDocument && (
-                  <div className="relative flex items-center gap-3 px-3 py-2 rounded-lg bg-[hsl(222,44%,14%)] border border-white/10">
-                    <FileText className="w-5 h-5 text-amber-400" />
+                  <div className="relative flex items-center gap-2 px-2 py-1.5 rounded bg-card border border-border">
+                    <FileText className="w-4 h-4 text-amber-500" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{selectedDocument.name}</p>
-                      <p className="text-xs text-white/50">{(selectedDocument.size / 1024).toFixed(1)} KB</p>
+                      <p className="text-xs font-medium text-foreground truncate max-w-[120px]">{selectedDocument.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{(selectedDocument.size / 1024).toFixed(1)} KB</p>
                     </div>
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-6 w-6 shrink-0 text-white/40 hover:text-white hover:bg-white/10" 
+                      className="h-5 w-5 shrink-0 text-muted-foreground hover:text-foreground" 
                       onClick={() => setSelectedDocument(null)}
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-2.5 h-2.5" />
                     </Button>
                   </div>
                 )}
@@ -469,34 +443,32 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           )}
         </AnimatePresence>
 
-        {/* Input Area */}
-        <div className="pt-4 border-t border-white/10">
-          <div className="flex gap-2">
+        {/* Input Area - Compact */}
+        <div className="pt-3 border-t border-border">
+          <div className="flex gap-1.5">
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
             <input ref={documentInputRef} type="file" accept=".pdf,.txt,.doc,.docx" onChange={handleDocumentSelect} className="hidden" />
             
-            <div className="flex gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => fileInputRef.current?.click()} 
-                disabled={isLoading} 
-                title="Enviar foto" 
-                className="text-green-400 hover:text-green-300 hover:bg-green-500/10 border border-green-500/30"
-              >
-                <ImageIcon className="w-4 h-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => documentInputRef.current?.click()} 
-                disabled={isLoading} 
-                title="Enviar documento" 
-                className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/30"
-              >
-                <Paperclip className="w-4 h-4" />
-              </Button>
-            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => fileInputRef.current?.click()} 
+              disabled={isLoading} 
+              title="Enviar foto" 
+              className="w-9 h-9 text-green-500 hover:text-green-400 hover:bg-green-500/10"
+            >
+              <ImageIcon className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => documentInputRef.current?.click()} 
+              disabled={isLoading} 
+              title="Enviar documento" 
+              className="w-9 h-9 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
+            >
+              <Paperclip className="w-4 h-4" />
+            </Button>
             
             <Input 
               placeholder="Digite sua pergunta..." 
@@ -504,20 +476,21 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
               onChange={(e) => setInput(e.target.value)} 
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())} 
               disabled={isLoading} 
-              className="flex-1 bg-[hsl(222,44%,18%)] border-white/10 text-white placeholder:text-white/40 focus:border-primary/50 focus:ring-primary/20" 
+              className="flex-1 h-9 text-sm" 
             />
             
             <Button 
               onClick={handleSend} 
               disabled={isLoading || (!input.trim() && !selectedImage && !selectedDocument)} 
-              className="px-5 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/30"
+              size="sm"
+              className="h-9 px-4"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           </div>
           
-          <p className="text-[11px] text-white/40 mt-3 text-center">
-            Orientações gerais. Para diagnósticos definitivos, consulte um mecânico profissional.
+          <p className="text-[10px] text-muted-foreground mt-2 text-center">
+            Orientações gerais. Consulte um mecânico para diagnósticos definitivos.
           </p>
         </div>
       </div>
@@ -546,15 +519,15 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
       <Button
         variant="ghost"
         size="icon"
-        className={`fixed bottom-4 left-4 z-40 rounded-full w-10 h-10 border ${
+        className={`fixed bottom-4 left-4 z-40 rounded-full w-8 h-8 ${
           isDiagnosticEnabled 
-            ? "bg-primary text-white border-primary shadow-lg shadow-primary/30" 
-            : "bg-[hsl(222,44%,18%)] text-white/60 border-white/10 hover:text-white hover:bg-white/10"
+            ? "bg-primary text-primary-foreground" 
+            : "bg-muted text-muted-foreground hover:text-foreground"
         }`}
         onClick={toggleDiagnosticMode}
         title={isDiagnosticEnabled ? "Desativar modo diagnóstico" : "Ativar modo diagnóstico"}
       >
-        <Bug className="w-4 h-4" />
+        <Bug className="w-3.5 h-3.5" />
       </Button>
       
       {/* Diagnostic Panel */}
