@@ -1,0 +1,61 @@
+project_id = "txxgmxxssnogumcwsfvn"
+
+[functions.send-contact-email]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
+
+[functions.diagnose]
+verify_jwt = false
+
+[functions.fetch-solution]
+verify_jwt = false
+
+[functions.search-tutorials]
+verify_jwt = false
+
+[functions.fetch-tutorial]
+verify_jwt = false
+
+[functions.send-system-alert]
+verify_jwt = false
+
+[functions.carcare-api]
+verify_jwt = false
+
+[functions.cache-admin]
+verify_jwt = false
+
+[functions.send-usage-alert]
+verify_jwt = false
+
+[functions.check-kpi-alerts]
+verify_jwt = false
+
+[functions.abacatepay-webhook]
+verify_jwt = false
+
+[functions.create-pix-qrcode]
+verify_jwt = false
+
+[functions.check-subscription-renewal]
+verify_jwt = false
+
+[functions.check-spam-alerts]
+verify_jwt = false
+
+[functions.carcare-scheduled-scan]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.list-orphan-users]
+verify_jwt = false
+
+[functions.automotive-expert-chat]
+verify_jwt = false
+
+[functions.semantic-tutorial-search]
+verify_jwt = false

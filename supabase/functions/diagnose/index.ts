@@ -1,0 +1,288 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Input validation schema
+const diagnosticRequestSchema = z.object({
+  dtcCodes: z
+    .array(
+      z.string()
+        .regex(/^[A-Z][0-9]{4}$/, "Código DTC inválido (formato: P0123)")
+        .max(10, "Código muito longo")
+    )
+    .min(1, "Pelo menos um código DTC é necessário")
+    .max(20, "Máximo de 20 códigos por diagnóstico"),
+  vehicleBrand: z.string().min(1, "Marca é obrigatória").max(50, "Marca muito longa"),
+  vehicleModel: z.string().min(1, "Modelo é obrigatório").max(50, "Modelo muito longo"),
+  vehicleYear: z
+    .number()
+    .int("Ano deve ser um número inteiro")
+    .min(1900, "Ano inválido")
+    .max(new Date().getFullYear() + 2, "Ano inválido"),
+  diagnosticId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  vehicleId: z.string().uuid().optional(),
+});
+
+interface DiagnosticItem {
+  dtc_code: string;
+  description_human: string;
+  priority: 'critical' | 'attention' | 'preventive';
+  severity: number;
+  can_diy: boolean;
+  diy_difficulty: number | null;
+  probable_causes: string[];
+  solution_url: string | null;
+}
+
+async function sendNotification(
+  supabaseUrl: string, 
+  serviceRoleKey: string, 
+  type: string, 
+  userId: string, 
+  data: Record<string, any>
+) {
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/send-notification`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({ type, userId, data }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to send notification:", await response.text());
+      return false;
+    }
+    
+    console.log(`${type} notification sent successfully`);
+    return true;
+  } catch (error) {
+    console.error("Error sending notification:", error);
+    return false;
+  }
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = diagnosticRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join(", ");
+      console.error("Validation failed:", errors);
+      return new Response(
+        JSON.stringify({ error: `Dados inválidos: ${errors}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { 
+      dtcCodes, 
+      vehicleBrand, 
+      vehicleModel, 
+      vehicleYear,
+      diagnosticId,
+      userId,
+      vehicleId
+    } = validationResult.data;
+    
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // Create prompt for AI analysis
+    const prompt = `Você é um especialista em diagnóstico automotivo. Analise os seguintes códigos DTC (Diagnostic Trouble Codes) para um veículo ${vehicleBrand} ${vehicleModel} ${vehicleYear}.
+
+Códigos para analisar: ${dtcCodes.join(', ')}
+
+Para CADA código, forneça uma análise detalhada em português brasileiro incluindo:
+1. Descrição clara do problema em linguagem simples (sem jargão técnico)
+2. Causas prováveis (lista de 2-4 causas)
+3. Nível de severidade de 1-10 (1=menor, 10=crítico)
+4. Prioridade: "critical" (segurança/dano grave), "attention" (precisa atenção) ou "preventive" (manutenção)
+5. Se pode ser resolvido pelo próprio dono (DIY): true ou false
+6. Se DIY, dificuldade de 1-5 (1=fácil, 5=muito difícil)
+
+IMPORTANTE: 
+- Seja claro e objetivo
+- Use linguagem acessível para leigos
+- Priorize a segurança do motorista
+- Seja realista sobre o que pode ser feito em casa
+
+Responda APENAS com o JSON, sem explicações adicionais.`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: "Você é um especialista em diagnóstico automotivo OBD2. Responda sempre em português brasileiro com JSONs válidos." },
+          { role: "user", content: prompt },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "analyze_dtc_codes",
+              description: "Analisa códigos DTC e retorna diagnósticos estruturados",
+              parameters: {
+                type: "object",
+                properties: {
+                  diagnostics: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        dtc_code: { type: "string" },
+                        description_human: { type: "string" },
+                        priority: { type: "string", enum: ["critical", "attention", "preventive"] },
+                        severity: { type: "number", minimum: 1, maximum: 10 },
+                        can_diy: { type: "boolean" },
+                        diy_difficulty: { type: "number", minimum: 1, maximum: 5 },
+                        probable_causes: { type: "array", items: { type: "string" } },
+                      },
+                      required: ["dtc_code", "description_human", "priority", "severity", "can_diy", "probable_causes"],
+                    },
+                  },
+                },
+                required: ["diagnostics"],
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "analyze_dtc_codes" } },
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos à sua conta." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const errorText = await response.text();
+      console.error("AI gateway error:", response.status, errorText);
+      throw new Error("Erro ao processar diagnóstico");
+    }
+
+    const aiResponse = await response.json();
+    
+    // Extract the function call result
+    let diagnosticItems: DiagnosticItem[] = [];
+    
+    const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      try {
+        const parsed = JSON.parse(toolCall.function.arguments);
+        diagnosticItems = parsed.diagnostics || [];
+      } catch (e) {
+        console.error("Failed to parse AI response:", e);
+      }
+    }
+
+    // If no items from AI, provide fallback based on known codes
+    if (diagnosticItems.length === 0) {
+      diagnosticItems = dtcCodes.map(code => ({
+        dtc_code: code,
+        description_human: `Código ${code} detectado. Consulte um mecânico para diagnóstico completo.`,
+        priority: code.startsWith('P03') || code.startsWith('P07') ? 'critical' : 'attention',
+        severity: 5,
+        can_diy: false,
+        diy_difficulty: null,
+        probable_causes: ['Diagnóstico adicional necessário'],
+        solution_url: null,
+      }));
+    }
+
+    // Check for critical items
+    const criticalItems = diagnosticItems.filter(item => item.priority === 'critical');
+    const hasCritical = criticalItems.length > 0;
+    const vehicleName = `${vehicleBrand} ${vehicleModel} ${vehicleYear}`;
+
+    // Send email notifications if we have userId
+    if (userId && diagnosticId) {
+      // If there are critical items, send critical alert
+      if (hasCritical) {
+        await sendNotification(
+          SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY,
+          'critical_diagnostic',
+          userId,
+          {
+            diagnosticId,
+            vehicleName,
+            dtcCode: criticalItems[0]?.dtc_code || 'N/A',
+            description: criticalItems[0]?.description_human || 'Problema crítico detectado',
+          }
+        );
+      }
+
+      // Always send diagnostic completed notification
+      await sendNotification(
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY,
+        'diagnostic_completed',
+        userId,
+        {
+          diagnosticId,
+          vehicleName,
+          totalCodes: diagnosticItems.length,
+          criticalCount: criticalItems.length,
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        diagnostics: diagnosticItems,
+        vehicleInfo: { brand: vehicleBrand, model: vehicleModel, year: vehicleYear },
+        hasCritical,
+        totalItems: diagnosticItems.length,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Diagnose function error:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "Erro desconhecido ao processar diagnóstico" 
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
