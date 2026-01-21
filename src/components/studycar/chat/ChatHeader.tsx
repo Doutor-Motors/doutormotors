@@ -1,9 +1,6 @@
 import { motion } from "framer-motion";
 import { 
-  ArrowLeft, 
-  Home, 
   Plus, 
-  History, 
   FileDown, 
   Loader2,
   MessageCircle,
@@ -21,10 +18,7 @@ interface ChatHeaderProps {
   conversationsCount: number;
   messagesCount: number;
   isExportingPDF: boolean;
-  onBack: () => void;
-  onHome: () => void;
   onNewConversation: () => void;
-  onOpenHistory: () => void;
   onExportPDF: () => void;
   onOpenRanking: () => void;
 }
@@ -35,10 +29,7 @@ const ChatHeader = ({
   conversationsCount,
   messagesCount,
   isExportingPDF,
-  onBack,
-  onHome,
   onNewConversation,
-  onOpenHistory,
   onExportPDF,
   onOpenRanking,
 }: ChatHeaderProps) => {
@@ -47,26 +38,8 @@ const ChatHeader = ({
       <div className="container mx-auto px-3 py-3">
         {/* Compact Navigation */}
         <div className="flex items-center justify-between gap-2">
-          {/* Left: Back + Logo + Title */}
+          {/* Left: Logo + Title */}
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center gap-0.5">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onBack} 
-                className="w-8 h-8 text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onHome} 
-                className="w-8 h-8 text-muted-foreground hover:text-foreground"
-              >
-                <Home className="w-4 h-4" />
-              </Button>
-            </div>
 
             <div className="flex items-center gap-2 min-w-0">
               <ExpertLogo size="sm" />
@@ -125,19 +98,6 @@ const ChatHeader = ({
               <Plus className="w-4 h-4" />
             </Button>
             
-            <Button 
-              size="sm" 
-              className="h-8 gap-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs" 
-              onClick={onOpenHistory}
-            >
-              <History className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Histórico</span>
-              {conversationsCount > 0 && (
-                <Badge variant="secondary" className="text-[9px] h-4 px-1 bg-primary-foreground/20 text-primary-foreground border-0">
-                  {conversationsCount}
-                </Badge>
-              )}
-            </Button>
           </div>
         </div>
 
