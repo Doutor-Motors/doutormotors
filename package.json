@@ -14,10 +14,7 @@
   },
   "dependencies": {
     "@anthropic-ai/tokenizer": "^0.0.4",
-    "@capacitor/android": "^8.0.1",
-    "@capacitor/cli": "^8.0.1",
     "@capacitor/core": "^8.0.1",
-    "@capacitor/ios": "^8.0.1",
     "@capacitor/push-notifications": "^8.0.0",
     "@hookform/resolvers": "^3.10.0",
     "@playwright/test": "^1.57.0",
@@ -74,7 +71,6 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "tar": "^7.5.3",
     "vaul": "^0.9.9",
     "vite-plugin-pwa": "^1.2.0",
     "zod": "^3.25.76",
