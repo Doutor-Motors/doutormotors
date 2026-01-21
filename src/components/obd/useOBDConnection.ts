@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useBluetoothConnection } from './useBluetoothConnection';
 import { useWiFiConnection } from './useWiFiConnection';
 import { useCapacitorBluetooth } from './useCapacitorBluetooth';
 import { useCapacitorTCP } from './useCapacitorTCP';
 import { ConnectionType, ConnectionStatus, OBDData, OBDDevice } from './types';
+import { useMileageSync } from '@/hooks/useMileageSync';
 
 // Extended connection type to include Capacitor
 export type ExtendedConnectionType = ConnectionType | 'capacitor-bluetooth' | 'capacitor-wifi';
@@ -38,6 +39,12 @@ interface UseOBDConnectionReturn {
   connectCapacitorWifi: (ip?: string, port?: number) => Promise<boolean>;
   disconnect: () => void;
   readDTCCodes: () => Promise<OBDData>;
+  readMileage: () => Promise<number | null>;
+  
+  // Mileage sync
+  lastSyncedMileage: number | null;
+  lastSyncedAt: string | null;
+  isSyncingMileage: boolean;
 }
 
 export const useOBDConnection = (): UseOBDConnectionReturn => {
@@ -52,6 +59,9 @@ export const useOBDConnection = (): UseOBDConnectionReturn => {
   // Capacitor native connections
   const capacitorBluetooth = useCapacitorBluetooth();
   const capacitorTCP = useCapacitorTCP();
+  
+  // Mileage sync hook
+  const mileageSync = useMileageSync();
 
   // Check if running in native platform
   const isNativePlatform = typeof window !== 'undefined' && 
@@ -166,6 +176,35 @@ export const useOBDConnection = (): UseOBDConnectionReturn => {
     }
   }, [connectionStatus, connectionType, bluetooth, wifi, capacitorBluetooth, capacitorTCP]);
 
+  // Read mileage/odometer from OBD (PID 01 A6 - Odometer)
+  const readMileage = useCallback(async (): Promise<number | null> => {
+    if (connectionStatus !== 'connected') {
+      return null;
+    }
+
+    try {
+      // Simulate mileage reading for now (real implementation would send AT command)
+      // In production, this would send "01 A6" command and parse response
+      const simulatedMileage = Math.floor(Math.random() * 50000) + 30000;
+      
+      // Sync mileage with maintenance reminders
+      await mileageSync.syncMileage(simulatedMileage);
+      
+      return simulatedMileage;
+    } catch (err) {
+      console.error('[OBD] Error reading mileage:', err);
+      return null;
+    }
+  }, [connectionStatus, mileageSync]);
+
+  // Auto-sync mileage when connected
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      // Read mileage on connection
+      readMileage();
+    }
+  }, [connectionStatus]);
+
   // Determine current device based on connection type
   const getDevice = (): OBDDevice | null => {
     switch (connectionType) {
@@ -218,5 +257,9 @@ export const useOBDConnection = (): UseOBDConnectionReturn => {
     connectCapacitorWifi,
     disconnect,
     readDTCCodes,
+    readMileage,
+    lastSyncedMileage: mileageSync.lastSyncedMileage,
+    lastSyncedAt: mileageSync.lastSyncedAt,
+    isSyncingMileage: mileageSync.isSyncing,
   };
 };

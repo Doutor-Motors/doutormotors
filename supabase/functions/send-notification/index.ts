@@ -21,6 +21,8 @@ const notificationTypes = [
   "ticket_resolved",
   "account_update",
   "password_changed",
+  "maintenance_reminder",
+  "maintenance_overdue",
 ] as const;
 
 const notificationRequestSchema = z.object({
@@ -322,6 +324,81 @@ function generateEmailContent(type: NotificationType, data: Record<string, any>,
         `
       };
 
+    case 'maintenance_reminder':
+      const priorityColor = data.priority === 'critical' ? '#dc2626' : 
+                           data.priority === 'attention' ? '#f59e0b' : '#3b82f6';
+      const priorityIcon = data.priority === 'critical' ? '🔴' : 
+                          data.priority === 'attention' ? '🟡' : '🔵';
+      const alertClass = data.priority === 'critical' ? 'alert-critical' : 
+                        data.priority === 'attention' ? 'alert-warning' : 'alert-info';
+      return {
+        subject: `${priorityIcon} Lembrete de Manutenção - ${data.title}`,
+        html: `
+          ${baseStyle}
+          <div class="email-container">
+            <div class="header" style="background: linear-gradient(135deg, ${priorityColor}, #1a1a1a);">
+              <h1>${priorityIcon} Lembrete de Manutenção</h1>
+            </div>
+            <div class="content">
+              <h2>Olá, ${userName}!</h2>
+              <div class="${alertClass}">
+                <strong>${data.title}</strong>
+                <p style="margin: 5px 0 0 0;">${data.dueMessage}</p>
+              </div>
+              
+              <p><strong>Veículo:</strong> ${data.vehicleName || 'Seu veículo'}</p>
+              <p><strong>Data prevista:</strong> ${data.dueDate}</p>
+              ${data.description ? `<p><strong>Descrição:</strong> ${data.description}</p>` : ''}
+              
+              <p>Manter a manutenção em dia é essencial para a segurança e durabilidade do seu veículo.</p>
+              
+              <a href="https://doutormotors.com.br/dashboard" class="btn">
+                Ver Lembretes
+              </a>
+            </div>
+            <div class="footer">
+              <p>Este é um email automático de lembrete de manutenção.</p>
+            </div>
+          </div>
+        `
+      };
+
+    case 'maintenance_overdue':
+      return {
+        subject: `🔴 ATRASADO - Manutenção ${data.title} está vencida!`,
+        html: `
+          ${baseStyle}
+          <div class="email-container">
+            <div class="header" style="background: linear-gradient(135deg, #dc2626, #7f1d1d);">
+              <h1>🔴 Manutenção Atrasada</h1>
+            </div>
+            <div class="content">
+              <h2>Olá, ${userName}!</h2>
+              <div class="alert-critical">
+                <strong>⚠️ ${data.title} está ${Math.abs(data.daysOverdue)} dias atrasada!</strong>
+              </div>
+              
+              <p><strong>Veículo:</strong> ${data.vehicleName || 'Seu veículo'}</p>
+              <p><strong>Data original:</strong> ${data.dueDate}</p>
+              ${data.description ? `<p><strong>Descrição:</strong> ${data.description}</p>` : ''}
+              
+              <div class="alert-warning">
+                <p style="margin: 0;">
+                  <strong>Atenção:</strong> Adiar manutenções pode comprometer a segurança e aumentar custos de reparo.
+                </p>
+              </div>
+              
+              <a href="https://doutormotors.com.br/dashboard" class="btn">
+                Marcar como Concluída
+              </a>
+            </div>
+            <div class="footer">
+              <p>Este é um email automático de alerta de manutenção.</p>
+            </div>
+          </div>
+        `
+      };
+
     default:
       return {
         subject: 'Notificação - Doutor Motors',
@@ -472,6 +549,10 @@ function checkPreferences(type: NotificationType, preferences: Record<string, an
     case 'account_update':
     case 'password_changed':
       return preferences.email_account_updates !== false;
+    case 'maintenance_reminder':
+    case 'maintenance_overdue':
+      // Always send maintenance reminders (important for safety)
+      return true;
     default:
       return true;
   }

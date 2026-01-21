@@ -70,6 +70,7 @@ import SubscriptionCheckoutPage from "./pages/SubscriptionCheckoutPage";
 import SelectPlanPage from "./pages/SelectPlanPage";
 import MyPaymentsPage from "./pages/dashboard/MyPaymentsPage";
 import UserAuditTimeline from "./pages/admin/UserAuditTimeline";
+import MaintenanceManagerPage from "./pages/dashboard/MaintenanceManagerPage";
 
 const queryClient = new QueryClient();
 
@@ -129,6 +130,7 @@ const App = () => (
                 <Route path="/dashboard/coding/history" element={<ProtectedRoute><CodingHistoryPage /></ProtectedRoute>} />
                 <Route path="/dashboard/permissions" element={<ProtectedRoute><PermissionsDiagnostic /></ProtectedRoute>} />
                 <Route path="/dashboard/payments" element={<ProtectedRoute><MyPaymentsPage /></ProtectedRoute>} />
+                <Route path="/dashboard/maintenance" element={<ProtectedRoute><MaintenanceManagerPage /></ProtectedRoute>} />
                 <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
                 
