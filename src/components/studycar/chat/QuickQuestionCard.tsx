@@ -55,7 +55,7 @@ const QuickQuestionCard = ({
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
       className={`
-        relative w-full text-left p-2.5 rounded-lg 
+        relative w-full text-left p-2 rounded-lg 
         ${styles.bg} ${styles.border}
         border transition-all duration-200
         flex items-center gap-2
@@ -72,16 +72,16 @@ const QuickQuestionCard = ({
       
       {/* Icon */}
       <div className={`
-        w-7 h-7 rounded-lg ${styles.iconBg}
+        w-6 h-6 rounded-md ${styles.iconBg}
         flex items-center justify-center shrink-0
         transition-transform duration-200
         group-hover:scale-110
       `}>
-        <Icon className={`w-3.5 h-3.5 ${color}`} />
+        <Icon className={`w-3 h-3 ${color}`} />
       </div>
       
       {/* Text */}
-      <span className="text-xs text-foreground/80 line-clamp-1 group-hover:text-foreground transition-colors">
+      <span className="text-[11px] text-foreground/80 line-clamp-1 group-hover:text-foreground transition-colors">
         {text}
       </span>
     </motion.button>
