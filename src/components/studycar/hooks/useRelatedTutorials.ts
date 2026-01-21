@@ -1,5 +1,9 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  getCachedResult, 
+  setCachedResult 
+} from "@/services/solutions/tutorialSearchCache";
 
 export interface RelatedTutorial {
   id: string;
@@ -37,6 +41,19 @@ export const useRelatedTutorials = (log?: LogFn) => {
     setIsSearching(true);
     safeLog("info", "semanticSearch", `Buscando tutoriais para: "${questionText.slice(0, 50)}..."`);
 
+    // Verificar cache primeiro
+    const cached = getCachedResult(questionText, vehicleContext);
+    if (cached) {
+      safeLog("success", "semanticSearch", `Cache hit! ${cached.tutorials.length} tutoriais do cache`);
+      setRelatedTutorials(cached.tutorials);
+      setSearchContext(cached.context);
+      setShowTutorialSuggestions(cached.tutorials.length > 0);
+      setIsSearching(false);
+      return;
+    }
+
+    safeLog("info", "semanticSearch", "Cache miss, buscando na API...");
+
     try {
       // First, try semantic search via Edge Function
       const { data: sessionData } = await supabase.auth.getSession();
@@ -68,6 +85,10 @@ export const useRelatedTutorials = (log?: LogFn) => {
             setRelatedTutorials(result.tutorials);
             setSearchContext(result.context || null);
             setShowTutorialSuggestions(true);
+            
+            // Salvar no cache
+            setCachedResult(questionText, result.tutorials, result.context || null, vehicleContext);
+            
             safeLog(
               "success", 
               "semanticSearch", 
