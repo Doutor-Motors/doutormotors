@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { UsageDisplay } from "@/components/dashboard/UsageDisplay";
 import { UsageChart } from "@/components/dashboard/UsageChart";
+import { MaintenanceRemindersPanel } from "@/components/dashboard/MaintenanceRemindersPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppStore } from "@/store/useAppStore";
@@ -417,6 +418,9 @@ const UserDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Maintenance Reminders */}
+        <MaintenanceRemindersPanel />
 
         {/* Usage Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
