@@ -473,8 +473,8 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           )}
         </AnimatePresence>
 
-        {/* Input Area - Compact */}
-        <div className="pt-3 border-t border-border">
+        {/* Input Area - Fixed at bottom */}
+        <div className="mt-auto pt-3 border-t border-border bg-background">
           <div className="flex gap-1.5">
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
             <input ref={documentInputRef} type="file" accept=".pdf,.txt,.doc,.docx" onChange={handleDocumentSelect} className="hidden" />
