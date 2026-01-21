@@ -210,7 +210,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
         />
 
       {/* Main Chat Area */}
-      <div className="flex-1 min-h-0 flex flex-col max-w-5xl mx-auto w-full px-4 sm:px-6 py-4">
+      <div className="flex-1 min-h-0 flex flex-col max-w-7xl mx-auto w-full px-4 sm:px-8 py-4">
         {/* OBD Context Panel - Compact */}
         {user && (
           <div className="mb-3">
