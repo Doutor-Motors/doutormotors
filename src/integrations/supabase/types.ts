@@ -1607,6 +1607,18 @@ export type Database = {
         }
         Relationships: []
       }
+      popular_questions_ranking: {
+        Row: {
+          last_used: string | null
+          question_color: string | null
+          question_gradient: string | null
+          question_icon: string | null
+          question_text: string | null
+          total_usage: number | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_contact_rate_limit: {
