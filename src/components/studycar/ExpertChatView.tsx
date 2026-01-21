@@ -182,7 +182,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }} 
-      className="min-h-screen flex bg-background"
+      className="h-[calc(100vh-5rem)] sm:h-[calc(100vh-6rem)] flex bg-background overflow-hidden isolate"
     >
       {/* Left Sidebar - History */}
       <HistorySidebar
@@ -197,7 +197,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full relative z-10">
         <ChatHeader
           userVehicle={userVehicle}
           currentConversation={currentConversation}
@@ -213,7 +213,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
         />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-3 py-3">
+      <div className="flex-1 min-h-0 flex flex-col max-w-3xl mx-auto w-full px-3 py-3">
         {/* OBD Context Panel - Compact */}
         {user && (
           <div className="mb-3">
