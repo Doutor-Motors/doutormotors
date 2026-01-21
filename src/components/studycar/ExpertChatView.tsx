@@ -28,9 +28,11 @@ import OBDContextPanel from "./OBDContextPanel";
 import ChatMessage from "./chat/ChatMessage";
 import ChatHeader from "./chat/ChatHeader";
 import PopularQuestionsSheet from "./chat/PopularQuestionsSheet";
-import ConversationHistorySheet from "./chat/ConversationHistorySheet";
+import HistorySidebar from "./chat/HistorySidebar";
 import DiagnosticPanel from "./chat/DiagnosticPanel";
 import ExpertLogo from "./ExpertLogo";
+import QuickQuestionCard from "./chat/QuickQuestionCard";
+import TutorialSkeleton from "./chat/TutorialSkeleton";
 import { useExpertChat } from "./hooks/useExpertChat";
 import { useConversationHistory } from "./hooks/useConversationHistory";
 import { useFavoriteQuestions } from "./hooks/useFavoriteQuestions";
@@ -89,13 +91,12 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
   const { messages, isLoading, currentConversationId, selectedOBDCodes, setSelectedOBDCodes, streamChat, clearConversation, loadConversationMessages } = useExpertChat({ userVehicle });
   const { conversations, isLoadingHistory, loadConversations, deleteConversation, togglePinConversation, renameConversation, createNewConversation } = useConversationHistory(isDiagnosticEnabled ? log : undefined);
   const { favoriteQuestions, popularQuestions, isLoadingPopular, loadFavorites, loadPopularQuestions, saveQuestionAsFavorite, removeFavorite } = useFavoriteQuestions();
-  const { relatedTutorials, showTutorialSuggestions, searchRelatedTutorials, closeSuggestions } = useRelatedTutorials(isDiagnosticEnabled ? log : undefined);
+  const { relatedTutorials, showTutorialSuggestions, isSearching, searchRelatedTutorials, closeSuggestions } = useRelatedTutorials(isDiagnosticEnabled ? log : undefined);
   
   // Local state
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isRankingOpen, setIsRankingOpen] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   
@@ -153,13 +154,11 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
 
   const handleNewConversation = async () => {
     clearConversation();
-    setIsHistoryOpen(false);
     notifySuccess("Nova conversa", "Comece a conversar!");
   };
 
   const handleLoadConversation = async (convId: string) => {
-    const success = await loadConversationMessages(convId);
-    if (success) setIsHistoryOpen(false);
+    await loadConversationMessages(convId);
   };
 
   const exportToPDF = async () => {
@@ -183,21 +182,35 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }} 
-      className="min-h-screen flex flex-col bg-background"
+      className="min-h-screen flex bg-background"
     >
-      <ChatHeader
-        userVehicle={userVehicle}
-        currentConversation={currentConversation}
-        conversationsCount={conversations.length}
-        messagesCount={messages.length}
-        isExportingPDF={isExportingPDF}
-        onBack={onBack}
-        onHome={onHome}
+      {/* Left Sidebar - History */}
+      <HistorySidebar
+        conversations={conversations}
+        isLoading={isLoadingHistory}
+        currentConversationId={currentConversationId}
+        onLoadConversation={handleLoadConversation}
+        onDeleteConversation={deleteConversation}
+        onTogglePin={togglePinConversation}
+        onRename={renameConversation}
         onNewConversation={handleNewConversation}
-        onOpenHistory={() => { loadConversations(); setIsHistoryOpen(true); }}
-        onExportPDF={exportToPDF}
-        onOpenRanking={() => { loadPopularQuestions(); setIsRankingOpen(true); }}
       />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <ChatHeader
+          userVehicle={userVehicle}
+          currentConversation={currentConversation}
+          conversationsCount={conversations.length}
+          messagesCount={messages.length}
+          isExportingPDF={isExportingPDF}
+          onBack={onBack}
+          onHome={onHome}
+          onNewConversation={handleNewConversation}
+          onOpenHistory={() => loadConversations()}
+          onExportPDF={exportToPDF}
+          onOpenRanking={() => { loadPopularQuestions(); setIsRankingOpen(true); }}
+        />
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-3 py-3">
@@ -251,89 +264,97 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                     </div>
                   </div>
                   
-                  {/* Favorite Questions - Compact Grid */}
+                  {/* Favorite Questions - Animated Grid */}
                   {favoriteQuestions.length > 0 && (
                     <div className="mb-4">
-                      <div className="flex items-center gap-1.5 mb-2">
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex items-center gap-1.5 mb-2"
+                      >
                         <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                         <span className="text-[10px] font-semibold text-yellow-500 uppercase tracking-wider">Favoritas</span>
-                      </div>
+                      </motion.div>
                       <div className="grid grid-cols-2 gap-2">
-                        {favoriteQuestions.slice(0, 4).map((fav) => {
+                        {favoriteQuestions.slice(0, 4).map((fav, i) => {
                           const IconComponent = ICON_MAP[fav.question_icon] || HelpCircle;
                           return (
-                            <motion.div 
-                              key={fav.id} 
-                              whileHover={{ scale: 1.02 }} 
-                              whileTap={{ scale: 0.98 }} 
-                              className="relative group"
-                            >
-                              <button
+                            <div key={fav.id} className="relative group">
+                              <QuickQuestionCard
+                                icon={IconComponent}
+                                text={fav.question_text}
+                                color={fav.question_color}
+                                index={i}
+                                variant="favorite"
                                 onClick={() => handleQuickQuestion(fav.question_text, fav.question_icon, fav.question_color, fav.question_gradient)}
-                                className="w-full text-left p-2.5 rounded-lg bg-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/40 transition-all flex items-center gap-2"
-                              >
-                                <IconComponent className={`w-4 h-4 shrink-0 ${fav.question_color}`} />
-                                <span className="text-xs text-foreground/80 line-clamp-1">{fav.question_text}</span>
-                              </button>
+                              />
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="absolute top-1 right-1 w-5 h-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted" 
+                                className="absolute top-1 right-1 w-5 h-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted z-10" 
                                 onClick={(e) => { e.stopPropagation(); removeFavorite(fav.id); }}
                               >
                                 <X className="w-2.5 h-2.5" />
                               </Button>
-                            </motion.div>
+                            </div>
                           );
                         })}
                       </div>
                     </div>
                   )}
                   
-                  {/* Vehicle-specific Questions - Compact */}
+                  {/* Vehicle-specific Questions - Animated */}
                   {contextualQuestions.length > 0 && userVehicle && (
                     <div className="mb-4">
-                      <div className="flex items-center gap-1.5 mb-2">
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="flex items-center gap-1.5 mb-2"
+                      >
                         <Car className="w-3 h-3 text-green-500" />
                         <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">
                           {userVehicle.brand}
                         </span>
-                      </div>
+                      </motion.div>
                       <div className="flex flex-wrap gap-2">
                         {contextualQuestions.map((q, i) => (
-                          <motion.button 
-                            key={`ctx-${i}`} 
-                            whileHover={{ scale: 1.02 }} 
-                            whileTap={{ scale: 0.98 }}
+                          <QuickQuestionCard
+                            key={`ctx-${i}`}
+                            icon={q.icon}
+                            text={q.text}
+                            color={q.color}
+                            index={i + (favoriteQuestions.length > 0 ? 4 : 0)}
+                            variant="vehicle"
                             onClick={() => handleQuickQuestion(q.text, q.icon.name || "HelpCircle", q.color, q.gradient)}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-500/5 border border-green-500/20 hover:border-green-500/40 transition-all"
-                          >
-                            <q.icon className={`w-3.5 h-3.5 ${q.color}`} />
-                            <span className="text-xs text-foreground/80">{q.text}</span>
-                          </motion.button>
+                          />
                         ))}
                       </div>
                     </div>
                   )}
                   
-                  {/* General Questions - Compact Chips */}
+                  {/* General Questions - Animated Chips */}
                   <div>
-                    <div className="flex items-center gap-1.5 mb-2">
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="flex items-center gap-1.5 mb-2"
+                    >
                       <Sparkles className="w-3 h-3 text-muted-foreground" />
                       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Perguntas</span>
-                    </div>
+                    </motion.div>
                     <div className="flex flex-wrap gap-2">
                       {BASE_QUESTIONS.map((q, i) => (
-                        <motion.button 
-                          key={`base-${i}`} 
-                          whileHover={{ scale: 1.02 }} 
-                          whileTap={{ scale: 0.98 }}
+                        <QuickQuestionCard
+                          key={`base-${i}`}
+                          icon={q.icon}
+                          text={q.text}
+                          color={q.color}
+                          index={i + (favoriteQuestions.length > 0 ? 4 : 0) + contextualQuestions.length}
+                          variant="general"
                           onClick={() => handleQuickQuestion(q.text, q.icon.name || "HelpCircle", q.color, q.gradient)}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border hover:border-primary/30 transition-all"
-                        >
-                          <q.icon className={`w-3.5 h-3.5 ${q.color}`} />
-                          <span className="text-xs text-foreground/80">{q.text}</span>
-                        </motion.button>
+                        />
                       ))}
                     </div>
                   </div>
@@ -352,9 +373,9 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           </div>
         </ScrollArea>
 
-        {/* Tutorial Suggestions - Compact */}
+        {/* Tutorial Suggestions with Skeleton Loading */}
         <AnimatePresence>
-          {showTutorialSuggestions && relatedTutorials.length > 0 && (
+          {(showTutorialSuggestions || isSearching) && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
@@ -366,33 +387,45 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                   <div className="flex items-center gap-1.5">
                     <Video className="w-3 h-3 text-green-500" />
                     <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">Tutoriais</span>
+                    {isSearching && (
+                      <Loader2 className="w-3 h-3 text-green-500 animate-spin ml-1" />
+                    )}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="w-5 h-5 text-muted-foreground hover:text-foreground" 
-                    onClick={closeSuggestions}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {relatedTutorials.map((t) => (
-                    <motion.a 
-                      key={t.id} 
-                      href={`/tutoriais/${t.slug}`} 
-                      whileHover={{ scale: 1.02 }} 
-                      className="block p-2 rounded-lg bg-card border border-border hover:border-green-500/30 transition-all group"
+                  {!isSearching && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="w-5 h-5 text-muted-foreground hover:text-foreground" 
+                      onClick={closeSuggestions}
                     >
-                      {t.thumbnail && (
-                        <img src={t.thumbnail} alt="" className="w-full h-12 object-cover rounded mb-1.5" />
-                      )}
-                      <span className="text-[10px] text-muted-foreground line-clamp-2 group-hover:text-green-500 transition-colors font-medium">
-                        {t.title}
-                      </span>
-                    </motion.a>
-                  ))}
+                      <X className="w-3 h-3" />
+                    </Button>
+                  )}
                 </div>
+                
+                {isSearching ? (
+                  <TutorialSkeleton count={4} />
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {relatedTutorials.map((t, i) => (
+                      <motion.a 
+                        key={t.id}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        href={`/tutoriais/${t.slug}`} 
+                        className="block p-2 rounded-lg bg-card border border-border hover:border-green-500/30 transition-all group"
+                      >
+                        {t.thumbnail && (
+                          <img src={t.thumbnail} alt="" className="w-full h-12 object-cover rounded mb-1.5" />
+                        )}
+                        <span className="text-[10px] text-muted-foreground line-clamp-2 group-hover:text-green-500 transition-colors font-medium">
+                          {t.title}
+                        </span>
+                      </motion.a>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -494,19 +527,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           </p>
         </div>
       </div>
-
-      {/* Sheets */}
-      <ConversationHistorySheet 
-        isOpen={isHistoryOpen} 
-        onClose={() => setIsHistoryOpen(false)} 
-        conversations={conversations} 
-        isLoading={isLoadingHistory} 
-        currentConversationId={currentConversationId} 
-        onLoadConversation={handleLoadConversation} 
-        onDeleteConversation={deleteConversation} 
-        onTogglePin={togglePinConversation} 
-        onRename={renameConversation} 
-      />
+      </div>
       <PopularQuestionsSheet 
         isOpen={isRankingOpen} 
         onClose={() => setIsRankingOpen(false)} 
