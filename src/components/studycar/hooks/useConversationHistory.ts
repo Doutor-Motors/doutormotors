@@ -44,6 +44,10 @@ export const useConversationHistory = () => {
   }, [user]);
 
   const deleteConversation = async (conversationId: string) => {
+    if (!user) {
+      notifyError("Erro", "Você precisa estar logado");
+      return false;
+    }
     try {
       // Delete messages first (now allowed by RLS)
       const { error: msgError } = await supabase
@@ -54,31 +58,46 @@ export const useConversationHistory = () => {
       if (msgError) throw msgError;
       
       // Then delete conversation
-      const { error: convError } = await supabase
+      const { data: deleted, error: convError } = await supabase
         .from("expert_conversations")
         .delete()
-        .eq("id", conversationId);
+        .eq("id", conversationId)
+        .select("id");
       
       if (convError) throw convError;
+      if (!deleted || deleted.length === 0) {
+        throw new Error("Sem permissão para excluir esta conversa (RLS)");
+      }
       
       setConversations(prev => prev.filter(c => c.id !== conversationId));
       notifySuccess("Excluída", "Conversa excluída com sucesso");
       return true;
     } catch (error) {
       console.error("Error deleting conversation:", error);
-      notifyError("Erro", "Não foi possível excluir a conversa");
+      notifyError(
+        "Erro",
+        error instanceof Error ? error.message : "Não foi possível excluir a conversa"
+      );
       return false;
     }
   };
 
   const togglePinConversation = async (conversationId: string, isPinned: boolean) => {
+    if (!user) {
+      notifyError("Erro", "Você precisa estar logado");
+      return false;
+    }
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("expert_conversations")
         .update({ is_pinned: !isPinned })
-        .eq("id", conversationId);
+        .eq("id", conversationId)
+        .select("id");
       
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("Sem permissão para fixar/desafixar esta conversa (RLS)");
+      }
       
       setConversations(prev => 
         prev.map(c => 
@@ -95,20 +114,32 @@ export const useConversationHistory = () => {
       return true;
     } catch (error) {
       console.error("Error toggling pin:", error);
+      notifyError(
+        "Erro",
+        error instanceof Error ? error.message : "Não foi possível fixar/desafixar"
+      );
       return false;
     }
   };
 
   const renameConversation = async (conversationId: string, newTitle: string) => {
     if (!newTitle.trim()) return false;
+    if (!user) {
+      notifyError("Erro", "Você precisa estar logado");
+      return false;
+    }
     
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("expert_conversations")
         .update({ title: newTitle.trim() })
-        .eq("id", conversationId);
+        .eq("id", conversationId)
+        .select("id");
       
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("Sem permissão para renomear esta conversa (RLS)");
+      }
       
       setConversations(prev => 
         prev.map(c => 
@@ -119,7 +150,10 @@ export const useConversationHistory = () => {
       return true;
     } catch (error) {
       console.error("Error renaming:", error);
-      notifyError("Erro", "Não foi possível renomear");
+      notifyError(
+        "Erro",
+        error instanceof Error ? error.message : "Não foi possível renomear"
+      );
       return false;
     }
   };

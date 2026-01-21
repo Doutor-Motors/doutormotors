@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Bot, User, FileText, Loader2, Play, ExternalLink, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Message, Tutorial } from "../hooks/useExpertChat";
+import { useTypewriterText } from "./useTypewriterText";
 
 interface ChatMessageProps {
   message: Message;
@@ -12,6 +13,12 @@ interface ChatMessageProps {
 const ChatMessage = ({ message, index, isTyping }: ChatMessageProps) => {
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
+
+  const typedContent = useTypewriterText(message.content ?? "", {
+    enabled: Boolean(isAssistant && isTyping),
+    tickMs: 16,
+    maxDurationMs: 4500,
+  });
   
   return (
     <motion.div
@@ -95,11 +102,11 @@ const ChatMessage = ({ message, index, isTyping }: ChatMessageProps) => {
               {message.content ? (
                 isAssistant && isTyping ? (
                   <span>
-                    {message.content}
+                    {typedContent}
                     <motion.span
-                      animate={{ opacity: [1, 0] }}
-                      transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }}
-                      className="inline-block w-2 h-4 bg-primary ml-0.5 align-middle"
+                      animate={{ opacity: [1, 0.15, 1] }}
+                      transition={{ duration: 0.75, repeat: Infinity, ease: "easeInOut" }}
+                      className="inline-block w-px h-4 bg-primary ml-0.5 align-middle"
                     />
                   </span>
                 ) : (
