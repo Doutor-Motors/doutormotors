@@ -100,12 +100,70 @@ interface ExpertChatViewProps {
   onHome: () => void;
 }
 
-const QUICK_QUESTIONS = [
-  { icon: AlertTriangle, text: "Meu carro está fazendo um barulho estranho", color: "text-amber-500" },
-  { icon: Wrench, text: "Qual manutenção devo fazer agora?", color: "text-primary" },
-  { icon: Car, text: "Essa peça é compatível com meu carro?", color: "text-green-500" },
-  { icon: HelpCircle, text: "Como funciona o sistema de injeção?", color: "text-blue-500" },
+// Base questions always shown
+const BASE_QUESTIONS = [
+  { icon: AlertTriangle, text: "Meu carro está fazendo um barulho estranho", color: "text-amber-500", gradient: "from-amber-500/20 to-orange-500/10" },
+  { icon: Wrench, text: "Qual manutenção devo fazer agora?", color: "text-primary", gradient: "from-primary/20 to-primary/5" },
+  { icon: Car, text: "Essa peça é compatível com meu carro?", color: "text-green-500", gradient: "from-green-500/20 to-emerald-500/10" },
+  { icon: HelpCircle, text: "Como funciona o sistema de injeção?", color: "text-blue-500", gradient: "from-blue-500/20 to-cyan-500/10" },
 ];
+
+// Vehicle-specific contextual questions
+const getContextualQuestions = (vehicle: { brand: string; model: string; year: number } | null) => {
+  if (!vehicle) return [];
+  
+  const currentYear = new Date().getFullYear();
+  const vehicleAge = currentYear - vehicle.year;
+  const questions: Array<{ icon: typeof Car; text: string; color: string; gradient: string }> = [];
+  
+  // Age-based questions
+  if (vehicleAge >= 10) {
+    questions.push({
+      icon: Wrench,
+      text: `Quais peças devo verificar em um ${vehicle.brand} com ${vehicleAge} anos?`,
+      color: "text-orange-500",
+      gradient: "from-orange-500/20 to-red-500/10"
+    });
+  }
+  
+  if (vehicleAge >= 5) {
+    questions.push({
+      icon: Activity,
+      text: `Qual a quilometragem ideal para trocar a correia dentada do ${vehicle.model}?`,
+      color: "text-rose-500",
+      gradient: "from-rose-500/20 to-pink-500/10"
+    });
+  }
+  
+  // Brand-specific questions
+  const brandQuestions: Record<string, { icon: typeof Car; text: string; color: string; gradient: string }> = {
+    "volkswagen": { icon: Car, text: `Problemas comuns no ${vehicle.model} ${vehicle.year}`, color: "text-blue-400", gradient: "from-blue-400/20 to-indigo-500/10" },
+    "fiat": { icon: AlertTriangle, text: `Recalls ativos para ${vehicle.brand} ${vehicle.model}?`, color: "text-red-500", gradient: "from-red-500/20 to-rose-500/10" },
+    "chevrolet": { icon: Wrench, text: `Manutenção preventiva do ${vehicle.model} ${vehicle.year}`, color: "text-yellow-500", gradient: "from-yellow-500/20 to-amber-500/10" },
+    "ford": { icon: HelpCircle, text: `Qual óleo usar no ${vehicle.model} ${vehicle.year}?`, color: "text-blue-600", gradient: "from-blue-600/20 to-blue-400/10" },
+    "honda": { icon: Activity, text: `Intervalo de revisão do ${vehicle.model}`, color: "text-red-400", gradient: "from-red-400/20 to-orange-500/10" },
+    "toyota": { icon: Car, text: `Sistema híbrido do ${vehicle.model} - como funciona?`, color: "text-green-600", gradient: "from-green-600/20 to-teal-500/10" },
+    "hyundai": { icon: Wrench, text: `Garantia e manutenção do ${vehicle.model} ${vehicle.year}`, color: "text-blue-500", gradient: "from-blue-500/20 to-sky-500/10" },
+    "renault": { icon: AlertTriangle, text: `Problemas elétricos comuns no ${vehicle.model}`, color: "text-yellow-400", gradient: "from-yellow-400/20 to-orange-400/10" },
+    "jeep": { icon: Car, text: `Sistema 4x4 do ${vehicle.model} - cuidados especiais`, color: "text-green-500", gradient: "from-green-500/20 to-lime-500/10" },
+    "nissan": { icon: HelpCircle, text: `CVT do ${vehicle.model} - manutenção correta`, color: "text-red-500", gradient: "from-red-500/20 to-rose-400/10" },
+  };
+  
+  const brandKey = vehicle.brand.toLowerCase();
+  if (brandQuestions[brandKey]) {
+    questions.push(brandQuestions[brandKey]);
+  }
+  
+  // General vehicle-specific question
+  questions.push({
+    icon: Sparkles,
+    text: `Dicas para manter meu ${vehicle.brand} ${vehicle.model} ${vehicle.year} em perfeito estado`,
+    color: "text-purple-500",
+    gradient: "from-purple-500/20 to-violet-500/10"
+  });
+  
+  return questions.slice(0, 4); // Max 4 contextual questions
+};
 
 const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) => {
   const { user } = useAuth();
@@ -911,21 +969,74 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                       <strong> analisar fotos</strong>, <strong>documentos</strong> e <strong>códigos OBD</strong>.
                     </p>
                     
-                    <p className="text-sm font-medium mb-4">Perguntas rápidas:</p>
+                    {/* Contextual questions based on vehicle */}
+                    {userVehicle && (
+                      <>
+                        <div className="flex items-center gap-2 justify-center mb-3">
+                          <Badge variant="outline" className="bg-primary/10 border-primary/30">
+                            <Car className="w-3 h-3 mr-1" />
+                            {userVehicle.brand} {userVehicle.model} {userVehicle.year}
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-medium mb-4 text-primary">Perguntas sobre seu veículo:</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto mb-6">
+                          {getContextualQuestions(userVehicle).map((q, i) => (
+                            <motion.div
+                              key={`ctx-${i}`}
+                              whileHover={{ scale: 1.02, y: -2 }}
+                              whileTap={{ scale: 0.98 }}
+                              className="relative group"
+                            >
+                              {/* Glow effect on hover */}
+                              <div className={`absolute -inset-0.5 bg-gradient-to-r ${q.gradient} rounded-xl blur-lg opacity-0 group-hover:opacity-75 transition-all duration-500`} />
+                              
+                              <Card
+                                className={`relative cursor-pointer border-border/50 bg-gradient-to-br ${q.gradient} backdrop-blur-sm hover:border-primary/50 transition-all duration-300 overflow-hidden`}
+                                onClick={() => handleQuickQuestion(q.text)}
+                              >
+                                {/* Shimmer effect */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                                
+                                <CardContent className="p-4 flex items-start gap-3 relative z-10">
+                                  <div className={`w-10 h-10 rounded-lg bg-background/80 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg ${q.color}`}>
+                                    <q.icon className="w-5 h-5" />
+                                  </div>
+                                  <span className="text-sm text-foreground leading-relaxed pt-1 group-hover:text-foreground transition-colors">{q.text}</span>
+                                </CardContent>
+                              </Card>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    
+                    <p className="text-sm font-medium mb-4">Perguntas gerais:</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                      {QUICK_QUESTIONS.map((q, i) => (
-                        <Card
-                          key={i}
-                          className="cursor-pointer border-border/50 bg-card/50 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 group"
-                          onClick={() => handleQuickQuestion(q.text)}
+                      {BASE_QUESTIONS.map((q, i) => (
+                        <motion.div
+                          key={`base-${i}`}
+                          whileHover={{ scale: 1.02, y: -2 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="relative group"
                         >
-                          <CardContent className="p-4 flex items-start gap-3">
-                            <div className={`w-10 h-10 rounded-lg bg-background/80 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${q.color}`}>
-                              <q.icon className="w-5 h-5" />
-                            </div>
-                            <span className="text-sm text-foreground/90 leading-relaxed pt-1">{q.text}</span>
-                          </CardContent>
-                        </Card>
+                          {/* Glow effect on hover */}
+                          <div className={`absolute -inset-0.5 bg-gradient-to-r ${q.gradient} rounded-xl blur-lg opacity-0 group-hover:opacity-60 transition-all duration-500`} />
+                          
+                          <Card
+                            className="relative cursor-pointer border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/50 transition-all duration-300 overflow-hidden"
+                            onClick={() => handleQuickQuestion(q.text)}
+                          >
+                            {/* Shimmer effect */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                            
+                            <CardContent className="p-4 flex items-start gap-3 relative z-10">
+                              <div className={`w-10 h-10 rounded-lg bg-background/80 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg ${q.color}`}>
+                                <q.icon className="w-5 h-5" />
+                              </div>
+                              <span className="text-sm text-foreground/90 leading-relaxed pt-1 group-hover:text-foreground transition-colors">{q.text}</span>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
                       ))}
                     </div>
                   </CardContent>
