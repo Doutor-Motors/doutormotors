@@ -28,7 +28,10 @@ import {
   FileText,
   Paperclip,
   Search,
-  Sparkles
+  Sparkles,
+  Star,
+  BookOpen,
+  Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -93,6 +96,33 @@ interface DiagnosticCode {
   priority: "critical" | "attention" | "preventive";
   severity: number;
 }
+
+interface FavoriteQuestion {
+  id: string;
+  question_text: string;
+  question_icon: string;
+  question_color: string;
+  question_gradient: string;
+  usage_count: number;
+}
+
+interface RelatedTutorial {
+  id: string;
+  title: string;
+  thumbnail?: string;
+  category?: string;
+  slug: string;
+}
+
+// Icon mapping for favorites
+const ICON_MAP: Record<string, typeof Car> = {
+  AlertTriangle,
+  Wrench,
+  Car,
+  HelpCircle,
+  Activity,
+  Sparkles,
+};
 
 interface ExpertChatViewProps {
   userVehicle: { brand: string; model: string; year: number } | null;
@@ -183,11 +213,124 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
   const [editingTitle, setEditingTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [historyTab, setHistoryTab] = useState<"all" | "pinned">("all");
+  const [favoriteQuestions, setFavoriteQuestions] = useState<FavoriteQuestion[]>([]);
+  const [relatedTutorials, setRelatedTutorials] = useState<RelatedTutorial[]>([]);
+  const [showTutorialSuggestions, setShowTutorialSuggestions] = useState(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
+
+  // Load favorite questions
+  const loadFavorites = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data } = await supabase
+        .from("expert_favorite_questions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("usage_count", { ascending: false })
+        .limit(6);
+      
+      if (data) {
+        setFavoriteQuestions(data);
+      }
+    } catch (error) {
+      console.error("Error loading favorites:", error);
+    }
+  }, [user]);
+
+  // Save question as favorite (or increment usage)
+  const saveQuestionAsFavorite = async (text: string, icon: string, color: string, gradient: string) => {
+    if (!user) return;
+    
+    try {
+      // Try to update existing, otherwise insert
+      const { data: existing } = await supabase
+        .from("expert_favorite_questions")
+        .select("id, usage_count")
+        .eq("user_id", user.id)
+        .eq("question_text", text)
+        .single();
+      
+      if (existing) {
+        await supabase
+          .from("expert_favorite_questions")
+          .update({ 
+            usage_count: existing.usage_count + 1,
+            last_used_at: new Date().toISOString()
+          })
+          .eq("id", existing.id);
+      } else {
+        await supabase
+          .from("expert_favorite_questions")
+          .insert({
+            user_id: user.id,
+            question_text: text,
+            question_icon: icon,
+            question_color: color,
+            question_gradient: gradient,
+          });
+      }
+      
+      loadFavorites();
+    } catch (error) {
+      console.error("Error saving favorite:", error);
+    }
+  };
+
+  // Remove favorite question
+  const removeFavorite = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await supabase
+        .from("expert_favorite_questions")
+        .delete()
+        .eq("id", id);
+      
+      setFavoriteQuestions(prev => prev.filter(f => f.id !== id));
+      notifySuccess("Removida", "Pergunta removida dos favoritos");
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+    }
+  };
+
+  // Search related tutorials based on question keywords
+  const searchRelatedTutorials = async (questionText: string) => {
+    try {
+      // Extract keywords from question
+      const keywords = questionText.toLowerCase()
+        .split(/\s+/)
+        .filter(w => w.length > 3)
+        .slice(0, 5);
+      
+      if (keywords.length === 0) return;
+      
+      // Search tutorials by keywords in title or category
+      const { data } = await supabase
+        .from("tutorial_cache")
+        .select("id, title_pt, thumbnail_url, category_pt, slug")
+        .or(keywords.map(k => `title_pt.ilike.%${k}%`).join(","))
+        .limit(4);
+      
+      if (data && data.length > 0) {
+        setRelatedTutorials(data.map(t => ({
+          id: t.id,
+          title: t.title_pt || "Tutorial",
+          thumbnail: t.thumbnail_url || undefined,
+          category: t.category_pt || undefined,
+          slug: t.slug,
+        })));
+        setShowTutorialSuggestions(true);
+      } else {
+        setShowTutorialSuggestions(false);
+      }
+    } catch (error) {
+      console.error("Error searching tutorials:", error);
+    }
+  };
 
   // Load conversation history
   const loadConversations = useCallback(async () => {
@@ -378,10 +521,11 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     }
   }, [messages]);
 
-  // Load conversations on mount
+  // Load conversations and favorites on mount
   useEffect(() => {
     loadConversations();
-  }, [loadConversations]);
+    loadFavorites();
+  }, [loadConversations, loadFavorites]);
 
   // Handle image selection
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -594,9 +738,16 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     );
   };
 
-  const handleQuickQuestion = (question: string) => {
+  const handleQuickQuestion = (question: string, icon?: string, color?: string, gradient?: string) => {
     if (isLoading) return;
     setInput("");
+    
+    // Save as favorite and search related tutorials
+    if (icon && color && gradient) {
+      saveQuestionAsFavorite(question, icon, color, gradient);
+    }
+    searchRelatedTutorials(question);
+    
     streamChat(question);
   };
 
@@ -969,6 +1120,58 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                       <strong> analisar fotos</strong>, <strong>documentos</strong> e <strong>códigos OBD</strong>.
                     </p>
                     
+                    {/* Favorite questions section */}
+                    {favoriteQuestions.length > 0 && (
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 justify-center mb-3">
+                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                          <p className="text-sm font-medium text-yellow-500">Suas perguntas favoritas:</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
+                          {favoriteQuestions.slice(0, 4).map((fav) => {
+                            const IconComponent = ICON_MAP[fav.question_icon] || HelpCircle;
+                            return (
+                              <motion.div
+                                key={fav.id}
+                                whileHover={{ scale: 1.02, y: -2 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="relative group"
+                              >
+                                <div className={`absolute -inset-0.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/10 rounded-xl blur-lg opacity-0 group-hover:opacity-75 transition-all duration-500`} />
+                                
+                                <Card
+                                  className="relative cursor-pointer border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-amber-500/5 backdrop-blur-sm hover:border-yellow-500/50 transition-all duration-300 overflow-hidden"
+                                  onClick={() => handleQuickQuestion(fav.question_text, fav.question_icon, fav.question_color, fav.question_gradient)}
+                                >
+                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                                  
+                                  <CardContent className="p-4 flex items-start gap-3 relative z-10">
+                                    <div className={`w-10 h-10 rounded-lg bg-background/80 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg ${fav.question_color}`}>
+                                      <IconComponent className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-sm text-foreground leading-relaxed line-clamp-2">{fav.question_text}</span>
+                                      <span className="text-xs text-muted-foreground mt-1 block">
+                                        Usada {fav.usage_count}x
+                                      </span>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                      onClick={(e) => removeFavorite(fav.id, e)}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </CardContent>
+                                </Card>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Contextual questions based on vehicle */}
                     {userVehicle && (
                       <>
@@ -987,14 +1190,12 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                               whileTap={{ scale: 0.98 }}
                               className="relative group"
                             >
-                              {/* Glow effect on hover */}
                               <div className={`absolute -inset-0.5 bg-gradient-to-r ${q.gradient} rounded-xl blur-lg opacity-0 group-hover:opacity-75 transition-all duration-500`} />
                               
                               <Card
                                 className={`relative cursor-pointer border-border/50 bg-gradient-to-br ${q.gradient} backdrop-blur-sm hover:border-primary/50 transition-all duration-300 overflow-hidden`}
-                                onClick={() => handleQuickQuestion(q.text)}
+                                onClick={() => handleQuickQuestion(q.text, q.icon.name || "Car", q.color, q.gradient)}
                               >
-                                {/* Shimmer effect */}
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                                 
                                 <CardContent className="p-4 flex items-start gap-3 relative z-10">
@@ -1019,14 +1220,12 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
                           whileTap={{ scale: 0.98 }}
                           className="relative group"
                         >
-                          {/* Glow effect on hover */}
                           <div className={`absolute -inset-0.5 bg-gradient-to-r ${q.gradient} rounded-xl blur-lg opacity-0 group-hover:opacity-60 transition-all duration-500`} />
                           
                           <Card
                             className="relative cursor-pointer border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/50 transition-all duration-300 overflow-hidden"
-                            onClick={() => handleQuickQuestion(q.text)}
+                            onClick={() => handleQuickQuestion(q.text, q.icon.name || "HelpCircle", q.color, q.gradient)}
                           >
-                            {/* Shimmer effect */}
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                             
                             <CardContent className="p-4 flex items-start gap-3 relative z-10">
@@ -1140,6 +1339,62 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
           </div>
         </ScrollArea>
 
+        {/* Tutorial suggestions floating panel */}
+        <AnimatePresence>
+          {showTutorialSuggestions && relatedTutorials.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="mb-3"
+            >
+              <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Video className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">Tutoriais relacionados à sua pergunta:</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-6 h-6"
+                      onClick={() => setShowTutorialSuggestions(false)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {relatedTutorials.map((tutorial) => (
+                      <motion.a
+                        key={tutorial.id}
+                        href={`/tutoriais/${tutorial.slug}`}
+                        whileHover={{ scale: 1.02 }}
+                        className="block p-2 rounded-lg bg-card/50 hover:bg-card border border-border/50 hover:border-primary/30 transition-all group"
+                      >
+                        {tutorial.thumbnail && (
+                          <img 
+                            src={tutorial.thumbnail} 
+                            alt="" 
+                            className="w-full h-16 object-cover rounded mb-1"
+                          />
+                        )}
+                        <span className="text-xs line-clamp-2 group-hover:text-primary transition-colors">
+                          {tutorial.title}
+                        </span>
+                        {tutorial.category && (
+                          <Badge variant="outline" className="text-[10px] mt-1">
+                            {tutorial.category}
+                          </Badge>
+                        )}
+                      </motion.a>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {/* Attachments Preview */}
         <AnimatePresence>
           {(selectedImage || selectedDocument) && (

@@ -576,6 +576,42 @@ export type Database = {
         }
         Relationships: []
       }
+      expert_favorite_questions: {
+        Row: {
+          created_at: string
+          id: string
+          last_used_at: string
+          question_color: string
+          question_gradient: string
+          question_icon: string
+          question_text: string
+          usage_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          question_color?: string
+          question_gradient?: string
+          question_icon?: string
+          question_text: string
+          usage_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          question_color?: string
+          question_gradient?: string
+          question_icon?: string
+          question_text?: string
+          usage_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       expert_messages: {
         Row: {
           content: string
