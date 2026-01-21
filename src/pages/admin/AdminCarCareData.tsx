@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import CacheStatisticsPanel from "@/components/admin/CacheStatisticsPanel";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -357,7 +358,13 @@ export default function AdminCarCareData() {
             <TabsTrigger value="procedures">Procedimentos ({stats.totalProcedures})</TabsTrigger>
             <TabsTrigger value="categories">Categorias ({stats.totalCategories})</TabsTrigger>
             <TabsTrigger value="vehicles">Por Veículo</TabsTrigger>
+            <TabsTrigger value="cache-stats">Estatísticas</TabsTrigger>
           </TabsList>
+
+          {/* Cache Statistics Tab */}
+          <TabsContent value="cache-stats">
+            <CacheStatisticsPanel />
+          </TabsContent>
 
           {/* Scanner Tab */}
           <TabsContent value="scanner" className="space-y-4">
