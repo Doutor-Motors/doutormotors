@@ -15,6 +15,7 @@ import {
   Star,
   Video,
   Activity,
+  Bug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,10 +31,12 @@ import ChatMessage from "./chat/ChatMessage";
 import ChatHeader from "./chat/ChatHeader";
 import PopularQuestionsSheet from "./chat/PopularQuestionsSheet";
 import ConversationHistorySheet from "./chat/ConversationHistorySheet";
+import DiagnosticPanel from "./chat/DiagnosticPanel";
 import { useExpertChat } from "./hooks/useExpertChat";
 import { useConversationHistory } from "./hooks/useConversationHistory";
 import { useFavoriteQuestions } from "./hooks/useFavoriteQuestions";
 import { useRelatedTutorials } from "./hooks/useRelatedTutorials";
+import { useDiagnosticMode } from "./hooks/useDiagnosticMode";
 
 // Icon mapping for favorites
 const ICON_MAP: Record<string, typeof Car> = {
@@ -80,11 +83,14 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
   const { user } = useAuth();
   const { notifySuccess, notifyError } = useNotifications();
   
-  // Custom hooks
+  // Diagnostic mode hook
+  const { isDiagnosticEnabled, toggleDiagnosticMode, logs, log, clearLogs } = useDiagnosticMode();
+  
+  // Custom hooks with diagnostic logging
   const { messages, isLoading, currentConversationId, selectedOBDCodes, setSelectedOBDCodes, streamChat, clearConversation, loadConversationMessages } = useExpertChat({ userVehicle });
-  const { conversations, isLoadingHistory, loadConversations, deleteConversation, togglePinConversation, renameConversation, createNewConversation } = useConversationHistory();
+  const { conversations, isLoadingHistory, loadConversations, deleteConversation, togglePinConversation, renameConversation, createNewConversation } = useConversationHistory(isDiagnosticEnabled ? log : undefined);
   const { favoriteQuestions, popularQuestions, isLoadingPopular, loadFavorites, loadPopularQuestions, saveQuestionAsFavorite, removeFavorite } = useFavoriteQuestions();
-  const { relatedTutorials, showTutorialSuggestions, searchRelatedTutorials, closeSuggestions } = useRelatedTutorials();
+  const { relatedTutorials, showTutorialSuggestions, searchRelatedTutorials, closeSuggestions } = useRelatedTutorials(isDiagnosticEnabled ? log : undefined);
   
   // Local state
   const [input, setInput] = useState("");
@@ -142,7 +148,7 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
     if (isLoading) return;
     setInput("");
     if (icon && color && gradient) saveQuestionAsFavorite(question, icon, color, gradient);
-    searchRelatedTutorials(question);
+    searchRelatedTutorials(question, userVehicle || undefined);
     streamChat(question, undefined, undefined, loadConversations);
   };
 
@@ -324,6 +330,25 @@ const ExpertChatView = ({ userVehicle, onBack, onHome }: ExpertChatViewProps) =>
       {/* Sheets */}
       <ConversationHistorySheet isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} conversations={conversations} isLoading={isLoadingHistory} currentConversationId={currentConversationId} onLoadConversation={handleLoadConversation} onDeleteConversation={deleteConversation} onTogglePin={togglePinConversation} onRename={renameConversation} />
       <PopularQuestionsSheet isOpen={isRankingOpen} onClose={() => setIsRankingOpen(false)} popularQuestions={popularQuestions} isLoading={isLoadingPopular} onSelectQuestion={(q) => { handleQuickQuestion(q.question_text, q.question_icon, q.question_color, q.question_gradient); setIsRankingOpen(false); }} />
+      
+      {/* Diagnostic Mode Toggle Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`fixed bottom-4 left-4 z-40 rounded-full w-10 h-10 ${isDiagnosticEnabled ? "bg-primary text-primary-foreground" : "bg-muted/80"}`}
+        onClick={toggleDiagnosticMode}
+        title={isDiagnosticEnabled ? "Desativar modo diagnóstico" : "Ativar modo diagnóstico"}
+      >
+        <Bug className="w-4 h-4" />
+      </Button>
+      
+      {/* Diagnostic Panel */}
+      <DiagnosticPanel
+        isOpen={isDiagnosticEnabled}
+        logs={logs}
+        onClose={toggleDiagnosticMode}
+        onClear={clearLogs}
+      />
     </motion.div>
   );
 };
