@@ -1575,6 +1575,7 @@ export type Database = {
         Row: {
           brand: string
           created_at: string
+          current_mileage: number | null
           engine: string | null
           fuel_type: string | null
           id: string
@@ -1587,6 +1588,7 @@ export type Database = {
         Insert: {
           brand: string
           created_at?: string
+          current_mileage?: number | null
           engine?: string | null
           fuel_type?: string | null
           id?: string
@@ -1599,6 +1601,7 @@ export type Database = {
         Update: {
           brand?: string
           created_at?: string
+          current_mileage?: number | null
           engine?: string | null
           fuel_type?: string | null
           id?: string
@@ -1741,6 +1744,7 @@ export type Database = {
       }
       cleanup_old_data: { Args: never; Returns: Json }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      get_system_stats: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1748,6 +1752,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_cpf: { Args: { cpf: string }; Returns: boolean }
       validate_obd_command: { Args: { command: string }; Returns: boolean }
     }
     Enums: {
