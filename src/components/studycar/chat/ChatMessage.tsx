@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { Bot, User, FileText, Loader2, Play, ExternalLink, Sparkles } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import type { Message, Tutorial } from "../hooks/useExpertChat";
+import { User, FileText, Loader2, Play, ExternalLink, Sparkles, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import type { Message } from "../hooks/useExpertChat";
 import { useTypewriterText } from "./useTypewriterText";
 
 interface ChatMessageProps {
@@ -24,63 +24,68 @@ const ChatMessage = ({ message, index, isTyping }: ChatMessageProps) => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
+      transition={{ delay: index * 0.03 }}
       className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
     >
       {isAssistant && (
-        <div className="relative">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-lg shadow-primary/10">
-            <Bot className="w-5 h-5 text-primary" />
+        <div className="relative shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-primary/80 to-orange-600 flex items-center justify-center shadow-lg shadow-primary/20">
+            <Zap className="w-5 h-5 text-white" />
           </div>
-          {/* Status indicator */}
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background" />
+          {/* Online indicator */}
+          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-[hsl(222,44%,14%)]" />
         </div>
       )}
       
-      <div className="max-w-[85%] space-y-2">
+      <div className={`max-w-[85%] space-y-2 ${isUser ? "items-end" : "items-start"}`}>
         {/* Speaker label */}
-        <div className={`text-xs text-muted-foreground mb-1 ${isUser ? "text-right" : "text-left"}`}>
+        <div className={`text-[11px] font-medium mb-1.5 ${isUser ? "text-right text-white/50" : "text-left text-primary/80"}`}>
           {isUser ? (
-            <span className="flex items-center gap-1 justify-end">
+            <span className="flex items-center gap-1.5 justify-end uppercase tracking-wider">
               <User className="w-3 h-3" />
               Você
             </span>
           ) : (
-            <span className="flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-primary" />
-              Especialista Automotivo
+            <span className="flex items-center gap-1.5 uppercase tracking-wider">
+              <Sparkles className="w-3 h-3" />
+              Especialista IA
             </span>
           )}
         </div>
         
-        <Card className={`relative overflow-hidden ${
+        {/* Message Card */}
+        <div className={`relative rounded-2xl overflow-hidden ${
           isUser 
-            ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground border-primary/50" 
-            : "bg-gradient-to-br from-card to-muted/30 border-border/50 shadow-lg"
+            ? "bg-gradient-to-br from-primary to-primary/90 text-white shadow-lg shadow-primary/20" 
+            : "bg-gradient-to-br from-[hsl(222,44%,18%)] to-[hsl(222,44%,14%)] text-white border border-white/10 shadow-xl"
         }`}>
-          {/* Tech pattern overlay for assistant */}
+          {/* Tech pattern for assistant */}
           {isAssistant && (
             <div className="absolute inset-0 opacity-5">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_0%,hsl(var(--background))_100%)]" />
               <div 
                 className="absolute inset-0"
                 style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                  backgroundImage: `linear-gradient(45deg, transparent 30%, hsl(var(--primary)/0.1) 50%, transparent 70%)`,
+                  backgroundSize: "20px 20px"
                 }}
               />
             </div>
           )}
           
-          <CardContent className="p-4 relative z-10">
+          <div className="p-4 relative z-10">
             {/* Image preview */}
             {message.imageBase64 && (
-              <motion.img 
-                initial={{ opacity: 0, scale: 0.9 }}
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                src={message.imageBase64} 
-                alt="Imagem enviada" 
-                className="max-w-[200px] rounded-lg mb-3 border border-white/10"
-              />
+                className="mb-3"
+              >
+                <img 
+                  src={message.imageBase64} 
+                  alt="Imagem enviada" 
+                  className="max-w-[220px] rounded-xl border-2 border-white/10 shadow-lg"
+                />
+              </motion.div>
             )}
             
             {/* Document indicator */}
@@ -88,33 +93,33 @@ const ChatMessage = ({ message, index, isTyping }: ChatMessageProps) => {
               <motion.div 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-background/20 backdrop-blur-sm"
+                className="flex items-center gap-2 mb-3 p-2.5 rounded-lg bg-white/10 backdrop-blur-sm"
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-4 h-4 text-amber-400" />
                 <span className="text-sm font-medium">{message.documentName}</span>
               </motion.div>
             )}
             
-            {/* Message content with typing animation for assistant */}
-            <div className={`text-sm whitespace-pre-wrap leading-relaxed ${
-              isAssistant ? "prose prose-sm dark:prose-invert max-w-none" : ""
+            {/* Message content */}
+            <div className={`text-sm leading-relaxed ${
+              isAssistant ? "text-white/90" : "text-white"
             }`}>
               {message.content ? (
                 isAssistant && isTyping ? (
                   <span>
                     {typedContent}
                     <motion.span
-                      animate={{ opacity: [1, 0.15, 1] }}
-                      transition={{ duration: 0.75, repeat: Infinity, ease: "easeInOut" }}
-                      className="inline-block w-px h-4 bg-primary ml-0.5 align-middle"
+                      animate={{ opacity: [1, 0.2, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
+                      className="inline-block w-0.5 h-4 bg-green-400 ml-1 align-middle rounded-full"
                     />
                   </span>
                 ) : (
-                  message.content
+                  <span className="whitespace-pre-wrap">{message.content}</span>
                 )
               ) : (
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="flex items-center gap-2 text-white/60">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
                   <span>Analisando</span>
                   <motion.span
                     animate={{ opacity: [0, 1, 0] }}
@@ -125,8 +130,8 @@ const ChatMessage = ({ message, index, isTyping }: ChatMessageProps) => {
                 </span>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Tutorial Suggestions */}
         {message.suggestedTutorials && message.suggestedTutorials.length > 0 && (
@@ -134,48 +139,47 @@ const ChatMessage = ({ message, index, isTyping }: ChatMessageProps) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
+            className="mt-2"
           >
-            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-              <CardContent className="p-3">
-                <p className="text-xs font-semibold text-primary mb-2 flex items-center gap-1">
-                  <Play className="w-3 h-3" />
-                  Tutoriais Relacionados:
-                </p>
-                <div className="space-y-2">
-                  {message.suggestedTutorials.map((tutorial, i) => (
-                    <motion.a
-                      key={i}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 * i }}
-                      href={tutorial.url || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-primary/10 transition-all text-xs group"
-                    >
-                      {tutorial.thumbnail && (
-                        <img 
-                          src={tutorial.thumbnail} 
-                          alt="" 
-                          className="w-14 h-10 object-cover rounded-md shadow-sm"
-                        />
-                      )}
-                      <span className="flex-1 truncate group-hover:text-primary transition-colors font-medium">
-                        {tutorial.name}
-                      </span>
-                      <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary shrink-0" />
-                    </motion.a>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 border border-green-500/20 p-3">
+              <p className="text-xs font-bold text-green-400 mb-2.5 flex items-center gap-1.5 uppercase tracking-wider">
+                <Play className="w-3 h-3" />
+                Tutoriais Relacionados
+              </p>
+              <div className="space-y-2">
+                {message.suggestedTutorials.map((tutorial, i) => (
+                  <motion.a
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 * i }}
+                    href={tutorial.url || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all text-xs group"
+                  >
+                    {tutorial.thumbnail && (
+                      <img 
+                        src={tutorial.thumbnail} 
+                        alt="" 
+                        className="w-14 h-10 object-cover rounded-lg shadow-md border border-white/10"
+                      />
+                    )}
+                    <span className="flex-1 truncate text-white/80 group-hover:text-green-300 transition-colors font-medium">
+                      {tutorial.name}
+                    </span>
+                    <ExternalLink className="w-3 h-3 text-white/40 group-hover:text-green-400 shrink-0" />
+                  </motion.a>
+                ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </div>
       
       {isUser && (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-muted flex items-center justify-center shrink-0 border border-border shadow-lg">
-          <User className="w-5 h-5 text-foreground" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[hsl(222,44%,22%)] to-[hsl(222,44%,18%)] flex items-center justify-center shrink-0 border border-white/10 shadow-lg">
+          <User className="w-5 h-5 text-white/70" />
         </div>
       )}
     </motion.div>
