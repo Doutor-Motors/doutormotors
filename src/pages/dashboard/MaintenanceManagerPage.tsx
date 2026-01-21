@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, isPast, isWithinInterval, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -20,7 +20,10 @@ import {
   Calendar,
   List,
   History,
-  Search
+  Search,
+  FileText,
+  CalendarPlus,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,9 +37,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { MaintenanceRemindersPanel } from "@/components/dashboard/MaintenanceRemindersPanel";
 import { useMaintenanceReminders, MaintenanceReminder, MAINTENANCE_TYPES } from "@/hooks/useMaintenanceReminders";
+import { useCalendarIntegration } from "@/hooks/useCalendarIntegration";
+import { useAppStore } from "@/store/useAppStore";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { generateMaintenanceReport } from "@/services/pdf/maintenanceReportGenerator";
 import { cn } from "@/lib/utils";
 
 const PRIORITY_CONFIG = {
@@ -46,6 +60,8 @@ const PRIORITY_CONFIG = {
 };
 
 const MaintenanceManagerPage = () => {
+  const { user } = useAuth();
+  const { activeVehicleId } = useAppStore();
   const { 
     reminders, 
     upcomingReminders,
@@ -55,10 +71,62 @@ const MaintenanceManagerPage = () => {
     deleteReminder 
   } = useMaintenanceReminders();
   
+  const calendar = useCalendarIntegration();
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [activeVehicle, setActiveVehicle] = useState<{
+    id: string;
+    brand: string;
+    model: string;
+    year: number;
+    plate?: string;
+    current_mileage?: number;
+  } | null>(null);
+
+  // Fetch active vehicle info
+  useEffect(() => {
+    const fetchVehicle = async () => {
+      if (!activeVehicleId) return;
+      
+      const { data } = await supabase
+        .from('vehicles')
+        .select('id, brand, model, year, license_plate')
+        .eq('id', activeVehicleId)
+        .single();
+      
+      if (data) {
+        setActiveVehicle({
+          id: data.id,
+          brand: data.brand,
+          model: data.model,
+          year: data.year,
+          plate: data.license_plate || undefined,
+        });
+      }
+    };
+    
+    fetchVehicle();
+  }, [activeVehicleId]);
+
+  // Generate PDF report
+  const handleExportPDF = () => {
+    if (!activeVehicle) return;
+    
+    generateMaintenanceReport({
+      vehicle: activeVehicle,
+      reminders,
+      userName: user?.email || undefined,
+    });
+  };
+
+  // Get vehicle name for calendar events
+  const getVehicleName = () => {
+    if (!activeVehicle) return undefined;
+    return `${activeVehicle.brand} ${activeVehicle.model} ${activeVehicle.year}`;
+  };
 
   // Calendar navigation
   const goToPreviousMonth = () => {
@@ -158,6 +226,54 @@ const MaintenanceManagerPage = () => {
             <p className="text-muted-foreground">
               Gerencie os lembretes de manutenção dos seus veículos
             </p>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            {/* Export PDF */}
+            <Button 
+              variant="outline" 
+              onClick={handleExportPDF}
+              disabled={!activeVehicle || reminders.length === 0}
+              className="font-chakra uppercase"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              PDF
+            </Button>
+            
+            {/* Add to Calendar */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline"
+                  disabled={upcomingReminders.length === 0}
+                  className="font-chakra uppercase"
+                >
+                  <CalendarPlus className="w-4 h-4 mr-2" />
+                  Agenda
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => calendar.addMultipleToCalendar(upcomingReminders, getVehicleName(), 'google')}
+                >
+                  <img src="https://www.google.com/favicon.ico" alt="" className="w-4 h-4 mr-2" />
+                  Google Calendar
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => calendar.addMultipleToCalendar(upcomingReminders, getVehicleName(), 'outlook')}
+                >
+                  <img src="https://outlook.live.com/favicon.ico" alt="" className="w-4 h-4 mr-2" />
+                  Outlook Calendar
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => calendar.addMultipleToCalendar(upcomingReminders, getVehicleName(), 'ics')}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Baixar ICS (Apple/Outros)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
