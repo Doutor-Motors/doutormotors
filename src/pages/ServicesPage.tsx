@@ -20,68 +20,69 @@ import { PLAN_FEATURES } from "@/hooks/useSubscription";
 const services = [
   {
     icon: services1,
-    title: "Diagnóstico OBD2",
-    description: "Leitura completa de códigos de falha e sensores do seu veículo via adaptador OBD2.",
+    title: "Diagnóstico OBD2 Inteligente",
+    description: "Leitura completa de códigos de falha e sensores do seu veículo através do adaptador OBD2.",
     features: [
-      "Leitura de todos os códigos DTC",
+      "Leitura de códigos DTC",
       "Dados em tempo real dos sensores",
-      "Compatível com veículos 1996+",
-      "Conexão Bluetooth ou Wi-Fi",
+      "Compatível com veículos a partir de 1996*",
+      "Conexão via Bluetooth ou Wi-Fi",
     ],
+    note: "*Disponibilidade pode variar conforme veículo e adaptador compatível."
   },
   {
     icon: services2,
-    title: "Análise de Urgência",
-    description: "Classificação inteligente dos problemas por nível de risco e urgência de reparo.",
+    title: "Análise de Urgência e Risco",
+    description: "Nem todo problema é grave e o sistema te mostra isso.",
     features: [
-      "Priorização automática de problemas",
-      "Indicadores visuais de urgência",
+      "Classificação automática por risco e urgência",
+      "Indicadores visuais claros",
       "Alertas de segurança",
-      "Recomendações de ação",
+      "Recomendações objetivas do que fazer",
     ],
   },
   {
     icon: services3,
     title: "Linguagem Simples",
-    description: "Tradução técnica para linguagem humana. Entenda o problema sem ser mecânico.",
+    description: "Você não precisa ser mecânico para entender seu carro.",
     features: [
-      "Explicações em português claro",
-      "Sem jargões técnicos",
-      "Analogias do dia a dia",
-      "Ilustrações explicativas",
+      "Tradução técnica → linguagem humana",
+      "Sem jargões complicados",
+      "Exemplos e analogias do dia a dia",
+      "Visual didático e explicativo",
     ],
   },
   {
     icon: services4,
-    title: "Histórico Completo",
-    description: "Mantenha um registro de todos os diagnósticos e manutenções do seu veículo.",
+    title: "Histórico Completo do Veículo",
+    description: "Tudo que acontece com seu carro fica registrado.",
     features: [
-      "Linha do tempo de eventos",
-      "Relatórios exportáveis",
-      "Múltiplos veículos",
-      "Backup em nuvem",
+      "Linha do tempo dos diagnósticos",
+      "Relatórios organizados",
+      "Cadastro de veículos",
+      "Dados armazenados com segurança na nuvem",
     ],
   },
   {
     icon: services6,
-    title: "Guias de Conserto",
-    description: "Descubra se você pode resolver sozinho com nossos guias passo a passo.",
+    title: "Guias de Conserto Orientados",
+    description: "Saiba quando pode resolver sozinho e quando não deve.",
     features: [
-      "Tutoriais em vídeo",
+      "Guias passo a passo (quando disponíveis)",
       "Lista de ferramentas",
-      "Nível de dificuldade",
-      "Tempo estimado",
+      "Nível de dificuldade claro",
+      "Estimativa de tempo",
     ],
+    note: "Nunca incentivamos consertos inseguros. O sistema sempre indica quando procurar um profissional."
   },
   {
     icon: services5,
     title: "Suporte Especializado",
-    description: "Conecte-se com mecânicos parceiros para problemas mais complexos.",
+    description: "Quando o problema exige ajuda profissional, você sabe exatamente o motivo.",
     features: [
-      "Chat com especialistas",
-      "Orçamentos transparentes",
-      "Mecânicos verificados",
-      "Avaliações de clientes",
+      "Orientação técnica dentro da plataforma",
+      "Diagnóstico claro para apresentar ao mecânico",
+      "Comunicação mais transparente e sem surpresas",
     ],
   },
 ];
@@ -90,32 +91,32 @@ const PRO_BENEFITS = [
   {
     icon: Activity,
     title: "Diagnósticos Ilimitados",
-    description: "Realize quantos diagnósticos precisar, quando quiser, sem se preocupar com limites mensais.",
+    description: "Use quantas vezes precisar, sem limites mensais.",
+  },
+  {
+    icon: Zap,
+    title: "Dados em Tempo Real Avançados",
+    description: "Visualize múltiplos parâmetros simultâneos com gráficos claros.",
   },
   {
     icon: Database,
-    title: "Gravação de Dados Completa",
-    description: "Grave dados em tempo real com até 20 parâmetros simultâneos e exporte para análise detalhada.",
-  },
-  {
-    icon: Code2,
-    title: "Funções de Coding Avançadas",
-    description: "Acesse funções de programação como reset de adaptações, calibrações e configuração de módulos.",
-  },
-  {
-    icon: Settings2,
-    title: "Configurações OBD Pro",
-    description: "Otimize a comunicação com ajustes de timing, protocolos personalizados e comandos avançados.",
+    title: "Gravação e Exportação de Dados",
+    description: "Exporte relatórios para análise técnica quando necessário.",
   },
   {
     icon: Sparkles,
-    title: "Inteligência Artificial",
-    description: "Consultas ilimitadas ao assistente de IA para diagnósticos precisos e soluções personalizadas.",
+    title: "Inteligência Artificial Automotiva",
+    description: "Consultas ilimitadas para entender falhas, causas prováveis e próximos passos.",
+  },
+  {
+    icon: Shield,
+    title: "Alertas Personalizados",
+    description: "Receba avisos conforme o uso e histórico do veículo.",
   },
   {
     icon: Headphones,
     title: "Suporte Prioritário",
-    description: "Atendimento rápido e prioritário para todas as suas dúvidas e problemas técnicos.",
+    description: "Respostas mais rápidas sempre que precisar.",
   },
 ];
 
@@ -148,11 +149,11 @@ const ServicesPage = () => {
   return (
     <div className="min-h-screen">
       <Header />
-      
+
       {/* Hero Section */}
-      <section 
+      <section
         className="relative pt-32 sm:pt-36 md:pt-44 pb-12 md:pb-20 overflow-hidden text-center"
-        style={{ 
+        style={{
           backgroundImage: `url(${heroBg})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
@@ -164,22 +165,21 @@ const ServicesPage = () => {
             <img src={textBarsLight} alt="" className="w-5 h-3 sm:w-7 sm:h-4" />
             Nossos Serviços
           </p>
-          
+
           <h1 className="font-chakra text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold uppercase text-primary-foreground leading-tight mb-3 md:mb-4 fade-in-up">
-            Diagnóstico Completo Para Seu Veículo
+            Diagnóstico Inteligente Para Você Entender Seu Veículo
           </h1>
-          
+
           <p className="text-white/90 text-sm sm:text-base md:text-lg mb-6 md:mb-8 leading-relaxed max-w-2xl mx-auto fade-in-up">
-            Oferecemos uma solução completa para você entender e cuidar do seu veículo 
-            com inteligência e autonomia.
+            O Doutor Motors foi criado para transformar dados técnicos do seu carro em decisões claras, seguras e conscientes, sem mistério e sem dependência.
           </p>
         </div>
       </section>
 
       {/* Services Grid */}
-      <section 
+      <section
         className="py-20"
-        style={{ 
+        style={{
           backgroundImage: `url(${serviceBg})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
@@ -189,30 +189,38 @@ const ServicesPage = () => {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {services.map((service, index) => (
-              <div 
+              <div
                 key={index}
                 className="bg-card p-8 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-2 group"
               >
                 <figure className="w-20 h-20 mx-auto mb-6">
                   <img src={service.icon} alt={service.title} className="w-full h-full object-contain" />
                 </figure>
-                
+
                 <h3 className="font-chakra text-xl font-semibold uppercase text-foreground mb-3 text-center">
                   {service.title}
                 </h3>
-                
+
                 <p className="text-muted-foreground text-sm leading-relaxed mb-6 text-center">
                   {service.description}
                 </p>
 
                 <ul className="space-y-3">
                   {service.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center gap-3 text-sm text-foreground">
-                      <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                    <li key={featureIndex} className="flex items-start gap-3 text-sm text-foreground text-left">
+                      <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
+
+                {(service as any).note && (
+                  <div className="mt-6 pt-4 border-t border-border/40">
+                    <p className="text-xs text-muted-foreground italic">
+                      {(service as any).note}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -227,14 +235,13 @@ const ServicesPage = () => {
               <Crown className="h-3 w-3 mr-1" />
               Recursos Exclusivos Pro
             </Badge>
-            
+
             <h2 className="font-chakra text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-foreground mb-4">
-              Desbloqueie Todo o Potencial
+              Para quem quer controle total e zero limitações
             </h2>
-            
+
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Diagnósticos ilimitados, funções avançadas de coding, gravação de dados profissional 
-              e muito mais com o plano Pro.
+              O plano Pro é ideal para quem usa o sistema com frequência e quer ir além do diagnóstico básico.
             </p>
           </div>
 
@@ -256,6 +263,12 @@ const ServicesPage = () => {
               </Card>
             ))}
           </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-xs text-muted-foreground italic">
+              Algumas funções avançadas podem variar conforme o modelo do veículo.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -267,11 +280,11 @@ const ServicesPage = () => {
               <img src={textBarsDark} alt="" className="w-7 h-4" />
               Planos
             </p>
-            
+
             <h2 className="font-chakra text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-foreground mb-4">
-              Escolha Seu Plano
+              Escolha o plano ideal para você
             </h2>
-            
+
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Compare os recursos e escolha o plano ideal para suas necessidades.
             </p>
@@ -280,7 +293,7 @@ const ServicesPage = () => {
           {/* Plan Cards */}
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
             {/* Basic Plan */}
-            <div className="bg-card p-8 rounded-lg shadow-lg border-2 border-transparent hover:border-muted-foreground/20 transition-all">
+            <div className="bg-card p-8 rounded-lg shadow-lg border-2 border-transparent hover:border-muted-foreground/20 transition-all flex flex-col">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
                   <Zap className="w-6 h-6 text-muted-foreground" />
@@ -292,7 +305,7 @@ const ServicesPage = () => {
                   <p className="text-3xl font-bold text-primary">{PLAN_FEATURES.basic.price}<span className="text-base font-normal text-muted-foreground">/mês</span></p>
                 </div>
               </div>
-              
+
               <div className="space-y-4 mb-6">
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Incluído</p>
                 <ul className="space-y-3">
@@ -304,7 +317,7 @@ const ServicesPage = () => {
                   ))}
                 </ul>
               </div>
-              
+
               {PLAN_FEATURES.basic.limitations.length > 0 && (
                 <div className="space-y-4 mb-6">
                   <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Limitações</p>
@@ -318,23 +331,23 @@ const ServicesPage = () => {
                   </ul>
                 </div>
               )}
-              
-              <Link to="/signup">
+
+              <Link to="/signup" className="mt-auto">
                 <Button variant="outline" className="w-full font-chakra uppercase">
-                  Começar Agora
+                  COMEÇAR DIAGNÓSTICO
                 </Button>
               </Link>
             </div>
 
             {/* Pro Plan */}
-            <div className="bg-card p-8 rounded-lg shadow-lg border-2 border-primary relative overflow-hidden scale-[1.02]">
+            <div className="bg-card p-8 rounded-lg shadow-lg border-2 border-primary relative overflow-hidden scale-[1.02] flex flex-col">
               <div className="absolute -top-1 left-1/2 -translate-x-1/2">
                 <Badge className="bg-primary text-primary-foreground px-3 py-1">
                   <Crown className="w-3 h-3 mr-1" />
                   Mais Popular
                 </Badge>
               </div>
-              
+
               <div className="flex items-center gap-3 mb-4 mt-4">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <Crown className="w-6 h-6 text-primary" />
@@ -346,7 +359,7 @@ const ServicesPage = () => {
                   <p className="text-3xl font-bold text-primary">{PLAN_FEATURES.pro.price}</p>
                 </div>
               </div>
-              
+
               <div className="space-y-4 mb-6">
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Incluído</p>
                 <ul className="space-y-3">
@@ -358,8 +371,8 @@ const ServicesPage = () => {
                   ))}
                 </ul>
               </div>
-              
-              <Link to="/signup">
+
+              <Link to="/signup" className="mt-auto">
                 <Button className="w-full bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase">
                   Assinar Pro
                 </Button>
@@ -423,9 +436,9 @@ const ServicesPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section 
+      <section
         className="py-20 relative"
-        style={{ 
+        style={{
           backgroundImage: `url(${heroBg})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
@@ -435,21 +448,21 @@ const ServicesPage = () => {
         <div className="container mx-auto px-4 text-center">
           <Crown className="h-12 w-12 text-primary mx-auto mb-4" />
           <h2 className="font-chakra text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-primary-foreground mb-4">
-            Pronto para Começar?
+            Faça Parte da Nossa Comunidade
           </h2>
-          
+
           <p className="text-white/90 text-lg max-w-2xl mx-auto mb-8">
-            Crie sua conta e comece a entender seu carro de verdade.
-            Cancele a qualquer momento, sem compromisso.
+            Milhares de motoristas já entenderam que conhecimento é poder, economia, segurança e tranquilidade também.
+
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup">
-              <Button 
+              <Button
                 size="lg"
                 className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 border border-transparent hover:border-primary-foreground transition-all hover:-translate-y-1 px-8"
               >
-                <span>Criar Conta</span>
+                <span>COMEÇAR DIAGNÓSTICO</span>
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>

@@ -13,7 +13,9 @@ import textBarsLight from "@/assets/images/text-bars-light.png";
 import textBarsDark from "@/assets/images/text-bars-dark.png";
 
 // Cloudflare Turnstile Site Key
-const TURNSTILE_SITE_KEY = "0x4AAAAAACNUOQK41DJ3NPJV";
+// Cloudflare Turnstile Site Key - Test Key for Development
+// Replace with your production key when deploying
+const TURNSTILE_SITE_KEY = "1x00000000000000000000AA";
 
 declare global {
   interface Window {
@@ -109,34 +111,60 @@ const ContactPage = () => {
   }, []);
 
   useEffect(() => {
-    // Load Turnstile script
-    const script = document.createElement('script');
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-    script.async = true;
-    script.defer = true;
-    
-    script.onload = () => {
-      if (turnstileRef.current && window.turnstile) {
-        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
-          sitekey: TURNSTILE_SITE_KEY,
-          callback: handleTurnstileCallback,
-          'expired-callback': handleTurnstileExpired,
-          'error-callback': handleTurnstileError,
-          theme: 'auto',
-          language: 'pt-br',
-        });
+    // Function to initialize widget
+    const initializeWidget = () => {
+      if (turnstileRef.current && window.turnstile && !widgetIdRef.current) {
+        try {
+          // Clear container first to prevent duplicates
+          turnstileRef.current.innerHTML = '';
+
+          widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+            sitekey: TURNSTILE_SITE_KEY,
+            callback: handleTurnstileCallback,
+            'expired-callback': handleTurnstileExpired,
+            'error-callback': handleTurnstileError,
+            theme: 'auto',
+            language: 'pt-br',
+          });
+        } catch (error) {
+          console.error("Turnstile render error:", error);
+          setTurnstileError(true);
+        }
       }
     };
 
-    document.head.appendChild(script);
+    // Load Turnstile script if not present
+    if (!document.getElementById('turnstile-script')) {
+      const script = document.createElement('script');
+      script.id = 'turnstile-script';
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeWidget;
+      document.head.appendChild(script);
+    } else if (window.turnstile) {
+      // If script is already loaded
+      initializeWidget();
+    } else {
+      // Script is loading but not ready, wait for it
+      const interval = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(interval);
+          initializeWidget();
+        }
+      }, 100);
+
+      return () => clearInterval(interval);
+    }
 
     return () => {
       if (widgetIdRef.current && window.turnstile) {
-        window.turnstile.remove(widgetIdRef.current);
-      }
-      const existingScript = document.querySelector('script[src*="turnstile"]');
-      if (existingScript) {
-        existingScript.remove();
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+        } catch (e) {
+          console.warn("Error removing turnstile widget", e);
+        }
+        widgetIdRef.current = null;
       }
     };
   }, [handleTurnstileCallback, handleTurnstileExpired, handleTurnstileError]);
@@ -155,7 +183,7 @@ const ContactPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!turnstileToken) {
       toast({
         title: "Verificação necessária",
@@ -222,14 +250,14 @@ const ContactPage = () => {
       resetTurnstile();
     } catch (error: any) {
       console.error("Error sending contact form:", error);
-      
+
       let errorMessage = "Não foi possível enviar sua mensagem. Tente novamente.";
       if (error.message?.includes('rate') || error.message?.includes('limit')) {
         errorMessage = "Você atingiu o limite de mensagens. Tente novamente mais tarde.";
       } else if (error.message?.includes('captcha') || error.message?.includes('verification')) {
         errorMessage = "Falha na verificação de segurança. Atualize a página e tente novamente.";
       }
-      
+
       toast({
         title: "Erro ao enviar",
         description: errorMessage,
@@ -244,11 +272,11 @@ const ContactPage = () => {
   return (
     <div className="min-h-screen">
       <Header />
-      
+
       {/* Hero Section */}
-      <section 
+      <section
         className="relative pt-32 sm:pt-36 md:pt-44 pb-12 md:pb-20 overflow-hidden text-center"
-        style={{ 
+        style={{
           backgroundImage: `url(${heroBg})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
@@ -260,13 +288,13 @@ const ContactPage = () => {
             <img src={textBarsLight} alt="" className="w-5 h-3 sm:w-7 sm:h-4" />
             Contato
           </p>
-          
+
           <h1 className="font-chakra text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold uppercase text-primary-foreground leading-tight mb-3 md:mb-4 fade-in-up">
             Fale Conosco
           </h1>
-          
+
           <p className="text-white/90 text-sm sm:text-base md:text-lg mb-6 md:mb-8 leading-relaxed max-w-2xl mx-auto fade-in-up">
-            Estamos aqui para ajudar. Entre em contato conosco e responderemos 
+            Estamos aqui para ajudar. Entre em contato conosco e responderemos
             o mais rápido possível.
           </p>
         </div>
@@ -277,7 +305,7 @@ const ContactPage = () => {
         <div className="container mx-auto px-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             {contactInfo.map((info, index) => (
-              <div 
+              <div
                 key={index}
                 className="bg-card p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-2 text-center"
               >
@@ -288,7 +316,7 @@ const ContactPage = () => {
                   {info.title}
                 </h3>
                 {info.link ? (
-                  <a 
+                  <a
                     href={info.link}
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
@@ -380,7 +408,7 @@ const ContactPage = () => {
                 </div>
 
                 {/* Honeypot field - hidden from real users, visible to bots */}
-                <div 
+                <div
                   className="absolute -left-[9999px] opacity-0 h-0 overflow-hidden"
                   aria-hidden="true"
                   tabIndex={-1}
@@ -408,7 +436,7 @@ const ContactPage = () => {
                   )}
                 </div>
 
-                <Button 
+                <Button
                   type="submit"
                   disabled={isSubmitting || !turnstileToken}
                   className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 px-8"
@@ -442,7 +470,7 @@ const ContactPage = () => {
 
               <div className="space-y-4 mb-8">
                 {supportTopics.map((topic, index) => (
-                  <div 
+                  <div
                     key={index}
                     onClick={() => {
                       setFormData(prev => ({ ...prev, subject: topic.title }));
@@ -479,9 +507,9 @@ const ContactPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section 
+      <section
         className="py-20 relative"
-        style={{ 
+        style={{
           backgroundImage: `url(${heroBg})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
@@ -492,14 +520,14 @@ const ContactPage = () => {
           <h2 className="font-chakra text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-primary-foreground mb-4">
             Prefere Resolver Sozinho?
           </h2>
-          
+
           <p className="text-white/90 text-lg max-w-2xl mx-auto mb-8">
             Confira nossa seção de perguntas frequentes ou comece a usar o Doutor Motors agora mesmo.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/como-funciona">
-              <Button 
+              <Button
                 size="lg"
                 className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 border border-transparent hover:border-primary-foreground transition-all hover:-translate-y-1 px-8"
               >
@@ -508,7 +536,7 @@ const ContactPage = () => {
               </Button>
             </Link>
             <Link to="/signup">
-              <Button 
+              <Button
                 size="lg"
                 variant="outline"
                 className="border-dm-blue-1 text-dm-blue-1 hover:bg-dm-blue-1 hover:text-white font-chakra uppercase rounded-pill px-8"

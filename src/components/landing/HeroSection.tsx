@@ -7,16 +7,16 @@ import textBarsLight from "@/assets/images/text-bars-light.png";
 
 const HeroSection = () => {
   return (
-    <section 
+    <section
       className="relative min-h-screen pt-32 sm:pt-36 md:pt-44 lg:pt-[160px] pb-12 md:pb-20 overflow-hidden text-center lg:text-left"
-      style={{ 
+      style={{
         backgroundImage: `url(${heroBg})`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
         backgroundPosition: 'center'
       }}
     >
-      
+
       <div className="container mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-6 md:gap-10 items-center">
         {/* Content */}
         <div className="relative z-10 max-w-xl mx-auto lg:mx-0">
@@ -24,19 +24,18 @@ const HeroSection = () => {
             <img src={textBarsLight} alt="" className="w-7 h-4" />
             O médico digital do seu carro
           </p>
-          
+
           <h1 className="font-chakra text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold uppercase text-primary-foreground leading-tight mb-3 md:mb-4">
             Diagnóstico Automotivo Inteligente
           </h1>
-          
+
           <p className="text-white/90 text-sm sm:text-base md:text-lg mb-6 md:mb-8 leading-relaxed">
-            Conecte seu OBD2, entenda os problemas do seu carro em linguagem simples, 
-            descubra a urgência e saiba se pode resolver sozinho.
+            Conecte seu OBD2, entenda o que está acontecendo com seu carro em linguagem simples, saiba a gravidade do problema e quando procurar um profissional.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
             <Link to="/signup">
-              <Button 
+              <Button
                 size="lg"
                 className="w-full sm:w-auto bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center justify-center gap-2 border border-transparent hover:border-primary-foreground transition-all hover:-translate-y-1 px-6 sm:px-8 text-sm sm:text-base"
               >
@@ -45,7 +44,7 @@ const HeroSection = () => {
               </Button>
             </Link>
             <Link to="/#how-it-works">
-              <Button 
+              <Button
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto border-dm-blue-1 text-dm-blue-1 hover:bg-dm-blue-1 hover:text-white font-chakra uppercase rounded-pill px-6 sm:px-8 text-sm sm:text-base"
@@ -74,9 +73,9 @@ const HeroSection = () => {
 
         {/* Banner Image */}
         <div className="relative lg:absolute lg:right-0 lg:bottom-0 lg:w-1/2">
-          <img 
-            src={heroBanner} 
-            alt="Veículo motorizado vermelho" 
+          <img
+            src={heroBanner}
+            alt="Veículo motorizado vermelho"
             className="w-full max-w-lg mx-auto lg:max-w-none move-anim"
           />
         </div>

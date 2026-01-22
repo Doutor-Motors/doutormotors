@@ -15,14 +15,14 @@ interface CapacitorPushManagerProps {
   showCard?: boolean;
 }
 
-export const CapacitorPushManager = ({ 
+export const CapacitorPushManager = ({
   onTokenReceived,
-  showCard = true 
+  showCard = true
 }: CapacitorPushManagerProps) => {
   const [isInitializing, setIsInitializing] = useState(false);
-  
+
   const { platformInfo, platformDescription } = usePlatformDetection();
-  
+
   const {
     isNative,
     isSupported,
@@ -37,13 +37,13 @@ export const CapacitorPushManager = ({
     onNotificationReceived,
     onNotificationAction,
   } = useCapacitorPushNotifications();
-  
+
   // Setup callbacks
   useEffect(() => {
     if (onTokenReceived) {
       setTokenCallback(onTokenReceived);
     }
-    
+
     // Handle foreground notifications
     onNotificationReceived((notification) => {
       toast.info(notification.title || 'Nova notificação', {
@@ -56,7 +56,7 @@ export const CapacitorPushManager = ({
         } : undefined,
       });
     });
-    
+
     // Handle notification actions
     onNotificationAction((action) => {
       if (action.actionId === 'view' && action.notification.data?.url) {
@@ -64,18 +64,18 @@ export const CapacitorPushManager = ({
       }
     });
   }, [onTokenReceived, setTokenCallback, onNotificationReceived, onNotificationAction]);
-  
+
   // Initialize push notifications
   const handleInitialize = async () => {
     setIsInitializing(true);
-    
+
     try {
       // Create Android channels first
       await createDiagnosticChannels();
-      
+
       // Register for push
       const success = await register();
-      
+
       if (success) {
         toast.success('Notificações ativadas!', {
           description: 'Você receberá alertas sobre diagnósticos importantes.',
@@ -92,18 +92,18 @@ export const CapacitorPushManager = ({
       setIsInitializing(false);
     }
   };
-  
+
   // Disable push notifications
   const handleDisable = async () => {
     await unregister();
     toast.info('Notificações desativadas');
   };
-  
+
   // If not showing card, just handle initialization silently
   if (!showCard) {
     return null;
   }
-  
+
   // Web browser - show prompt to download native app
   if (!isNative) {
     return (
@@ -127,18 +127,13 @@ export const CapacitorPushManager = ({
               Para receber notificações push nativas sobre diagnósticos, baixe o app.
             </AlertDescription>
           </Alert>
-          
-          <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
-            <Link to="/baixar-app">
-              <Smartphone className="w-4 h-4 mr-2" />
-              Baixar App Nativo
-            </Link>
-          </Button>
+
+
         </CardContent>
       </Card>
     );
   }
-  
+
   // Native app - show push configuration
   return (
     <Card>
@@ -168,7 +163,7 @@ export const CapacitorPushManager = ({
               </Badge>
             )}
           </div>
-          
+
           <Switch
             checked={isRegistered}
             onCheckedChange={(checked) => {
@@ -181,7 +176,7 @@ export const CapacitorPushManager = ({
             disabled={isInitializing}
           />
         </div>
-        
+
         {/* Permission status */}
         {permission === 'denied' && (
           <Alert variant="destructive">
@@ -192,14 +187,14 @@ export const CapacitorPushManager = ({
             </AlertDescription>
           </Alert>
         )}
-        
+
         {/* Token info (for debugging) */}
         {isRegistered && token && (
           <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded-md">
             <span className="font-medium">Token:</span> {token.substring(0, 30)}...
           </div>
         )}
-        
+
         {/* Feature description */}
         <div className="text-sm text-muted-foreground space-y-2 pt-2 border-t">
           <p className="font-medium text-foreground">Você será notificado sobre:</p>
@@ -210,7 +205,7 @@ export const CapacitorPushManager = ({
             <li>📊 Resultados de diagnósticos concluídos</li>
           </ul>
         </div>
-        
+
         {/* Channels info (Android) */}
         {platformInfo.isAndroid && (
           <div className="text-xs text-muted-foreground pt-2 border-t">

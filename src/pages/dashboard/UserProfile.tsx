@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database, Bell, History, BarChart3, Crown, ArrowRight } from "lucide-react";
+import { User, Mail, Phone, Lock, Save, ArrowLeft, Loader2, Settings, Database, Bell, History, BarChart3, Crown, ArrowRight, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import AlertsHistorySection from "@/components/profile/AlertsHistorySection";
 import PushNotificationManager from "@/components/notifications/PushNotificationManager";
 import CapacitorPushManager from "@/components/notifications/CapacitorPushManager";
 import ChartPreferencesSection from "@/components/profile/ChartPreferencesSection";
+import MyPaymentsContent from "@/components/profile/MyPaymentsContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserTier } from "@/hooks/useUserTier";
@@ -30,7 +31,7 @@ const UserProfile = () => {
   const { notifyProfileUpdated, notifyPasswordChanged, notifyError } = useNotifications();
   const navigate = useNavigate();
   const { tier, tierConfig, isPro, isAdmin, isLoading: tierLoading } = useUserTier();
-  
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -85,7 +86,7 @@ const UserProfile = () => {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
+
     setIsSaving(true);
 
     try {
@@ -151,7 +152,7 @@ const UserProfile = () => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      
+
       toast({
         title: "Senha atualizada!",
         description: "Sua senha foi alterada com sucesso.",
@@ -200,7 +201,7 @@ const UserProfile = () => {
               Gerencie suas informações pessoais e configurações de conta.
             </p>
           </div>
-          
+
           {/* Upgrade CTA for Basic users */}
           {!isPro && !isAdmin && (
             <Button
@@ -224,6 +225,10 @@ const UserProfile = () => {
             <TabsTrigger value="alerts" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
               <History className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Alertas</span>
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
+              <CreditCard className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Pagamentos</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="font-chakra uppercase text-xs sm:text-sm gap-1 sm:gap-2">
               <Bell className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -366,13 +371,17 @@ const UserProfile = () => {
             )}
           </TabsContent>
 
+          <TabsContent value="payments" className="mt-6">
+            <MyPaymentsContent />
+          </TabsContent>
+
           <TabsContent value="notifications" className="mt-6 space-y-6">
             {/* Native Push Notifications (Capacitor) */}
             <CapacitorPushManager />
-            
+
             {/* Web Push Notifications */}
             <PushNotificationManager showTestButtons={true} />
-            
+
             {/* Email Notification Settings */}
             {user && (
               <NotificationSettings userId={user.id} />
@@ -385,8 +394,8 @@ const UserProfile = () => {
 
           <TabsContent value="privacy" className="mt-6">
             {user && email && (
-              <DataDeletionSection 
-                userId={user.id} 
+              <DataDeletionSection
+                userId={user.id}
                 userEmail={email}
                 onAccountDeleted={handleAccountDeleted}
               />

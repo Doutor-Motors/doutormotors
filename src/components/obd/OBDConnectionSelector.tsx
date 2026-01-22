@@ -23,6 +23,7 @@ import {
 import { ConnectionStatus, OBDDevice } from './types';
 import { ExtendedConnectionType } from './useOBDConnection';
 import { ConnectionMethodGuide } from './ConnectionMethodGuide';
+import { useAdmin } from '@/hooks/useAdmin';
 
 interface OBDConnectionSelectorProps {
   connectionStatus: ConnectionStatus;
@@ -64,7 +65,9 @@ export const OBDConnectionSelector = ({
   const [showWifiSettings, setShowWifiSettings] = useState(false);
   const [tempIp, setTempIp] = useState(wifiConfig.ip);
   const [tempPort, setTempPort] = useState(wifiConfig.port.toString());
+
   const [activeTab, setActiveTab] = useState<string>('bluetooth');
+  const { isAdmin } = useAdmin();
 
   const getStatusColor = () => {
     switch (connectionStatus) {
@@ -111,17 +114,17 @@ export const OBDConnectionSelector = ({
 
   const getConnectionTypeBadge = () => {
     if (!connectionType) return null;
-    
+
     const badges: Record<string, { label: string; color: string }> = {
       'bluetooth': { label: 'Web Bluetooth', color: 'bg-blue-500' },
       'wifi': { label: 'Web WiFi', color: 'bg-green-500' },
       'capacitor-bluetooth': { label: 'Nativo Bluetooth', color: 'bg-purple-500' },
       'capacitor-wifi': { label: 'Nativo WiFi', color: 'bg-purple-500' },
     };
-    
+
     const badge = badges[connectionType];
     if (!badge) return null;
-    
+
     return (
       <Badge className={`${badge.color} text-white text-xs`}>
         {badge.label}
@@ -158,7 +161,7 @@ export const OBDConnectionSelector = ({
                 <p className="text-dm-cadet">
                   {device ? device.name : 'Selecione um método de conexão'}
                 </p>
-              {isSimulated && connectionStatus === 'connected' && (
+                {isSimulated && connectionStatus === 'connected' && (
                   <div className="mt-2">
                     <p className="text-amber-400 text-sm flex items-center gap-1">
                       <AlertCircle className="w-4 h-4" />
@@ -172,10 +175,10 @@ export const OBDConnectionSelector = ({
             {/* Help Buttons */}
             <div className="flex flex-wrap gap-2">
               <ConnectionMethodGuide isNativePlatform={isNativePlatform} />
-              <Button 
-                asChild 
-                variant="outline" 
-                size="sm" 
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
                 className="gap-2"
               >
                 <Link to="/como-diagnosticar">
@@ -204,7 +207,7 @@ export const OBDConnectionSelector = ({
             </Button>
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-3 w-full max-w-md bg-white/10">
+              <TabsList className={`grid w-full max-w-md bg-white/10 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <TabsTrigger value="bluetooth" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                   <Bluetooth className="w-4 h-4 mr-2" />
                   Bluetooth
@@ -213,10 +216,12 @@ export const OBDConnectionSelector = ({
                   <Wifi className="w-4 h-4 mr-2" />
                   WiFi
                 </TabsTrigger>
-                <TabsTrigger value="native" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                  <Smartphone className="w-4 h-4 mr-2" />
-                  Nativo
-                </TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="native" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                    <Smartphone className="w-4 h-4 mr-2" />
+                    Nativo
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               {/* Bluetooth Tab */}
@@ -254,27 +259,20 @@ export const OBDConnectionSelector = ({
                         <div>
                           <h4 className="font-semibold text-amber-300">Modo Demonstração no Navegador</h4>
                           <p className="text-sm text-dm-cadet mt-1">
-                            Navegadores não conseguem se comunicar diretamente com adaptadores WiFi OBD2 
+                            Navegadores não conseguem se comunicar diretamente com adaptadores WiFi OBD2
                             por limitações técnicas (conexões TCP raw não são suportadas).
                           </p>
                           <p className="text-sm text-amber-200/80 mt-2">
                             <strong>Para conexão WiFi real:</strong> baixe o app nativo na Play Store ou App Store.
                           </p>
-                          <Button 
-                            onClick={() => window.open('/native-app-guide', '_blank')}
-                            className="mt-3 bg-amber-600 hover:bg-amber-700 text-white" 
-                            size="sm"
-                          >
-                            <Smartphone className="w-4 h-4 mr-2" />
-                            Baixar App Nativo
-                          </Button>
+
                         </div>
                       </div>
                     </div>
                   )}
-                  
+
                   <p className="text-sm text-dm-cadet">
-                    {isNativePlatform 
+                    {isNativePlatform
                       ? 'Conecte via WiFi. Configure o IP do seu adaptador ELM327 WiFi.'
                       : 'Teste o sistema em modo demonstração com dados simulados.'}
                   </p>
@@ -286,12 +284,12 @@ export const OBDConnectionSelector = ({
                       <Wifi className="w-5 h-5" />
                       {isNativePlatform ? 'Conectar WiFi' : 'Testar Demo WiFi'}
                     </Button>
-                    
+
                     <Dialog open={showWifiSettings} onOpenChange={setShowWifiSettings}>
                       <DialogTrigger asChild>
                         <Button
                           variant="outline"
-                          className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-secondary"
+                          className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-chakra uppercase"
                         >
                           <Settings className="w-4 h-4 mr-2" />
                           Configurar IP
@@ -342,86 +340,87 @@ export const OBDConnectionSelector = ({
                 </div>
               </TabsContent>
 
-              {/* Native Tab */}
-              <TabsContent value="native" className="mt-4">
-                <div className="space-y-3">
-                  <p className="text-sm text-dm-cadet">
-                    Conexão nativa otimizada para o app móvel. Melhor performance e estabilidade.
-                  </p>
-                  
-                  {isNativePlatform ? (
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          onClick={onConnectCapacitorBluetooth}
-                          className="bg-purple-600 hover:bg-purple-700 text-white font-chakra uppercase flex items-center gap-2"
-                        >
-                          <Bluetooth className="w-5 h-5" />
-                          Bluetooth Nativo
-                        </Button>
-                        <Button
-                          onClick={onConnectCapacitorWifi}
-                          className="bg-purple-600 hover:bg-purple-700 text-white font-chakra uppercase flex items-center gap-2"
-                        >
-                          <Wifi className="w-5 h-5" />
-                          WiFi Nativo
-                        </Button>
-                      </div>
-                      
-                      {onScanDevices && (
-                        <Button
-                          onClick={onScanDevices}
-                          variant="outline"
-                          disabled={isScanning}
-                          className="border-primary-foreground text-primary-foreground"
-                        >
-                          {isScanning ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Search className="w-4 h-4 mr-2" />
-                          )}
-                          {isScanning ? 'Buscando...' : 'Buscar Dispositivos'}
-                        </Button>
-                      )}
-                      
-                      {availableDevices.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs text-dm-cadet">Dispositivos encontrados:</p>
-                          <div className="space-y-1">
-                            {availableDevices.map((d) => (
-                              <div key={d.id} className="text-xs bg-white/10 px-3 py-2 rounded flex items-center gap-2">
-                                <Bluetooth className="w-3 h-3" />
-                                {d.name} ({d.address})
-                              </div>
-                            ))}
-                          </div>
+              {isAdmin && (
+                <TabsContent value="native" className="mt-4">
+                  <div className="space-y-3">
+                    <p className="text-sm text-dm-cadet">
+                      Conexão nativa otimizada para o app móvel. Melhor performance e estabilidade.
+                    </p>
+
+                    {isNativePlatform ? (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            onClick={onConnectCapacitorBluetooth}
+                            className="bg-purple-600 hover:bg-purple-700 text-white font-chakra uppercase flex items-center gap-2"
+                          >
+                            <Bluetooth className="w-5 h-5" />
+                            Bluetooth Nativo
+                          </Button>
+                          <Button
+                            onClick={onConnectCapacitorWifi}
+                            className="bg-purple-600 hover:bg-purple-700 text-white font-chakra uppercase flex items-center gap-2"
+                          >
+                            <Wifi className="w-5 h-5" />
+                            WiFi Nativo
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                      <p className="text-yellow-400 text-sm flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <span>
-                          <strong>Modo Web Detectado:</strong> Para conexão nativa real, 
-                          baixe o app Doutor Motors na loja de aplicativos. 
-                          No navegador, você pode testar com o modo simulação.
-                        </span>
-                      </p>
-                      <div className="mt-3 flex gap-2">
-                        <Button
-                          onClick={onConnectCapacitorBluetooth}
-                          variant="outline"
-                          size="sm"
-                          className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/20"
-                        >
-                          Testar Simulação
-                        </Button>
+
+                        {onScanDevices && (
+                          <Button
+                            onClick={onScanDevices}
+                            variant="outline"
+                            disabled={isScanning}
+                            className="border-primary-foreground text-primary-foreground"
+                          >
+                            {isScanning ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Search className="w-4 h-4 mr-2" />
+                            )}
+                            {isScanning ? 'Buscando...' : 'Buscar Dispositivos'}
+                          </Button>
+                        )}
+
+                        {availableDevices.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-dm-cadet">Dispositivos encontrados:</p>
+                            <div className="space-y-1">
+                              {availableDevices.map((d) => (
+                                <div key={d.id} className="text-xs bg-white/10 px-3 py-2 rounded flex items-center gap-2">
+                                  <Bluetooth className="w-3 h-3" />
+                                  {d.name} ({d.address})
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
+                    ) : (
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                        <p className="text-yellow-400 text-sm flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>
+                            <strong>Modo Web Detectado:</strong> Para conexão nativa real,
+                            baixe o app Doutor Motors na loja de aplicativos.
+                            No navegador, você pode testar com o modo simulação.
+                          </span>
+                        </p>
+                        <div className="mt-3 flex gap-2">
+                          <Button
+                            onClick={onConnectCapacitorBluetooth}
+                            variant="outline"
+                            size="sm"
+                            className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/20"
+                          >
+                            Testar Simulação
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
           )}
         </div>
@@ -439,8 +438,8 @@ export const OBDConnectionSelector = ({
                   </p>
                 </div>
               </div>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="outline"
                 className="border-amber-400 text-amber-300 hover:bg-amber-500/20"
                 onClick={() => window.open('/native-app-guide', '_blank')}

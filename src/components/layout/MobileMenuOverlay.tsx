@@ -47,9 +47,8 @@ export default function MobileMenuOverlay({
 
   return createPortal(
     <div
-      className={`lg:hidden fixed inset-0 bg-gradient-to-b from-secondary via-secondary to-dm-blue-3 z-[100] transition-all duration-500 ${
-        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-      }`}
+      className={`lg:hidden fixed inset-0 bg-gradient-to-b from-secondary via-secondary to-dm-blue-3 z-[100] transition-all duration-500 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
       aria-hidden={!isOpen}
       role="dialog"
       aria-modal="true"
@@ -70,13 +69,12 @@ export default function MobileMenuOverlay({
                 key={link.name}
                 to={link.path}
                 onClick={onClose}
-                className={`flex items-center justify-between px-5 py-4 rounded-2xl font-chakra text-lg uppercase transition-all duration-300 ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-lg"
-                    : isHighlight
-                      ? "bg-gradient-to-r from-purple-600/30 to-pink-600/30 text-primary-foreground border border-purple-500/30"
-                      : "text-primary-foreground/80 hover:bg-white/10 hover:text-primary-foreground"
-                }`}
+                className={`flex items-center justify-between px-5 py-4 rounded-2xl font-chakra text-lg uppercase transition-all duration-300 ${isActive
+                  ? "bg-primary text-primary-foreground shadow-lg"
+                  : isHighlight
+                    ? "bg-gradient-to-r from-purple-600/30 to-pink-600/30 text-primary-foreground border border-purple-500/30"
+                    : "text-primary-foreground/80 hover:bg-white/10 hover:text-primary-foreground"
+                  }`}
                 style={{
                   animationDelay: `${index * 50}ms`,
                   transform: isOpen ? "translateX(0)" : "translateX(-20px)",
@@ -105,7 +103,7 @@ export default function MobileMenuOverlay({
             <Button
               variant="outline"
               size="lg"
-              className="w-full border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-secondary font-chakra uppercase rounded-2xl h-14 text-base transition-all duration-300"
+              className="w-full border-white/40 text-white hover:bg-white hover:text-dm-blue-3 font-chakra uppercase rounded-2xl h-14 text-base transition-all duration-300 bg-transparent"
             >
               Entrar
             </Button>
@@ -115,7 +113,7 @@ export default function MobileMenuOverlay({
               size="lg"
               className="w-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-chakra uppercase rounded-2xl h-14 text-base shadow-lg shadow-primary/30 transition-all duration-300 flex items-center justify-center gap-2"
             >
-              Começar Agora
+              COMEÇAR DIAGNÓSTICO
               <ArrowRight className="w-5 h-5" />
             </Button>
           </Link>

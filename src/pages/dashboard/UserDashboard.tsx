@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { 
-  Car, 
-  Activity, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Car,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
   Clock,
   Plus,
   ChevronRight,
@@ -47,7 +47,7 @@ const UserDashboard = () => {
   const { notifyInfo, notifyWarning, notifyCriticalAlert } = useNotifications();
   const { hasAcceptedTerms, isLoading: isLoadingConsent, refetch: refetchConsent } = useLegalConsent(user?.id);
   const { tier, isLoading: tierLoading, tierConfig } = useUserTier();
-  
+
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
   const [recentAlerts, setRecentAlerts] = useState<DiagnosticItem[]>([]);
@@ -90,12 +90,12 @@ const UserDashboard = () => {
 
       if (vehiclesData) {
         setVehicles(vehiclesData);
-        
+
         // Set active vehicle
-        const active = activeVehicleId 
-          ? vehiclesData.find(v => v.id === activeVehicleId) 
+        const active = activeVehicleId
+          ? vehiclesData.find(v => v.id === activeVehicleId)
           : vehiclesData[0];
-        
+
         if (active) {
           setActiveVehicle(active);
           if (!activeVehicleId) {
@@ -137,7 +137,7 @@ const UserDashboard = () => {
 
         setRecentAlerts(allItems.slice(0, 5));
         setStats({ critical, attention, preventive, total: allItems.length });
-        
+
         // Show notification for alerts when user enters dashboard
         if (!hasNotifiedAlerts && allItems.length > 0) {
           setHasNotifiedAlerts(true);
@@ -245,14 +245,7 @@ const UserDashboard = () => {
                   <Wifi className="w-4 h-4 mr-1" />
                   WiFi
                 </Button>
-                <Button
-                  onClick={obd.connectCapacitorBluetooth}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-chakra uppercase"
-                  size="sm"
-                >
-                  <Smartphone className="w-4 h-4 mr-1" />
-                  Nativo
-                </Button>
+
               </>
             )}
           </div>
@@ -272,14 +265,14 @@ const UserDashboard = () => {
                       {activeVehicle.brand} {activeVehicle.model}
                     </h2>
                     <p className="text-dm-cadet">
-                      {activeVehicle.year} 
+                      {activeVehicle.year}
                       {activeVehicle.engine && ` • ${activeVehicle.engine}`}
                       {activeVehicle.fuel_type && ` • ${activeVehicle.fuel_type}`}
                     </p>
                   </div>
                 </div>
                 <Link to="/dashboard/vehicles">
-                  <Button variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-secondary font-chakra uppercase">
+                  <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-chakra uppercase">
                     <Plus className="w-4 h-4 mr-2" />
                     Gerenciar Veículos
                   </Button>
@@ -382,7 +375,7 @@ const UserDashboard = () => {
             {recentAlerts.length > 0 ? (
               <div className="space-y-4">
                 {recentAlerts.map((alert) => (
-                  <div 
+                  <div
                     key={alert.id}
                     className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                   >

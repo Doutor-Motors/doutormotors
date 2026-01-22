@@ -68,9 +68,32 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { isPro, canAccess, isProFeature } = useUserTier();
 
   // Build menu items dynamically based on admin status
-  const menuItems: MenuItem[] = isAdmin 
+  const menuItems: MenuItem[] = isAdmin
     ? [...baseMenuItems, { icon: Shield, label: "Admin", path: "/admin", showBadge: true }]
-    : baseMenuItems;
+    : baseMenuItems.filter(item => {
+      // 1. Pagamentos movido para perfil, sempre oculto do menu lateral
+      if (item.path === "/dashboard/payments") return false;
+
+      // 2. Itens exclusivos de ADMIN
+      const adminOnly = [
+        "/estude-seu-carro"
+      ];
+      if (adminOnly.includes(item.path)) return false; // Se não é admin (já verificado no ternário acima), oculta
+
+      // 3. Itens PRO (Gravação, Coding, Config OBD, Manutenções)
+      // Se for PRO, pode ver. Se for Basic, NÃO vê (oculta em vez de bloquear com cadeado).
+      const proOnly = [
+        "/dashboard/data-recording",
+        "/dashboard/coding",
+        "/dashboard/obd-settings",
+        "/dashboard/maintenance"
+      ];
+      if (proOnly.includes(item.path)) {
+        return isPro; // True se for Pro, False se for Basic
+      }
+
+      return true;
+    });
 
   const handleLogout = async () => {
     await signOut();
@@ -105,23 +128,22 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
         <nav className="flex-1 px-4">
           <ul className="space-y-2">
-          {menuItems.map((item) => {
+            {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
               const showNotificationBadge = item.showBadge && unreadCount > 0;
               const isProItem = item.isPro;
               const isLocked = isProItem && !isPro && !isAdmin;
-              
+
               return (
                 <li key={item.path}>
                   <Link
                     to={isLocked ? "/dashboard/upgrade" : item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg font-chakra uppercase text-sm transition-colors ${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : isLocked
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg font-chakra uppercase text-sm transition-colors ${isActive
+                      ? "bg-primary text-primary-foreground"
+                      : isLocked
                         ? "text-muted-foreground/60 hover:bg-muted/20 hover:text-muted-foreground"
                         : "text-dm-cadet hover:bg-dm-blue-2 hover:text-primary-foreground"
-                    }`}
+                      }`}
                   >
                     <item.icon className={`w-5 h-5 ${isLocked ? "opacity-50" : ""}`} />
                     <span className={`flex-1 ${isLocked ? "opacity-60" : ""}`}>{item.label}</span>
@@ -186,30 +208,29 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Mobile Sidebar */}
       {isSidebarOpen && (
         <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setIsSidebarOpen(false)}>
-          <aside 
+          <aside
             className="absolute left-0 top-0 bottom-0 w-64 bg-dm-space text-primary-foreground pt-24"
             onClick={(e) => e.stopPropagation()}
           >
             <nav className="flex-1 px-4 py-4">
               <ul className="space-y-2">
-              {menuItems.map((item) => {
+                {menuItems.map((item) => {
                   const isActive = location.pathname === item.path;
                   const showNotificationBadge = item.showBadge && unreadCount > 0;
                   const isProItem = item.isPro;
                   const isLocked = isProItem && !isPro && !isAdmin;
-                  
+
                   return (
                     <li key={item.path}>
                       <Link
                         to={isLocked ? "/dashboard/upgrade" : item.path}
                         onClick={() => setIsSidebarOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg font-chakra uppercase text-sm transition-colors ${
-                          isActive
-                            ? "bg-primary text-primary-foreground"
-                            : isLocked
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg font-chakra uppercase text-sm transition-colors ${isActive
+                          ? "bg-primary text-primary-foreground"
+                          : isLocked
                             ? "text-muted-foreground/60 hover:bg-muted/20 hover:text-muted-foreground"
                             : "text-dm-cadet hover:bg-dm-blue-2 hover:text-primary-foreground"
-                        }`}
+                          }`}
                       >
                         <item.icon className={`w-5 h-5 ${isLocked ? "opacity-50" : ""}`} />
                         <span className={`flex-1 ${isLocked ? "opacity-60" : ""}`}>{item.label}</span>

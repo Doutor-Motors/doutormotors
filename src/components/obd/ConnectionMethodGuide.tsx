@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { 
-  Bluetooth, 
-  Wifi, 
-  Smartphone, 
-  CheckCircle2, 
+import {
+  Bluetooth,
+  Wifi,
+  Smartphone,
+  CheckCircle2,
   Circle,
   AlertTriangle,
   HelpCircle,
@@ -44,17 +44,17 @@ interface ConnectionMethodGuideProps {
 
 export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: ConnectionMethodGuideProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // Use platform detection hook for accurate capability detection
-  const { 
-    platformInfo, 
-    platformDescription, 
+  const {
+    platformInfo,
+    platformDescription,
     connectionCapabilities,
     canConnect,
     recommendedAction,
-    isLoading 
+    isLoading
   } = usePlatformDetection();
-  
+
   // Use prop if provided, otherwise use detected platform
   const isNativePlatform = propIsNative ?? platformInfo.isNative;
 
@@ -144,57 +144,14 @@ export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: Connec
         { problem: 'Internet não funciona', solution: 'Normal! O adaptador cria uma rede local sem internet. Reconecte ao WiFi normal após usar' },
       ],
     },
-    {
-      id: 'capacitor',
-      name: 'App Nativo',
-      icon: Smartphone,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10',
-      recommended: isNativePlatform,
-      platformSupport: {
-        browser: { supported: false, note: 'Requer instalação do app' },
-        native: { supported: true, note: 'Android e iOS - Melhor experiência!' },
-      },
-      description: 'Conexão nativa otimizada - A MELHOR OPÇÃO para smartphones',
-      compatibility: 'Todos os adaptadores ELM327 (Bluetooth e WiFi)',
-      nativeHighlight: {
-        title: '🏆 Recomendado para Smartphones',
-        text: 'O app nativo oferece a melhor experiência: conexão real com Bluetooth e WiFi, melhor performance, e funciona em iPhone e Android.',
-      },
-      pros: [
-        'Conexão REAL (não simulada)',
-        'Funciona com Bluetooth E WiFi',
-        'Melhor performance e estabilidade',
-        'Funciona em iPhone/iOS',
-        'Menor consumo de bateria',
-      ],
-      cons: [
-        'Requer instalar o app',
-        'Disponível apenas em dispositivos móveis',
-      ],
-      steps: [
-        '📥 Baixe o app Doutor Motors na Play Store (Android) ou App Store (iOS)',
-        'Plugue o adaptador OBD2 no veículo',
-        'Ligue a ignição',
-        'Abra o app e vá para Diagnóstico',
-        'Escolha "Bluetooth Nativo" ou "WiFi Nativo"',
-        'O app detectará automaticamente os adaptadores disponíveis',
-        'Selecione seu adaptador e toque para conectar',
-        'Conceda as permissões necessárias quando solicitado',
-      ],
-      troubleshooting: [
-        { problem: 'App não encontra dispositivos', solution: 'Verifique se Bluetooth/WiFi está ativado e se as permissões foram concedidas' },
-        { problem: 'Permissões negadas', solution: 'Vá em Configurações > Apps > Doutor Motors > Permissões e ative Bluetooth e Localização' },
-        { problem: 'App fecha inesperadamente', solution: 'Atualize o app para a versão mais recente ou reinstale' },
-      ],
-    },
+
   ];
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           className="gap-2"
         >
@@ -253,31 +210,31 @@ export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: Connec
                       <p className="text-sm text-muted-foreground mt-1">
                         {recommendedAction}
                       </p>
-                      
+
                       {/* Browser capabilities */}
                       <div className="flex flex-wrap gap-2 mt-3">
-                        <Badge 
-                          variant="outline" 
-                          className={connectionCapabilities.bluetooth.supported 
-                            ? "border-green-500 text-green-500 gap-1" 
+                        <Badge
+                          variant="outline"
+                          className={connectionCapabilities.bluetooth.supported
+                            ? "border-green-500 text-green-500 gap-1"
                             : "border-red-500 text-red-500 gap-1"
                           }
                         >
                           {connectionCapabilities.bluetooth.supported ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                           Bluetooth {connectionCapabilities.bluetooth.supported ? '✓' : '✗'}
                         </Badge>
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className="border-red-500 text-red-500 gap-1"
                         >
                           <Lock className="w-3 h-3" />
                           WiFi/TCP ✗
                         </Badge>
                       </div>
-                      
+
                       {!canConnect && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           className="mt-3 bg-amber-600 hover:bg-amber-700"
                           asChild
                         >
@@ -400,7 +357,7 @@ export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: Connec
                     </tr>
                   </tbody>
                 </table>
-                
+
                 {/* Current device info */}
                 <div className="mt-3 pt-3 border-t text-xs text-muted-foreground text-center">
                   Detectado: <span className="font-medium text-foreground">{platformDescription}</span>
@@ -413,8 +370,8 @@ export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: Connec
           {/* Connection Methods */}
           <Accordion type="single" collapsible className="space-y-4">
             {methods.map((method) => (
-              <AccordionItem 
-                key={method.id} 
+              <AccordionItem
+                key={method.id}
                 value={method.id}
                 className="border rounded-lg overflow-hidden"
               >
@@ -463,7 +420,7 @@ export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: Connec
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Browser Limitation Warning for WiFi */}
                     {'browserLimitation' in method && method.browserLimitation && !isNativePlatform && (
                       <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
@@ -476,8 +433,8 @@ export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: Connec
                             <p className="text-sm text-muted-foreground mt-1">
                               {(method.browserLimitation as { title: string; text: string; action: string }).text}
                             </p>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               className="mt-3 bg-red-600 hover:bg-red-700"
                               asChild
                             >
@@ -519,7 +476,7 @@ export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: Connec
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Compatibility */}
                     <div>
                       <h5 className="font-semibold text-foreground mb-1 flex items-center gap-2">
@@ -603,35 +560,35 @@ export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: Connec
               <div className="flex items-start gap-3">
                 <span className="text-lg">🔌</span>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Localização da porta OBD2:</strong> Geralmente fica embaixo do painel, 
+                  <strong>Localização da porta OBD2:</strong> Geralmente fica embaixo do painel,
                   à esquerda do volante. Em alguns veículos pode estar no console central ou embaixo do porta-luvas.
                 </p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-lg">🔋</span>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Bateria:</strong> Sempre mantenha o adaptador conectado apenas durante o uso. 
+                  <strong>Bateria:</strong> Sempre mantenha o adaptador conectado apenas durante o uso.
                   Deixar conectado permanentemente pode drenar a bateria do veículo.
                 </p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-lg">📱</span>
                 <p className="text-sm text-muted-foreground">
-                  <strong>iPhone/iOS:</strong> Para usar Bluetooth ou WiFi no iPhone, você PRECISA baixar o app nativo. 
+                  <strong>iPhone/iOS:</strong> Para usar Bluetooth ou WiFi no iPhone, você PRECISA baixar o app nativo.
                   O Safari não suporta essas conexões diretamente.
                 </p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-lg">⚠️</span>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Segurança:</strong> Não faça diagnósticos enquanto dirige. 
+                  <strong>Segurança:</strong> Não faça diagnósticos enquanto dirige.
                   Estacione o veículo em local seguro antes de iniciar.
                 </p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-lg">🛒</span>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Adaptadores recomendados:</strong> ELM327 v2.1+, OBDLink, Veepeak, V-Link. 
+                  <strong>Adaptadores recomendados:</strong> ELM327 v2.1+, OBDLink, Veepeak, V-Link.
                   Evite adaptadores muito baratos pois podem ter firmware defeituoso.
                 </p>
               </div>
@@ -654,7 +611,7 @@ export const ConnectionMethodGuide = ({ isNativePlatform: propIsNative }: Connec
                       Baixe o app nativo para diagnóstico completo com Bluetooth e WiFi funcionando de verdade!
                     </p>
                   </div>
-                  <Button 
+                  <Button
                     className="bg-purple-600 hover:bg-purple-700 text-white"
                     asChild
                   >

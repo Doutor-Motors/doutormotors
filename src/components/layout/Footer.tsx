@@ -17,7 +17,7 @@ const Footer = () => {
               <span className="font-chakra text-primary-foreground text-lg font-bold tracking-wider -mt-[29px] ml-1">DOUTOR MOTORS</span>
             </Link>
             <p className="text-white/80 mb-5 text-sm leading-relaxed">
-              Doutor Motors é seu diagnóstico automotivo inteligente. 
+              Doutor Motors é seu diagnóstico automotivo inteligente.
               Entenda os problemas do seu veículo e saiba como resolver.
             </p>
           </div>
@@ -74,10 +74,10 @@ const Footer = () => {
         </div>
 
         {/* Decorative Shape */}
-        <img 
-          src={footerShape3} 
-          alt="" 
-          className="hidden lg:block absolute right-0 bottom-0 w-1/3 move-anim opacity-50" 
+        <img
+          src={footerShape3}
+          alt=""
+          className="hidden lg:block absolute right-0 bottom-0 w-1/3 move-anim opacity-50"
         />
       </div>
 
@@ -85,20 +85,20 @@ const Footer = () => {
       <div className="bg-dm-blue-1 py-5 relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
           <p className="text-center text-xs text-white/70">
-            Copyright © {new Date().getFullYear()} Doutor Motors. Todos os direitos reservados. 
+            Copyright © {new Date().getFullYear()} Doutor Motors. Todos os direitos reservados.
             <span className="mx-2">|</span>
             <span className="italic">Plataforma informativa e educativa.</span>
           </p>
         </div>
-        <img 
-          src={footerShape2} 
-          alt="" 
-          className="hidden lg:block absolute right-0 bottom-0 w-1/3 opacity-30" 
+        <img
+          src={footerShape2}
+          alt=""
+          className="hidden lg:block absolute right-0 bottom-0 w-1/3 opacity-30"
         />
-        <img 
-          src={footerShape1} 
-          alt="" 
-          className="hidden lg:block absolute left-10 bottom-0 w-1/4 move-anim opacity-40" 
+        <img
+          src={footerShape1}
+          alt=""
+          className="hidden lg:block absolute left-10 bottom-0 w-1/4 move-anim opacity-40"
         />
       </div>
     </footer>

@@ -17,7 +17,19 @@ import {
   VehicleData,
 } from './elm327Protocol';
 
-export type OBDConnectionState = 
+export interface OBDSettings {
+  atst_value: number;
+  atst_mode: "auto" | "manual";
+  optimize_requests: boolean;
+  preferred_protocol: string;
+  auto_reconnect: boolean;
+  connection_timeout_seconds: number;
+  max_simultaneous_parameters: number;
+  polling_interval_ms: number;
+  custom_init_commands: string[];
+}
+
+export type OBDConnectionState =
   | 'disconnected'
   | 'connecting'
   | 'initializing'
@@ -58,10 +70,11 @@ export class OBDConnectionManager {
   private voltage: string = '';
   private isSimulated: boolean = true;
   private lastError: string = '';
-  
+  private settings: OBDSettings | null = null;
+
   private writeFunction: WriteFunction | null = null;
   private readFunction: ReadFunction | null = null;
-  
+
   private onStateChange?: (info: OBDConnectionInfo) => void;
 
   constructor(onStateChange?: (info: OBDConnectionInfo) => void) {
@@ -99,6 +112,43 @@ export class OBDConnectionManager {
     this.writeFunction = write;
     this.readFunction = read;
     this.isSimulated = false;
+  }
+
+  /**
+   * Apply settings to connection
+   */
+  applySettings(settings: OBDSettings) {
+    this.settings = settings;
+    // If currently connected and ATST changed, we might want to send it immediately
+    if (this.state === 'connected' && !this.isSimulated) {
+      this.configureConnection();
+    }
+  }
+
+  /**
+   * Configure connection parameters based on settings
+   */
+  private async configureConnection() {
+    if (!this.settings || this.isSimulated) return;
+
+    try {
+      // Apply ATST (Timeout)
+      if (this.settings.atst_mode === 'manual') {
+        const hex = this.settings.atst_value.toString(16).toUpperCase().padStart(2, '0');
+        await this.sendCommand(`ATST${hex}`, 500);
+      }
+
+      // Execute custom init commands
+      if (this.settings.custom_init_commands?.length > 0) {
+        for (const cmd of this.settings.custom_init_commands) {
+          if (cmd.trim()) {
+            await this.sendCommand(cmd.trim(), 500);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to configure connection settings:', err);
+    }
   }
 
   /**
@@ -205,11 +255,28 @@ export class OBDConnectionManager {
       // Send initialization sequence
       for (const command of getInitSequence()) {
         const response = await this.sendCommand(command, 3000);
-        
+
         // Validate reset response
         if (command === ELM327_COMMANDS.RESET && !isValidELM327Response(response)) {
           throw new Error('Invalid ELM327 response - device may not be an ELM327');
         }
+      }
+
+
+
+      // Apply settings if available
+      if (this.settings) {
+        // Apply protocol preference if set manually
+        if (this.settings.preferred_protocol !== 'auto') {
+          try {
+            await this.sendCommand(`ATSP${this.settings.preferred_protocol}`, 1000);
+          } catch (e) {
+            console.warn('Failed to set preferred protocol:', e);
+          }
+        }
+
+        // Connect
+        await this.configureConnection();
       }
 
       // Get protocol

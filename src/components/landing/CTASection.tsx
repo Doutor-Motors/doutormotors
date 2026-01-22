@@ -23,9 +23,9 @@ const features = [
 
 const CTASection = () => {
   return (
-    <section 
+    <section
       className="py-12 sm:py-16 md:py-20 relative"
-      style={{ 
+      style={{
         backgroundImage: `url(${heroBg})`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
@@ -34,18 +34,17 @@ const CTASection = () => {
     >
       <div className="container mx-auto px-4 sm:px-6 text-center">
         <h2 className="font-chakra text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-primary-foreground mb-3 sm:mb-4 px-2">
-          Pronto para Entender Seu Carro?
+          Pronto para entender o que seu carro está sinalizando ?
         </h2>
-        
+
         <p className="text-white/90 text-sm sm:text-base md:text-lg max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
-          Comece agora e tenha acesso ao diagnóstico completo do seu veículo. 
-          Sem surpresas, sem custos escondidos.
+          Sem surpresas. Sem pressão. Sem termos técnicos.
         </p>
 
         {/* Features */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-3xl mx-auto mb-8 sm:mb-10">
           {features.map((feature, index) => (
-            <div 
+            <div
               key={index}
               className="bg-dm-blue-2/50 backdrop-blur-sm p-4 sm:p-6 rounded-lg"
             >
@@ -60,16 +59,16 @@ const CTASection = () => {
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
           <Link to="/signup">
-            <Button 
+            <Button
               size="lg"
               className="w-full sm:w-auto bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center justify-center gap-2 border border-transparent hover:border-primary-foreground transition-all hover:-translate-y-1 px-6 sm:px-8 text-sm sm:text-base"
             >
-              <span>Criar Conta</span>
+              <span>Começar Diagnóstico</span>
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </Link>
           <Link to="/login">
-            <Button 
+            <Button
               size="lg"
               variant="outline"
               className="w-full sm:w-auto border-dm-blue-1 text-dm-blue-1 hover:bg-dm-blue-1 hover:text-white font-chakra uppercase rounded-pill px-6 sm:px-8 text-sm sm:text-base"

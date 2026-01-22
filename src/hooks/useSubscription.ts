@@ -105,7 +105,7 @@ export const PLAN_FEATURES = {
 export function useSubscription() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   // Verificar se é admin internamente
   const { isAdmin, isLoading: adminLoading } = useIsAdminInternal(user?.id);
 

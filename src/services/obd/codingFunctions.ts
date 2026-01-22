@@ -10,7 +10,7 @@
 import { getOBDConnectionManager, OBDConnectionInfo } from './OBDConnectionManager';
 
 // Coding function categories
-export type CodingCategory = 
+export type CodingCategory =
   | 'adaptation_reset'
   | 'calibration'
   | 'module_config'
@@ -59,7 +59,7 @@ export const CODING_FUNCTIONS: CodingFunction[] = [
     description: 'Redefine os valores aprendidos da posição do corpo de borboleta. Útil após limpeza ou substituição.',
     category: 'adaptation_reset',
     riskLevel: 'low',
-    requiresPro: false,
+    requiresPro: true,
     requiresIgnitionOn: true,
     requiresEngineOff: true,
     commands: ['AT SH 7E0', '3E 00', '10 02', '31 01 0F 0A', '10 01'],
@@ -86,7 +86,7 @@ export const CODING_FUNCTIONS: CodingFunction[] = [
     description: 'Redefine os valores aprendidos de marcha lenta. Útil após limpeza do corpo de borboleta.',
     category: 'adaptation_reset',
     riskLevel: 'low',
-    requiresPro: false,
+    requiresPro: true,
     requiresIgnitionOn: true,
     requiresEngineOff: true,
     commands: ['AT SH 7E0', '3E 00', '10 02', '31 01 0F 0C', '10 01'],
@@ -113,7 +113,7 @@ export const CODING_FUNCTIONS: CodingFunction[] = [
     description: 'Registra uma nova bateria no sistema de gerenciamento. Execute após trocar a bateria.',
     category: 'adaptation_reset',
     riskLevel: 'low',
-    requiresPro: false,
+    requiresPro: true,
     requiresIgnitionOn: true,
     requiresEngineOff: true,
     commands: ['AT SH 7E0', '3E 00', '10 02', '31 01 F0 0D', '10 01'],
@@ -143,7 +143,7 @@ export const CODING_FUNCTIONS: CodingFunction[] = [
     description: 'Inicia o processo de recalibração dos sensores de pressão dos pneus.',
     category: 'calibration',
     riskLevel: 'low',
-    requiresPro: false,
+    requiresPro: true,
     requiresIgnitionOn: true,
     commands: ['AT SH 7A0', '3E 00', '10 02', '31 01 E0 01', '10 01'],
     confirmationRequired: true,
@@ -170,7 +170,7 @@ export const CODING_FUNCTIONS: CodingFunction[] = [
     description: 'Recalibra os sensores de estacionamento traseiros e dianteiros.',
     category: 'calibration',
     riskLevel: 'low',
-    requiresPro: false,
+    requiresPro: true,
     requiresIgnitionOn: true,
     commands: ['AT SH 76F', '3E 00', '10 02', '31 01 E0 02', '10 01'],
     confirmationRequired: true,
@@ -267,7 +267,7 @@ export const CODING_FUNCTIONS: CodingFunction[] = [
     description: 'Ativa manualmente a ventoinha de arrefecimento para teste.',
     category: 'output_test',
     riskLevel: 'low',
-    requiresPro: false,
+    requiresPro: true,
     requiresIgnitionOn: true,
     commands: ['AT SH 7E0', '3E 00', '10 02', '30 03 01 01', '10 01'],
     confirmationRequired: true,
@@ -296,7 +296,7 @@ export const CODING_FUNCTIONS: CodingFunction[] = [
     description: 'Lê os dados do momento em que um código de erro foi registrado.',
     category: 'freeze_frame',
     riskLevel: 'low',
-    requiresPro: false,
+    requiresPro: true,
     requiresIgnitionOn: true,
     commands: ['0200', '0201', '0202', '0203', '0204', '0205'],
     confirmationRequired: false,
@@ -379,8 +379,8 @@ export class OBDCodingManager {
    * Get functions available for plan
    */
   getFunctionsForPlan(isPro: boolean): CodingFunction[] {
-    return isPro 
-      ? CODING_FUNCTIONS 
+    return isPro
+      ? CODING_FUNCTIONS
       : CODING_FUNCTIONS.filter(f => !f.requiresPro);
   }
 
@@ -414,7 +414,7 @@ export class OBDCodingManager {
 
     try {
       const connectionInfo = this.connectionManager.getConnectionInfo();
-      
+
       // Check connection
       if (connectionInfo.state !== 'connected') {
         return {
@@ -507,10 +507,10 @@ export class OBDCodingManager {
 
     for (let i = 0; i < totalSteps; i++) {
       onProgress?.(i + 1, totalSteps, `Executando etapa ${i + 1}/${totalSteps}...`);
-      
+
       // Simulate delay
       await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
-      
+
       // Simulate responses
       if (i === 0) {
         rawResponses.push('OK\r\n>');

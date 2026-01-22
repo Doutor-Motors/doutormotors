@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Car, 
-  Plug, 
-  Bluetooth, 
-  Wifi, 
-  Smartphone, 
-  ArrowRight, 
+import {
+  Car,
+  Plug,
+  Bluetooth,
+  Wifi,
+  Smartphone,
+  ArrowRight,
   ArrowDown,
   CheckCircle2,
   AlertTriangle,
@@ -48,11 +48,11 @@ const HowDiagnosticWorksPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="pt-36 sm:pt-40 md:pt-44 pb-16">
         <div className="container mx-auto px-4 max-w-5xl">
           {/* Hero Section */}
-          <motion.div 
+          <motion.div
             className="text-center mb-12"
             initial="hidden"
             animate="visible"
@@ -65,7 +65,7 @@ const HowDiagnosticWorksPage = () => {
               Como o Diagnóstico Funciona?
             </h1>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              Entenda passo a passo como diagnosticar seu carro, mesmo que ele seja antigo 
+              Entenda passo a passo como diagnosticar seu carro, mesmo que ele seja antigo
               e não tenha Bluetooth ou WiFi. É mais simples do que você imagina!
             </p>
           </motion.div>
@@ -90,8 +90,8 @@ const HowDiagnosticWorksPage = () => {
                       Muita gente acha que o carro precisa ter Bluetooth ou WiFi. <strong className="text-green-300">Isso NÃO é verdade!</strong>
                     </p>
                     <p className="text-foreground/80 mt-2">
-                      Quem tem o Bluetooth/WiFi é o <strong className="text-foreground">adaptador OBD2</strong> que você compra separadamente. 
-                      Ele é como um "tradutor" que conecta seu carro ao celular. Seu carro só precisa ter a 
+                      Quem tem o Bluetooth/WiFi é o <strong className="text-foreground">adaptador OBD2</strong> que você compra separadamente.
+                      Ele é como um "tradutor" que conecta seu carro ao celular. Seu carro só precisa ter a
                       <strong className="text-foreground"> porta OBD2</strong> (obrigatória desde 1996 nos EUA e 2001 no Brasil/Europa).
                     </p>
                   </div>
@@ -183,8 +183,8 @@ const HowDiagnosticWorksPage = () => {
                 {/* Summary */}
                 <div className="mt-6 p-4 bg-muted/50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">
-                    <strong className="text-foreground">Resumindo:</strong> O adaptador OBD2 é plugado no carro, 
-                    lê os dados do computador do veículo, e envia para seu celular via Bluetooth ou WiFi. 
+                    <strong className="text-foreground">Resumindo:</strong> O adaptador OBD2 é plugado no carro,
+                    lê os dados do computador do veículo, e envia para seu celular via Bluetooth ou WiFi.
                     Você só precisa de: <strong className="text-primary">1 adaptador</strong> + <strong className="text-primary">1 celular</strong> + <strong className="text-primary">nosso app</strong>.
                   </p>
                 </div>
@@ -217,7 +217,7 @@ const HowDiagnosticWorksPage = () => {
                         Encontre a Porta OBD2 do Seu Carro
                       </h3>
                       <p className="text-muted-foreground mb-4">
-                        Todo carro fabricado a partir de 1996 (EUA) ou 2001 (Brasil/Europa) possui uma porta OBD2. 
+                        Todo carro fabricado a partir de 1996 (EUA) ou 2001 (Brasil/Europa) possui uma porta OBD2.
                         É uma tomada de 16 pinos, geralmente localizada:
                       </p>
                       <div className="grid sm:grid-cols-2 gap-3">
@@ -260,7 +260,7 @@ const HowDiagnosticWorksPage = () => {
                         Compre um Adaptador OBD2
                       </h3>
                       <p className="text-muted-foreground mb-4">
-                        O adaptador é um aparelhinho pequeno que você compra uma vez e usa para sempre. 
+                        O adaptador é um aparelhinho pequeno que você compra uma vez e usa para sempre.
                         Existem dois tipos principais:
                       </p>
                       <div className="grid sm:grid-cols-2 gap-4 mb-4">
@@ -270,7 +270,7 @@ const HowDiagnosticWorksPage = () => {
                             <h4 className="font-bold text-blue-300">Bluetooth</h4>
                           </div>
                           <p className="text-sm text-foreground/80">
-                            Mais barato (R$30-80). Funciona bem com Android. 
+                            Mais barato (R$30-80). Funciona bem com Android.
                             No iPhone, só funciona com nosso app nativo.
                           </p>
                         </div>
@@ -280,7 +280,7 @@ const HowDiagnosticWorksPage = () => {
                             <h4 className="font-bold text-green-300">WiFi</h4>
                           </div>
                           <p className="text-sm text-foreground/80">
-                            Um pouco mais caro (R$50-150). Funciona perfeitamente 
+                            Um pouco mais caro (R$50-150). Funciona perfeitamente
                             com iPhone e Android usando nosso app nativo.
                           </p>
                         </div>
@@ -309,7 +309,7 @@ const HowDiagnosticWorksPage = () => {
                         Plugue o Adaptador no Carro
                       </h3>
                       <p className="text-muted-foreground mb-4">
-                        Com o carro desligado, encaixe o adaptador na porta OBD2 que você encontrou. 
+                        Com o carro desligado, encaixe o adaptador na porta OBD2 que você encontrou.
                         O encaixe é firme - não precisa forçar muito, mas deve ficar bem preso.
                       </p>
                       <div className="space-y-2">
@@ -350,7 +350,7 @@ const HowDiagnosticWorksPage = () => {
                       <p className="text-muted-foreground mb-4">
                         Agora você vai fazer seu celular "conversar" com o adaptador:
                       </p>
-                      
+
                       <Accordion type="single" collapsible className="mb-4">
                         <AccordionItem value="bluetooth" className="border rounded-lg mb-2 overflow-hidden">
                           <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-blue-500/10">
@@ -529,9 +529,9 @@ const HowDiagnosticWorksPage = () => {
                     E se meu carro for mais antigo?
                   </h4>
                   <p className="text-sm text-foreground/80">
-                    Carros fabricados antes dessas datas podem ter portas de diagnóstico diferentes 
-                    (OBD-I) que não são compatíveis com adaptadores ELM327 padrão. Nesses casos, 
-                    você precisaria de um scanner específico para a marca do seu veículo, 
+                    Carros fabricados antes dessas datas podem ter portas de diagnóstico diferentes
+                    (OBD-I) que não são compatíveis com adaptadores ELM327 padrão. Nesses casos,
+                    você precisaria de um scanner específico para a marca do seu veículo,
                     ou levar a uma oficina especializada.
                   </p>
                 </div>
@@ -560,7 +560,7 @@ const HowDiagnosticWorksPage = () => {
                       Posso deixar o adaptador sempre plugado no carro?
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4 text-muted-foreground">
-                      <strong className="text-foreground">Não recomendamos.</strong> O adaptador consome energia da bateria mesmo com o carro desligado. 
+                      <strong className="text-foreground">Não recomendamos.</strong> O adaptador consome energia da bateria mesmo com o carro desligado.
                       Se deixar por vários dias, pode drenar a bateria. Plugue apenas quando for usar.
                     </AccordionContent>
                   </AccordionItem>
@@ -570,7 +570,7 @@ const HowDiagnosticWorksPage = () => {
                       O diagnóstico pode danificar meu carro?
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4 text-muted-foreground">
-                      <strong className="text-foreground">Não!</strong> O diagnóstico apenas <em>lê</em> informações do computador do carro. 
+                      <strong className="text-foreground">Não!</strong> O diagnóstico apenas <em>lê</em> informações do computador do carro.
                       Não altera nenhuma configuração. É como olhar o painel de instrumentos - só visualiza, não mexe em nada.
                     </AccordionContent>
                   </AccordionItem>
@@ -580,7 +580,7 @@ const HowDiagnosticWorksPage = () => {
                       Preciso de internet para fazer o diagnóstico?
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4 text-muted-foreground">
-                      <strong className="text-foreground">Para ler os códigos, não.</strong> A comunicação entre o celular e o adaptador é direta (Bluetooth ou WiFi local). 
+                      <strong className="text-foreground">Para ler os códigos, não.</strong> A comunicação entre o celular e o adaptador é direta (Bluetooth ou WiFi local).
                       Mas para ver as explicações detalhadas, soluções e vídeos, você precisa de internet.
                     </AccordionContent>
                   </AccordionItem>
@@ -590,7 +590,7 @@ const HowDiagnosticWorksPage = () => {
                       Funciona em carros a diesel?
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4 text-muted-foreground">
-                      <strong className="text-foreground">Sim!</strong> Carros a diesel fabricados a partir de 2004 (Europa) ou 2007 (Brasil) 
+                      <strong className="text-foreground">Sim!</strong> Carros a diesel fabricados a partir de 2004 (Europa) ou 2007 (Brasil)
                       geralmente têm porta OBD2 compatível. Pickups e caminhões podem ter protocolos diferentes.
                     </AccordionContent>
                   </AccordionItem>
@@ -600,7 +600,7 @@ const HowDiagnosticWorksPage = () => {
                       Posso usar no notebook/computador?
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4 text-muted-foreground">
-                      <strong className="text-foreground">Sim!</strong> Se seu notebook tiver Bluetooth, você pode usar pelo navegador Chrome ou Edge. 
+                      <strong className="text-foreground">Sim!</strong> Se seu notebook tiver Bluetooth, você pode usar pelo navegador Chrome ou Edge.
                       Para WiFi, precisa do app nativo (só celular). No computador, Bluetooth funciona melhor.
                     </AccordionContent>
                   </AccordionItem>
@@ -610,7 +610,7 @@ const HowDiagnosticWorksPage = () => {
                       E se meu carro não mostrar nenhum erro?
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4 text-muted-foreground">
-                      <strong className="text-foreground">Ótimo!</strong> Significa que o computador do carro não detectou nenhum problema. 
+                      <strong className="text-foreground">Ótimo!</strong> Significa que o computador do carro não detectou nenhum problema.
                       Mas lembre-se: alguns problemas mecânicos (freios, suspensão, pneus) não são detectados eletronicamente.
                     </AccordionContent>
                   </AccordionItem>
@@ -631,7 +631,7 @@ const HowDiagnosticWorksPage = () => {
                   Pronto para Diagnosticar seu Carro?
                 </h2>
                 <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                  Agora que você entende como funciona, é hora de testar! 
+                  Agora que você entende como funciona, é hora de testar!
                   Se ainda não tem um adaptador, comece pelo modo demonstração para conhecer o sistema.
                 </p>
                 <div className="flex flex-wrap justify-center gap-4">
@@ -641,12 +641,7 @@ const HowDiagnosticWorksPage = () => {
                       Ir para Diagnóstico
                     </Link>
                   </Button>
-                  <Button asChild size="lg" variant="outline" className="font-chakra uppercase">
-                    <Link to="/native-app-guide">
-                      <Download className="w-5 h-5 mr-2" />
-                      Baixar App Nativo
-                    </Link>
-                  </Button>
+
                 </div>
               </CardContent>
             </Card>

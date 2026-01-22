@@ -76,11 +76,11 @@ const HowItWorksPage = () => {
   return (
     <div className="min-h-screen">
       <Header />
-      
+
       {/* Hero Section */}
-      <section 
+      <section
         className="relative pt-32 sm:pt-36 md:pt-44 pb-12 md:pb-20 overflow-hidden text-center"
-        style={{ 
+        style={{
           backgroundImage: `url(${heroBg})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
@@ -92,13 +92,13 @@ const HowItWorksPage = () => {
             <img src={textBarsLight} alt="" className="w-5 h-3 sm:w-7 sm:h-4" />
             Como Funciona
           </p>
-          
+
           <h1 className="font-chakra text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold uppercase text-primary-foreground leading-tight mb-3 md:mb-4 fade-in-up">
             Diagnóstico em 3 Passos Simples
           </h1>
-          
+
           <p className="text-white/90 text-sm sm:text-base md:text-lg mb-6 md:mb-8 leading-relaxed max-w-2xl mx-auto fade-in-up">
-            Entenda como o Doutor Motors transforma dados técnicos complexos 
+            Entenda como o Doutor Motors transforma dados técnicos complexos
             em informações claras e acionáveis.
           </p>
         </div>
@@ -108,17 +108,16 @@ const HowItWorksPage = () => {
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
           {steps.map((step, index) => (
-            <div 
+            <div
               key={index}
-              className={`grid lg:grid-cols-2 gap-12 items-center mb-20 last:mb-0 ${
-                index % 2 === 1 ? 'lg:flex-row-reverse' : ''
-              }`}
+              className={`grid lg:grid-cols-2 gap-12 items-center mb-20 last:mb-0 ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''
+                }`}
             >
               <div className={index % 2 === 1 ? 'lg:order-2' : ''}>
                 <figure className="relative group">
-                  <img 
-                    src={step.image} 
-                    alt={step.title} 
+                  <img
+                    src={step.image}
+                    alt={step.title}
                     className="w-full rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute -bottom-4 -right-4 bg-primary w-20 h-20 rounded-lg flex items-center justify-center shadow-lg">
@@ -155,9 +154,9 @@ const HowItWorksPage = () => {
       {/* Car Image Section */}
       <section className="py-10 bg-muted/30">
         <div className="container mx-auto px-4 text-center">
-          <img 
-            src={services5} 
-            alt="Carro vermelho" 
+          <img
+            src={services5}
+            alt="Carro vermelho"
             className="w-full max-w-md mx-auto move-anim"
           />
         </div>
@@ -171,7 +170,7 @@ const HowItWorksPage = () => {
               <img src={textBarsDark} alt="" className="w-7 h-4" />
               Perguntas Frequentes
             </p>
-            
+
             <h2 className="font-chakra text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-foreground">
               Dúvidas Comuns
             </h2>
@@ -179,7 +178,7 @@ const HowItWorksPage = () => {
 
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {faqs.map((faq, index) => (
-              <div 
+              <div
                 key={index}
                 className="bg-card p-6 rounded-lg shadow-lg hover:shadow-xl transition-all"
               >
@@ -196,9 +195,9 @@ const HowItWorksPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section 
+      <section
         className="py-20 relative"
-        style={{ 
+        style={{
           backgroundImage: `url(${heroBg})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
@@ -207,25 +206,25 @@ const HowItWorksPage = () => {
       >
         <div className="container mx-auto px-4 text-center">
           <h2 className="font-chakra text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-primary-foreground mb-4">
-            Pronto para Experimentar?
+            Faça Parte da Nossa Comunidade
           </h2>
-          
+
           <p className="text-white/90 text-lg max-w-2xl mx-auto mb-8">
-            Crie sua conta e faça seu primeiro diagnóstico em menos de 5 minutos.
+            Milhares de motoristas já entenderam que conhecimento é poder, economia, segurança e tranquilidade também.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup">
-              <Button 
+              <Button
                 size="lg"
                 className="bg-primary hover:bg-dm-blue-3 text-primary-foreground font-chakra uppercase rounded-pill flex items-center gap-2 border border-transparent hover:border-primary-foreground transition-all hover:-translate-y-1 px-8"
               >
-                <span>Comece Agora</span>
+                <span>COMEÇAR DIAGNÓSTICO</span>
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
             <Link to="/servicos">
-              <Button 
+              <Button
                 size="lg"
                 variant="outline"
                 className="border-dm-blue-1 text-dm-blue-1 hover:bg-dm-blue-1 hover:text-white font-chakra uppercase rounded-pill px-8"

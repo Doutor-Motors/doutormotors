@@ -12,6 +12,7 @@ import { RecordingList } from "@/components/dataRecording/RecordingList";
 import { RecordingChart } from "@/components/dataRecording/RecordingChart";
 import { RecordingControls } from "@/components/dataRecording/RecordingControls";
 import { exportToCSV, exportToBRC } from "@/services/dataRecording/export";
+import { getOBDConnectionManager } from "@/services/obd/OBDConnectionManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ export default function DataRecordingPage() {
     deleteRecording,
     renameRecording,
     fetchDataPoints,
+    addDataPoint,
   } = useDataRecording();
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -69,6 +71,47 @@ export default function DataRecordingPage() {
     }
     return () => clearInterval(interval);
   }, [isRecording]);
+
+  // Data capture loop
+  useEffect(() => {
+    let captureInterval: NodeJS.Timeout;
+    const connectionManager = getOBDConnectionManager();
+
+    if (isRecording) {
+      // Capture data every 2 seconds
+      captureInterval = setInterval(async () => {
+        const info = connectionManager.getConnectionInfo();
+
+        // Ensure connected (or simulated) before trying to read
+        if (info.state === 'connected' || info.isSimulated) {
+          try {
+            const data = await connectionManager.readVehicleData();
+
+            // Format data for storage
+            const dataPoint: Record<string, number | string> = {};
+            if (data.rpm !== undefined) dataPoint.rpm = data.rpm;
+            if (data.speed !== undefined) dataPoint.speed = data.speed;
+            if (data.coolantTemp !== undefined) dataPoint.coolantTemp = data.coolantTemp;
+            if (data.engineLoad !== undefined) dataPoint.engineLoad = data.engineLoad;
+            if (data.throttlePosition !== undefined) dataPoint.throttlePosition = data.throttlePosition;
+            if (data.batteryVoltage) dataPoint.voltage = parseFloat(data.batteryVoltage.replace('V', ''));
+            if (data.fuelLevel !== undefined) dataPoint.fuelLevel = data.fuelLevel;
+
+            // Only add point if we have valid data
+            if (Object.keys(dataPoint).length > 0) {
+              addDataPoint(dataPoint);
+            }
+          } catch (err) {
+            console.error("Error capturing data point:", err);
+          }
+        }
+      }, 2000);
+    }
+
+    return () => {
+      if (captureInterval) clearInterval(captureInterval);
+    };
+  }, [isRecording, addDataPoint]);
 
   // View recording details
   const handleViewRecording = useCallback(async (recording: DataRecording) => {
@@ -129,7 +172,7 @@ export default function DataRecordingPage() {
             </Button>
             <h1 className="text-2xl font-bold">Gravação de Dados</h1>
           </div>
-          
+
           <UpgradePrompt
             feature="Gravação de Dados"
             description="Com o plano Pro, você pode gravar dados do seu veículo em tempo real, visualizar gráficos detalhados e exportar em CSV ou BRC."
@@ -155,7 +198,7 @@ export default function DataRecordingPage() {
               </p>
             </div>
           </div>
-          
+
           <RecordingControls
             vehicles={vehicles}
             isRecording={isRecording}
