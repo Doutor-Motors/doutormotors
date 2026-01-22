@@ -12,9 +12,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { subscription, isLoading: subLoading, isAdmin } = useSubscription();
   const location = useLocation();
 
-  const loading = authLoading || subLoading;
 
-  if (loading) {
+
+  // Só mostra loader se estiver carregando E não tivermos dados de usuário ainda.
+  // Se já tiver user, não bloqueia a tela (stale-while-revalidate).
+  const showLoader = (authLoading && !user) || (subLoading && !subscription && !isAdmin);
+
+  if (showLoader) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -39,9 +43,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // CRÍTICO: exige id real para evitar bypass (fallbacks/cache não podem liberar acesso)
   const hasValidSubscription = Boolean(
     subscription &&
-      subscription.id &&
-      subscription.status === "active" &&
-      (subscription.plan_type === "basic" || subscription.plan_type === "pro")
+    subscription.id &&
+    subscription.status === "active" &&
+    (subscription.plan_type === "basic" || subscription.plan_type === "pro")
   );
 
   // Se não tem assinatura válida, redireciona para página de seleção de plano

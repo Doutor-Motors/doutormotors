@@ -6,14 +6,62 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface Tutorial {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  thumbnail?: string;
-  slug: string;
-  score: number;
+// Schemas for Gemini
+const EXTRACTION_SCHEMA = {
+  type: "object",
+  properties: {
+    keywords: { type: "array", items: { type: "string" } },
+    category: { type: "string" },
+    intent: { type: "string" },
+    searchTerms: { type: "array", items: { type: "string" } }
+  },
+  required: ["keywords", "category", "intent", "searchTerms"]
+};
+
+const RANKING_SCHEMA = {
+  type: "object",
+  properties: {
+    rankings: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          index: { type: "integer" },
+          score: { type: "integer" },
+          reason: { type: "string" }
+        },
+        required: ["index", "score"]
+      }
+    }
+  },
+  required: ["rankings"]
+};
+
+async function callGemini(prompt: string, schema: any, apiKey: string) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          response_mime_type: "application/json",
+          response_schema: schema
+        }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Gemini API Error: ${response.status} ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!jsonText) throw new Error("Empty AI response");
+
+  return JSON.parse(jsonText);
 }
 
 serve(async (req) => {
@@ -31,84 +79,47 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Extract keywords and search context from query using AI
-    const extractionPrompt = `Analise esta pergunta de um usuário sobre veículos e extraia:
-1. Palavras-chave principais (máximo 5)
-2. Categoria do problema (ex: motor, freios, elétrica, suspensão, etc.)
-3. Intenção do usuário (ex: diagnóstico, manutenção, reparo, entender funcionamento)
-
+    // 1. Extract keywords
+    const extractionPrompt = `Analise esta pergunta de um usuário sobre veículos e extraia metadados para busca.
 Pergunta: "${query}"
 ${vehicleContext ? `Veículo: ${vehicleContext.brand} ${vehicleContext.model} ${vehicleContext.year}` : ""}
 
-Responda em JSON:
-{
-  "keywords": ["palavra1", "palavra2"],
-  "category": "categoria",
-  "intent": "intenção",
-  "searchTerms": ["termo de busca 1", "termo de busca 2"]
-}`;
+Objetivo: Retornar JSON com keywords, categoria, intenção e termos de busca alternativos.`;
 
-    const extractionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: extractionPrompt }],
-        temperature: 0.3,
-      }),
-    });
-
-    if (!extractionResponse.ok) {
-      console.error("AI extraction failed:", await extractionResponse.text());
-      throw new Error("Failed to analyze query");
-    }
-
-    const extractionData = await extractionResponse.json();
-    let extracted: {
-      keywords: string[];
-      category: string;
-      intent: string;
-      searchTerms: string[];
-    };
-
+    let extracted: any = {};
     try {
-      const content = extractionData.choices?.[0]?.message?.content || "{}";
-      // Remove markdown code blocks if present
-      const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
-      extracted = JSON.parse(cleanContent);
-    } catch {
+      extracted = await callGemini(extractionPrompt, EXTRACTION_SCHEMA, GEMINI_API_KEY);
+    } catch (e) {
+      console.error("Extraction failed", e);
+      // Fallback
       extracted = {
         keywords: query.split(" ").filter((w: string) => w.length > 3).slice(0, 5),
         category: "geral",
-        intent: "diagnóstico",
+        intent: "busca",
         searchTerms: [query],
       };
     }
 
-    console.log("Extracted context:", extracted);
+    console.log("Extracted:", extracted);
 
-    // 2. Search tutorials with expanded terms
+    // 2. Search database
     const allSearchTerms = [...new Set([
       ...extracted.keywords,
       ...extracted.searchTerms,
       extracted.category,
     ])].filter(Boolean);
 
-    // Build OR conditions for search
     const orConditions = allSearchTerms
-      .flatMap(term => [
+      .flatMap((term: string) => [
         `title_pt.ilike.%${term}%`,
         `title_original.ilike.%${term}%`,
         `description_pt.ilike.%${term}%`,
@@ -122,10 +133,7 @@ Responda em JSON:
       .or(orConditions)
       .limit(20);
 
-    if (error) {
-      console.error("Database search error:", error);
-      throw error;
-    }
+    if (error) throw error;
 
     if (!tutorials || tutorials.length === 0) {
       return new Response(
@@ -134,87 +142,36 @@ Responda em JSON:
       );
     }
 
-    // 3. Re-rank using AI
-    const tutorialsSummary = tutorials.map((t, i) => ({
+    // 3. Re-rank results
+    const tutorialsSummary = tutorials.map((t: any, i: number) => ({
       index: i,
       title: t.title_pt || t.title_original,
       description: t.description_pt?.substring(0, 100) || "",
       category: t.category_pt || "",
     }));
 
-    const rankingPrompt = `Você é um assistente que ranqueia tutoriais automotivos por relevância.
+    const rankingPrompt = `Ranqueie estes tutoriais para a pergunta: "${query}"
+Intenção: ${extracted.intent}
+Categoria: ${extracted.category}
 
-Pergunta do usuário: "${query}"
-${vehicleContext ? `Veículo: ${vehicleContext.brand} ${vehicleContext.model} ${vehicleContext.year}` : ""}
-Intenção detectada: ${extracted.intent}
-Categoria detectada: ${extracted.category}
+Tutoriais: ${JSON.stringify(tutorialsSummary)}
 
-Tutoriais disponíveis:
-${JSON.stringify(tutorialsSummary, null, 2)}
+Retorne indices dos ${Math.min(limit, tutorials.length)} melhores e scores (0-100).`;
 
-Retorne os índices dos ${Math.min(limit, tutorials.length)} tutoriais MAIS RELEVANTES em ordem de relevância (do mais relevante para o menos), junto com um score de 0 a 100.
-
-Responda APENAS em JSON:
-{
-  "rankings": [
-    { "index": 0, "score": 95, "reason": "motivo breve" },
-    { "index": 2, "score": 80, "reason": "motivo breve" }
-  ]
-}`;
-
-    const rankingResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: rankingPrompt }],
-        temperature: 0.1,
-      }),
-    });
-
-    if (!rankingResponse.ok) {
-      console.error("AI ranking failed:", await rankingResponse.text());
-      // Fallback: return tutorials as-is with default scores
-      const fallbackTutorials: Tutorial[] = tutorials.slice(0, limit).map((t, i) => ({
-        id: t.id,
-        title: t.title_pt || t.title_original || "Tutorial",
-        description: t.description_pt || undefined,
-        category: t.category_pt || undefined,
-        thumbnail: t.thumbnail_url || undefined,
-        slug: t.slug,
-        score: 100 - (i * 10),
-      }));
-
-      return new Response(
-        JSON.stringify({ tutorials: fallbackTutorials, fallback: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const rankingData = await rankingResponse.json();
-    let rankings: { index: number; score: number; reason?: string }[];
-
+    let rankings = [];
     try {
-      const content = rankingData.choices?.[0]?.message?.content || "{}";
-      const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
-      const parsed = JSON.parse(cleanContent);
-      rankings = parsed.rankings || [];
-    } catch {
-      // Fallback to first N tutorials
-      rankings = tutorials.slice(0, limit).map((_, i) => ({
-        index: i,
-        score: 100 - (i * 10),
-      }));
+      const rankingData = await callGemini(rankingPrompt, RANKING_SCHEMA, GEMINI_API_KEY);
+      rankings = rankingData.rankings || [];
+    } catch (e) {
+      console.error("Ranking failed", e);
+      rankings = tutorials.slice(0, limit).map((_: any, i: number) => ({ index: i, score: 90 - i }));
     }
 
-    // 4. Build final response
-    const rankedTutorials: Tutorial[] = rankings
-      .filter((r) => r.index >= 0 && r.index < tutorials.length)
+    // 4. Build response
+    const rankedTutorials = rankings
+      .filter((r: any) => r.index >= 0 && r.index < tutorials.length)
       .slice(0, limit)
-      .map((r) => {
+      .map((r: any) => {
         const t = tutorials[r.index];
         return {
           id: t.id,
@@ -227,8 +184,6 @@ Responda APENAS em JSON:
         };
       });
 
-    console.log("Returning", rankedTutorials.length, "ranked tutorials");
-
     return new Response(
       JSON.stringify({
         tutorials: rankedTutorials,
@@ -240,8 +195,9 @@ Responda APENAS em JSON:
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
-    console.error("semantic-tutorial-search error:", error);
+    console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

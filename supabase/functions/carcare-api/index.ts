@@ -56,7 +56,7 @@ async function getCachedTranscription(videoUrl: string): Promise<CachedTranscrip
     if (data) {
       const hasValidVideo = data.youtube_video_id && data.youtube_video_id.length === 11;
       const hasValidSteps = data.elaborated_steps && Array.isArray(data.elaborated_steps) && data.elaborated_steps.length > 0;
-      
+
       if (!hasValidVideo && !hasValidSteps) {
         console.log("Cache exists but is invalid (no video and no steps), ignoring:", videoUrl);
         // Deletar cache inválido para evitar reutilização
@@ -66,7 +66,7 @@ async function getCachedTranscription(videoUrl: string): Promise<CachedTranscrip
           .eq("video_url", videoUrl);
         return null;
       }
-      
+
       console.log("Cache hit for video:", videoUrl, { hasValidVideo, hasValidSteps });
     }
 
@@ -75,6 +75,36 @@ async function getCachedTranscription(videoUrl: string): Promise<CachedTranscrip
     console.error("Cache lookup error:", err);
     return null;
   }
+}
+
+// Helper para chamadas Gemini
+async function callGeminiAPI(prompt: string, schema: any, temperature = 0.4): Promise<any> {
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature,
+          response_mime_type: "application/json",
+          response_schema: schema
+        }
+      })
+    }
+  );
+
+  if (!response.ok) throw new Error(`Gemini Error: ${response.status} ${await response.text()}`);
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Empty AI response");
+
+  return JSON.parse(text);
 }
 
 // Salvar transcrição no cache - só salva se tiver conteúdo válido
@@ -93,7 +123,7 @@ async function saveToCache(cacheData: {
     // VALIDAÇÃO: Não salvar cache se não tiver vídeo válido E não tiver steps válidos
     const hasValidVideo = cacheData.youtube_video_id && cacheData.youtube_video_id.length === 11;
     const hasValidSteps = cacheData.elaborated_steps && cacheData.elaborated_steps.length > 0;
-    
+
     if (!hasValidVideo && !hasValidSteps) {
       console.log("Not caching invalid data (no video and no steps):", cacheData.video_url);
       return;
@@ -119,10 +149,40 @@ async function saveToCache(cacheData: {
   }
 }
 
+// Helper para chamadas Gemini
+async function callGeminiAPI(prompt: string, schema: any, temperature = 0.4): Promise<any> {
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature,
+          response_mime_type: "application/json",
+          response_schema: schema
+        }
+      })
+    }
+  );
+
+  if (!response.ok) throw new Error(`Gemini Error: ${response.status} ${await response.text()}`);
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Empty AI response");
+
+  return JSON.parse(text);
+}
+
 // Extrair áudio do YouTube e transcrever usando ElevenLabs
 async function transcribeYouTubeVideo(videoUrl: string): Promise<string | null> {
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-  
+
   if (!ELEVENLABS_API_KEY) {
     console.log("ELEVENLABS_API_KEY not configured, skipping transcription");
     return null;
@@ -136,7 +196,7 @@ async function transcribeYouTubeVideo(videoUrl: string): Promise<string | null> 
       return null;
     }
     const videoId = videoIdMatch[1];
-    
+
     console.log(`Transcribing YouTube video: ${videoId}...`);
 
     // Usar serviço de download de áudio do YouTube (via API pública)
@@ -156,7 +216,7 @@ async function transcribeYouTubeVideo(videoUrl: string): Promise<string | null> 
 
     if (!cobaltResponse.ok) {
       console.log("Cobalt API error, trying alternative method...");
-      
+
       // Tentar método alternativo: usar transcrição do próprio YouTube via API
       // Se não conseguir áudio, retornar null e usar passos do HTML
       return null;
@@ -206,7 +266,7 @@ async function transcribeYouTubeVideo(videoUrl: string): Promise<string | null> 
 
     const transcription = await transcribeResponse.json();
     console.log("Transcription successful:", transcription.text?.slice(0, 200) + "...");
-    
+
     return transcription.text || null;
   } catch (error) {
     console.error("Transcription error:", error);
@@ -220,100 +280,34 @@ async function generateElaboratedSteps(
   title: string,
   vehicleContext?: string
 ): Promise<string[]> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  
-  if (!LOVABLE_API_KEY) {
-    console.log("LOVABLE_API_KEY not configured, skipping step generation");
-    return [];
-  }
-
   try {
-    console.log("Generating elaborated steps from transcription...");
+    console.log("Generating elaborated steps from transcription with Gemini...");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `Você é um mecânico experiente brasileiro que cria tutoriais de manutenção automotiva detalhados e fáceis de seguir.
+    const STEPS_SCHEMA = {
+      type: "array",
+      items: { type: "string" }
+    };
 
-Sua tarefa é analisar a transcrição de um vídeo tutorial automotivo e criar um passo a passo ELABORADO e BEM ESTRUTURADO em português brasileiro.
-
-REGRAS IMPORTANTES:
-1. Crie passos CLAROS, DETALHADOS e em SEQUÊNCIA LÓGICA
-2. Inclua dicas de segurança quando relevante (use ⚠️)
-3. Mencione ferramentas específicas necessárias em cada passo
-4. Adicione observações úteis baseadas na transcrição
-5. Use linguagem técnica mas acessível
-6. Numere cada passo com emoji (1️⃣, 2️⃣, 3️⃣...)
-7. Cada passo deve ter 2-4 frases explicativas
-8. Máximo de 10-15 passos
-
-FORMATO DE SAÍDA: JSON array de strings, cada string é um passo completo.
-Exemplo: ["1️⃣ Primeiro passo...", "2️⃣ Segundo passo..."]
-
-RETORNE APENAS O JSON, sem explicações adicionais.`
-          },
-          {
-            role: "user",
-            content: `TÍTULO DO VÍDEO: ${title}
-${vehicleContext ? `VEÍCULO: ${vehicleContext}` : ""}
-
-TRANSCRIÇÃO DO VÍDEO:
-${transcription.slice(0, 8000)}
-
-Crie o passo a passo elaborado em português brasileiro:`
-          }
-        ],
-        temperature: 0.4,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Step generation API error:", response.status);
-      return [];
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      console.error("No content received from step generation");
-      return [];
-    }
-
-    // Parse the JSON response
-    let cleanedContent = content.trim();
-    if (cleanedContent.startsWith("```json")) {
-      cleanedContent = cleanedContent.slice(7);
-    } else if (cleanedContent.startsWith("```")) {
-      cleanedContent = cleanedContent.slice(3);
-    }
-    if (cleanedContent.endsWith("```")) {
-      cleanedContent = cleanedContent.slice(0, -3);
-    }
-
-    const steps = JSON.parse(cleanedContent.trim());
+    const prompt = `Analise a transcrição de vídeo e crie um tutorial estruturado em passos (array de strings).
     
-    if (Array.isArray(steps)) {
-      console.log(`Generated ${steps.length} elaborated steps`);
-      return steps;
-    }
+    Contexto: ${title} ${vehicleContext ? " - " + vehicleContext : ""}
+    Transcrição: ${transcription.slice(0, 8000)}
+    
+    Regras:
+    1. Passos claros e sequenciais em Português Brasileiro.
+    2. Numere com emojis (1️⃣, 2️⃣...).
+    3. Inclua avisos de segurança (⚠️) se necessário.
+    4. Max 15 passos.`;
 
-    return [];
+    const steps = await callGeminiAPI(prompt, STEPS_SCHEMA);
+    return Array.isArray(steps) ? steps : [];
   } catch (error) {
     console.error("Step generation error:", error);
     return [];
   }
 }
 
-// Traduzir conteúdo para português usando Lovable AI
+// Traduzir conteúdo para português usando Gemini
 async function translateToPortuguese(content: {
   title?: string;
   description?: string;
@@ -325,141 +319,31 @@ async function translateToPortuguese(content: {
   videoDescription?: string;
   steps?: string[];
 }> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  
-  if (!LOVABLE_API_KEY) {
-    console.log("LOVABLE_API_KEY not configured, skipping translation");
-    return content;
-  }
-
-  // Prepare content for translation
-  const textsToTranslate: string[] = [];
-  const keys: string[] = [];
-
-  if (content.title) {
-    textsToTranslate.push(content.title);
-    keys.push("title");
-  }
-  if (content.description) {
-    textsToTranslate.push(content.description);
-    keys.push("description");
-  }
-  if (content.videoDescription) {
-    textsToTranslate.push(content.videoDescription);
-    keys.push("videoDescription");
-  }
-  if (content.steps && content.steps.length > 0) {
-    content.steps.forEach((step, i) => {
-      textsToTranslate.push(step);
-      keys.push(`step_${i}`);
-    });
-  }
-
-  if (textsToTranslate.length === 0) {
-    return content;
-  }
-
   try {
-    console.log(`Translating ${textsToTranslate.length} texts to Portuguese...`);
+    const keys = Object.keys(content).filter(k => content[k as keyof typeof content]);
+    if (keys.length === 0) return content;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `Você é um tradutor especializado em conteúdo automotivo. Traduza o texto do inglês para o português brasileiro de forma clara e natural.
+    console.log(`Translating content to Portuguese with Gemini...`);
 
-REGRAS:
-- Mantenha termos técnicos automotivos quando apropriados (ex: OBD, ECU, R134a)
-- Use linguagem acessível para mecânicos e entusiastas
-- Traduza unidades de medida quando relevante
-- Não adicione ou remova informações
-- Retorne APENAS o JSON com as traduções, sem explicações
-
-FORMATO DE ENTRADA: JSON com chaves e textos em inglês
-FORMATO DE SAÍDA: JSON com as mesmas chaves e textos traduzidos para português`
-          },
-          {
-            role: "user",
-            content: JSON.stringify(
-              textsToTranslate.reduce((acc, text, i) => {
-                acc[keys[i]] = text;
-                return acc;
-              }, {} as Record<string, string>)
-            )
-          }
-        ],
-        temperature: 0.3,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Translation API error:", response.status);
-      return content;
-    }
-
-    const data = await response.json();
-    const translatedContent = data.choices?.[0]?.message?.content;
-
-    if (!translatedContent) {
-      console.error("No translation content received");
-      return content;
-    }
-
-    // Parse the translated JSON
-    let translations: Record<string, string>;
-    try {
-      // Clean up the response (remove markdown code blocks if present)
-      let cleanedContent = translatedContent.trim();
-      if (cleanedContent.startsWith("```json")) {
-        cleanedContent = cleanedContent.slice(7);
-      } else if (cleanedContent.startsWith("```")) {
-        cleanedContent = cleanedContent.slice(3);
+    const TRANSLATION_SCHEMA = {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        videoDescription: { type: "string" },
+        steps: { type: "array", items: { type: "string" } }
       }
-      if (cleanedContent.endsWith("```")) {
-        cleanedContent = cleanedContent.slice(0, -3);
-      }
-      translations = JSON.parse(cleanedContent.trim());
-    } catch (e) {
-      console.error("Failed to parse translation JSON:", e);
-      return content;
-    }
+    };
 
-    // Build translated content
-    const result: typeof content = {};
+    const prompt = `Traduza o seguinte JSON para Português Brasileiro (pt-BR).
+    Mantenha termos técnicos. Retorne JSON com a mesma estrutura.
+    
+    Conteúdo: ${JSON.stringify(content)}`;
 
-    if (translations.title) {
-      result.title = translations.title;
-    } else if (content.title) {
-      result.title = content.title;
-    }
+    const translated = await callGeminiAPI(prompt, TRANSLATION_SCHEMA);
 
-    if (translations.description) {
-      result.description = translations.description;
-    } else if (content.description) {
-      result.description = content.description;
-    }
-
-    if (translations.videoDescription) {
-      result.videoDescription = translations.videoDescription;
-    } else if (content.videoDescription) {
-      result.videoDescription = content.videoDescription;
-    }
-
-    if (content.steps && content.steps.length > 0) {
-      result.steps = content.steps.map((_, i) => {
-        return translations[`step_${i}`] || content.steps![i];
-      });
-    }
-
-    console.log("Translation completed successfully");
-    return result;
+    // Merge result
+    return { ...content, ...translated };
   } catch (error) {
     console.error("Translation error:", error);
     return content;
@@ -472,92 +356,30 @@ async function generateStepsWithAI(
   description: string,
   vehicleContext?: string
 ): Promise<string[]> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  
-  if (!LOVABLE_API_KEY) {
-    console.log("LOVABLE_API_KEY not configured, skipping AI step generation");
-    return [];
-  }
-
   try {
-    console.log("Generating steps with AI for:", title);
+    console.log("Generating steps with Gemini for:", title);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `Você é um mecânico experiente brasileiro que cria tutoriais de manutenção automotiva detalhados.
+    const STEPS_SCHEMA = {
+      type: "array",
+      items: { type: "string" }
+    };
 
-Sua tarefa é criar um passo a passo DETALHADO e PROFISSIONAL em português brasileiro para o procedimento solicitado.
-
-REGRAS IMPORTANTES:
-1. Crie entre 6 a 10 passos claros e detalhados
-2. Cada passo deve começar com um número e emoji (1️⃣, 2️⃣, etc.)
-3. Inclua **texto em negrito** para ações importantes
-4. Adicione dicas de segurança com ⚠️ quando necessário
-5. Mencione ferramentas específicas quando relevante
-6. Use linguagem técnica mas acessível
-7. Seja específico para o veículo mencionado quando possível
-
-FORMATO DE SAÍDA: JSON array de strings, cada string é um passo completo.
-Exemplo: ["1️⃣ **Preparação**: Primeiro passo...", "2️⃣ **Execução**: Segundo passo..."]
-
-RETORNE APENAS O JSON, sem explicações adicionais.`
-          },
-          {
-            role: "user",
-            content: `PROCEDIMENTO: ${title}
-${description ? `DESCRIÇÃO: ${description}` : ''}
-${vehicleContext ? `VEÍCULO: ${vehicleContext}` : ''}
-
-Crie o passo a passo detalhado em português brasileiro:`
-          }
-        ],
-        temperature: 0.4,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("AI step generation error:", response.status);
-      return [];
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      console.error("No content received from AI");
-      return [];
-    }
-
-    // Parse the JSON response
-    let cleanedContent = content.trim();
-    if (cleanedContent.startsWith("```json")) {
-      cleanedContent = cleanedContent.slice(7);
-    } else if (cleanedContent.startsWith("```")) {
-      cleanedContent = cleanedContent.slice(3);
-    }
-    if (cleanedContent.endsWith("```")) {
-      cleanedContent = cleanedContent.slice(0, -3);
-    }
-
-    const steps = JSON.parse(cleanedContent.trim());
+    const prompt = `Crie um tutorial passo a passo profissional para o procedimento automotivo.
     
-    if (Array.isArray(steps)) {
-      console.log(`Generated ${steps.length} steps with AI`);
-      return steps;
-    }
+    Procedimento: ${title}
+    Descrição: ${description}
+    Veículo: ${vehicleContext || "Genérico"}
+    
+    Regras:
+    1. 6 a 10 passos detalhados.
+    2. Numere com emojis.
+    3. Use texto em negrito para ênfase (markdown).
+    4. Português Brasileiro.`;
 
-    return [];
+    const steps = await callGeminiAPI(prompt, STEPS_SCHEMA);
+    return Array.isArray(steps) ? steps : [];
   } catch (error) {
-    console.error("AI step generation error:", error);
+    console.error("Step generation error:", error);
     return [];
   }
 }
@@ -574,10 +396,10 @@ Deno.serve(async (req) => {
     console.log("CarCare API request:", { action, brand, model, year, procedure, query, skipCache });
 
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-    
+
     // Se não tiver API key, usar dados estáticos diretamente
     const useStaticOnly = !FIRECRAWL_API_KEY;
-    
+
     if (useStaticOnly) {
       console.log("Using static data only (no Firecrawl API key)");
     }
@@ -604,14 +426,14 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         if (useStaticOnly) {
           return new Response(
             JSON.stringify({ success: true, data: getStaticModels(brand) }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         const models = await fetchModelsFromCarCareKiosk(FIRECRAWL_API_KEY, brand);
         return new Response(
           JSON.stringify({ success: true, data: models }),
@@ -626,14 +448,14 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         if (useStaticOnly) {
           return new Response(
             JSON.stringify({ success: true, data: getStaticCategories(brand, model, year) }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         const videos = await fetchVideosFromCarCareKiosk(FIRECRAWL_API_KEY, brand, model, year);
         return new Response(
           JSON.stringify({ success: true, data: videos }),
@@ -648,14 +470,14 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         if (useStaticOnly) {
           return new Response(
             JSON.stringify({ success: true, data: null }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         // Build vehicle context for better step generation
         const vehicleContext = [brand, model, year].filter(Boolean).join(" ");
         const videoDetails = await fetchVideoDetails(FIRECRAWL_API_KEY, procedure, vehicleContext || undefined, skipCache);
@@ -672,7 +494,7 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         if (useStaticOnly) {
           // Busca local nos dados estáticos
           const results = searchStaticData(query, brand, model);
@@ -681,7 +503,7 @@ Deno.serve(async (req) => {
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         const results = await searchCarCareKiosk(FIRECRAWL_API_KEY, query, brand, model, year);
         return new Response(
           JSON.stringify({ success: true, data: results }),
@@ -696,14 +518,14 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         if (useStaticOnly) {
           return new Response(
             JSON.stringify({ success: false, error: "Firecrawl API key required for scanning" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         const result = await scanAndCacheProcedures(FIRECRAWL_API_KEY, brand, model, year || new Date().getFullYear().toString());
         return new Response(
           JSON.stringify({ success: true, ...result }),
@@ -718,20 +540,20 @@ Deno.serve(async (req) => {
           .from("carcare_procedure_cache")
           .select("*")
           .gt("expires_at", new Date().toISOString());
-        
+
         if (brand) query = query.eq("brand", brand);
         if (model) query = query.eq("model", model);
         if (year) query = query.eq("year", year);
-        
+
         const { data, error } = await query.order("category").order("procedure_name");
-        
+
         if (error) {
           return new Response(
             JSON.stringify({ success: false, error: error.message }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         return new Response(
           JSON.stringify({ success: true, data }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -744,14 +566,14 @@ Deno.serve(async (req) => {
           .from("carcare_categories")
           .select("*")
           .order("name_en");
-        
+
         if (error) {
           return new Response(
             JSON.stringify({ success: false, error: error.message }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         return new Response(
           JSON.stringify({ success: true, data }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -780,7 +602,7 @@ Deno.serve(async (req) => {
 async function fetchBrandsFromCarCareKiosk(apiKey: string): Promise<any[]> {
   try {
     console.log("Fetching brands from CarCareKiosk...");
-    
+
     const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: {
@@ -801,16 +623,16 @@ async function fetchBrandsFromCarCareKiosk(apiKey: string): Promise<any[]> {
 
     const data = await response.json();
     const html = data.data?.html || "";
-    
+
     const brands: any[] = [];
     const brandRegex = /<a[^>]*href="\/make\/([^"]+)"[^>]*>[\s\S]*?<img[^>]*src="([^"]*)"[^>]*>[\s\S]*?<\/a>/gi;
-    
+
     let match;
     const seen = new Set();
-    
+
     while ((match = brandRegex.exec(html)) !== null) {
       const [, brandSlug, imageUrl] = match;
-      
+
       if (!seen.has(brandSlug) && brandSlug && !brandSlug.includes('/')) {
         seen.add(brandSlug);
         const brandName = formatBrandName(brandSlug);
@@ -841,7 +663,7 @@ async function fetchBrandsFromCarCareKiosk(apiKey: string): Promise<any[]> {
     }
 
     console.log(`Found ${brands.length} brands from CarCareKiosk`);
-    
+
     if (brands.length === 0) {
       return getStaticBrands();
     }
@@ -862,14 +684,14 @@ async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promi
       `https://www.carcarekiosk.com/videos/${brand.replace(/\s+/g, "-")}`, // /videos/Land-Rover
       `https://www.carcarekiosk.com/make/${brand.toLowerCase().replace(/\s+/g, "-")}`, // Formato antigo: /make/honda
     ];
-    
+
     let html = "";
     let successfulUrl = "";
-    
+
     // Tentar cada formato de URL até encontrar um que funcione
     for (const url of urlFormats) {
       console.log(`Trying to fetch models for ${brand} from ${url}...`);
-      
+
       try {
         const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
           method: "POST",
@@ -888,7 +710,7 @@ async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promi
           const data = await response.json();
           const fetchedHtml = data.data?.html || "";
           const markdown = data.data?.markdown || "";
-          
+
           // Verificar se a página é válida (não é NOT FOUND)
           if (isValidPage(markdown, fetchedHtml) && fetchedHtml.length > 1000) {
             html = fetchedHtml;
@@ -903,12 +725,12 @@ async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promi
         console.log(`Failed to fetch from ${url}:`, e);
       }
     }
-    
+
     if (!html) {
       console.log("All URL formats failed, using static data for", brand);
       return getStaticModels(brand);
     }
-    
+
     const models: any[] = [];
     const seen = new Set();
 
@@ -919,7 +741,7 @@ async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promi
       const [, , modelSlug, year] = match;
       const modelName = formatModelName(modelSlug.replace(/-/g, " "), brand);
       const key = `${modelName.toLowerCase()}_${year}`;
-      
+
       if (!seen.has(key)) {
         seen.add(key);
         models.push({
@@ -938,7 +760,7 @@ async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promi
       const [, year, modelSlug] = match;
       const modelName = formatModelName(modelSlug, brand);
       const key = `${modelName.toLowerCase()}_${year}`;
-      
+
       if (!seen.has(key)) {
         seen.add(key);
         models.push({
@@ -952,7 +774,7 @@ async function fetchModelsFromCarCareKiosk(apiKey: string, brand: string): Promi
     }
 
     console.log(`Found ${models.length} models for ${brand}`);
-    
+
     if (models.length === 0) {
       console.log("No models found from scraping, using static data for", brand);
       return getStaticModels(brand);
@@ -996,7 +818,7 @@ async function fetchAllVideosFromModelPage(
   try {
     const brandSlug = brand.replace(/\s+/g, "_");
     const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
-    
+
     // A página de "todos os vídeos" do modelo - formato mais comum
     // Ex: https://www.carcarekiosk.com/video/2019_Honda_Civic
     // Ou: https://www.carcarekiosk.com/videos/Honda/Civic/2019
@@ -1005,14 +827,14 @@ async function fetchAllVideosFromModelPage(
       `https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}`,
       `https://www.carcarekiosk.com/videos/${brand.replace(/\s+/g, "-")}/${model.replace(/\s+/g, "-")}/${year}`,
     ];
-    
+
     console.log(`[ModelVideosIndex] Fetching all videos index for ${year} ${brand} ${model}...`);
-    
+
     let html = "";
     let markdown = "";
     let successfulUrl = "";
     const yearStr = year;
-    
+
     for (const url of urlFormats) {
       try {
         const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
@@ -1032,7 +854,7 @@ async function fetchAllVideosFromModelPage(
           const data = await response.json();
           const fetchedHtml = data.data?.html || "";
           const fetchedMarkdown = data.data?.markdown || "";
-          
+
           if (isValidPage(fetchedMarkdown, fetchedHtml) && fetchedHtml.length > 1000) {
             html = fetchedHtml;
             markdown = fetchedMarkdown;
@@ -1045,16 +867,16 @@ async function fetchAllVideosFromModelPage(
         console.log(`[ModelVideosIndex] Failed to fetch from ${url}:`, e);
       }
     }
-    
+
     if (!html) {
       console.log("[ModelVideosIndex] Could not fetch model videos page");
       return null;
     }
-    
+
     // Função auxiliar para categorizar procedimentos automaticamente
     const categorizeProcedure = (procName: string): string => {
       const p = procName.toLowerCase();
-      
+
       // Mapeamento de palavras-chave para categorias
       const categoryKeywords: Record<string, string[]> = {
         "oil": ["oil", "motor oil", "oil filter", "oil change", "oil drain"],
@@ -1081,7 +903,7 @@ async function fetchAllVideosFromModelPage(
         "horn": ["horn"],
         "door": ["door", "lock", "window", "handle"],
       };
-      
+
       for (const [category, keywords] of Object.entries(categoryKeywords)) {
         for (const keyword of keywords) {
           if (p.includes(keyword)) {
@@ -1089,33 +911,33 @@ async function fetchAllVideosFromModelPage(
           }
         }
       }
-      
+
       return "maintenance"; // Categoria genérica
     };
-    
+
     // Extrair TODOS os procedimentos da página usando MÚLTIPLOS padrões
     const procedures: ModelVideosIndex["procedures"] = [];
     const seen = new Set<string>();
     let match;
-    
+
     // Função auxiliar para adicionar procedimento de forma segura
     const addProcedure = (categorySlug: string, procedureSlug: string, urlPath: string, thumbnail?: string) => {
       const key = `${categorySlug}_${procedureSlug}`.toLowerCase();
-      
+
       // Filtrar entradas inválidas
       if (!categorySlug || !procedureSlug) return;
       if (categorySlug.length < 2 || procedureSlug.length < 2) return;
       if (categorySlug.includes('svg') || procedureSlug.includes('svg')) return;
       if (categorySlug.includes('img') || procedureSlug.includes('img')) return;
       if (categorySlug.includes('icon') || procedureSlug.includes('icon')) return;
-      
+
       if (!seen.has(key)) {
         seen.add(key);
-        
-        const fullUrl = urlPath.startsWith("http") 
-          ? urlPath 
+
+        const fullUrl = urlPath.startsWith("http")
+          ? urlPath
           : `https://www.carcarekiosk.com${urlPath}`;
-        
+
         procedures.push({
           category: translateCategoryName(categorySlug.replace(/_/g, " ")),
           categorySlug: categorySlug.toLowerCase().replace(/-/g, "_"),
@@ -1126,11 +948,11 @@ async function fetchAllVideosFromModelPage(
         });
       }
     };
-    
+
     // ============================================================================
     // PADRÕES DE REGEX MELHORADOS PARA CAPTURAR MAIS PROCEDIMENTOS
     // ============================================================================
-    
+
     // Padrão 1: Links de procedimentos no formato /video/Vehicle/Category/Procedure
     // Ex: /video/2019_Honda_Civic_2.0L_4_Cyl./oil/change
     const procedurePattern1 = /href="((?:https?:\/\/www\.carcarekiosk\.com)?\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"/gi;
@@ -1138,7 +960,7 @@ async function fetchAllVideosFromModelPage(
       const [, urlPath, categorySlug, procedureSlug] = match;
       addProcedure(categorySlug, procedureSlug, urlPath);
     }
-    
+
     // Padrão 2: Links com atributo data-video ou class específica
     // Ex: <a href="/video/..." class="functions" data-toggle="collapse">
     const procedurePattern2 = /<a[^>]*href="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*(?:class="[^"]*functions[^"]*"|data-toggle)[^>]*>/gi;
@@ -1146,7 +968,7 @@ async function fetchAllVideosFromModelPage(
       const [, urlPath, categorySlug, procedureSlug] = match;
       addProcedure(categorySlug, procedureSlug, urlPath);
     }
-    
+
     // Padrão 3: Links dentro de listas de procedimentos
     // Ex: <li><a href="/video/.../category/procedure">Procedure Name</a></li>
     const procedurePattern3 = /<li[^>]*>\s*<a[^>]*href="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*>[^<]+<\/a>/gi;
@@ -1154,7 +976,7 @@ async function fetchAllVideosFromModelPage(
       const [, urlPath, categorySlug, procedureSlug] = match;
       addProcedure(categorySlug, procedureSlug, urlPath);
     }
-    
+
     // Padrão 4: Cards de categoria com imagens e links
     // Ex: <div class="card">...<a href="/video/...">...</a>...</div>
     const cardPattern = /<div[^>]*class="[^"]*card[^"]*"[^>]*>[\s\S]*?href="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[\s\S]*?<\/div>/gi;
@@ -1162,7 +984,7 @@ async function fetchAllVideosFromModelPage(
       const [, urlPath, categorySlug, procedureSlug] = match;
       addProcedure(categorySlug, procedureSlug, urlPath);
     }
-    
+
     // Padrão 5: Extrair do markdown - formato de lista
     // Ex: - [Oil Change](/video/...)
     const markdownLinkPattern = /\[([^\]]+)\]\(([^)]*\/video\/[^)]+\/([^)\/]+)\/([^)\/]+))\)/gi;
@@ -1170,7 +992,7 @@ async function fetchAllVideosFromModelPage(
       const [, , urlPath, categorySlug, procedureSlug] = match;
       addProcedure(categorySlug, procedureSlug, urlPath);
     }
-    
+
     // Padrão 6: Links com texto de procedimento
     // Ex: <a href="...">Oil Change</a>
     const procedureWithTextPattern = /<a[^>]*href="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*>([^<]+)<\/a>/gi;
@@ -1178,7 +1000,7 @@ async function fetchAllVideosFromModelPage(
       const [, urlPath, categorySlug, procedureSlug] = match;
       addProcedure(categorySlug, procedureSlug, urlPath);
     }
-    
+
     // Padrão 7: URLs absolutas no HTML
     // Ex: https://www.carcarekiosk.com/video/2019_Honda_Civic/oil/change
     const absoluteUrlPattern = /(https:\/\/www\.carcarekiosk\.com\/video\/[^\s"'<>]+\/([a-z_-]+)\/([a-z_-]+))/gi;
@@ -1186,7 +1008,7 @@ async function fetchAllVideosFromModelPage(
       const [, urlPath, categorySlug, procedureSlug] = match;
       addProcedure(categorySlug, procedureSlug, urlPath);
     }
-    
+
     // Padrão 8: Botões de procedimentos
     // Ex: <button onclick="location.href='/video/...'">
     const buttonPattern = /onclick="[^"]*location\.href='([^']*\/video\/[^']+\/([^'\/]+)\/([^'\/]+))'"/gi;
@@ -1194,7 +1016,7 @@ async function fetchAllVideosFromModelPage(
       const [, urlPath, categorySlug, procedureSlug] = match;
       addProcedure(categorySlug, procedureSlug, urlPath);
     }
-    
+
     // Padrão 9: Links em atributos data-*
     // Ex: data-href="/video/..." ou data-url="..."
     const dataAttrPattern = /data-(?:href|url)="([^"]*\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"/gi;
@@ -1202,13 +1024,13 @@ async function fetchAllVideosFromModelPage(
       const [, urlPath, categorySlug, procedureSlug] = match;
       addProcedure(categorySlug, procedureSlug, urlPath);
     }
-    
+
     // Padrão 10: Extrair categorias de collapse panels
     // O site CarCareKiosk usa painéis colapsáveis para cada categoria
     const collapsePattern = /<a[^>]*data-toggle="collapse"[^>]*href="#collapse-([^"]+)"[^>]*>[^<]*<\/a>[\s\S]*?<div[^>]*id="collapse-\1"[^>]*>([\s\S]*?)<\/div>/gi;
     while ((match = collapsePattern.exec(html)) !== null) {
       const [, categoryId, innerContent] = match;
-      
+
       // Dentro do painel, buscar todos os procedimentos
       const innerProcPattern = /href="([^"]*\/video\/[^"]+\/[^"\/]+\/([^"\/]+))"/gi;
       let innerMatch;
@@ -1217,54 +1039,54 @@ async function fetchAllVideosFromModelPage(
         addProcedure(categoryId, procedureSlug, urlPath);
       }
     }
-    
+
     // ============================================================================
     // EXTRAIR THUMBNAILS E ASSOCIAR COM PROCEDIMENTOS
     // ============================================================================
-    
+
     // Padrão de thumbnails do CloudFront
     const thumbnailPattern = /https:\/\/d2n97g4vasjwsk\.cloudfront\.net\/[^"'\s\)]+\.(?:webp|jpg|png)/gi;
     const thumbnails: string[] = [];
     while ((match = thumbnailPattern.exec(html)) !== null) {
       thumbnails.push(match[0]);
     }
-    
+
     // Também extrair do markdown
     while ((match = thumbnailPattern.exec(markdown)) !== null) {
       if (!thumbnails.includes(match[0])) {
         thumbnails.push(match[0]);
       }
     }
-    
+
     // Extrair procedimentos das thumbnails (quando não encontramos via links)
     // Ex: https://d2n97g4vasjwsk.cloudfront.net/2019_Honda_Civic/Oil+Change+-+480p.webp
     for (const thumb of thumbnails) {
       // Decodificar URL e extrair nome do procedimento
       const decodedThumb = decodeURIComponent(thumb.replace(/\+/g, " "));
-      
+
       // Formato: /Vehicle/ProcedureName - Resolution.webp
       const thumbProcMatch = decodedThumb.match(/cloudfront\.net\/[^\/]+\/([^\/\-]+)/i);
       if (thumbProcMatch) {
         const procedureName = thumbProcMatch[1].trim().toLowerCase().replace(/\s+/g, "_");
-        
+
         // Se esse procedimento ainda não foi encontrado, adicionar como procedimento genérico
-        const hasThisProc = procedures.some(p => 
+        const hasThisProc = procedures.some(p =>
           p.procedureSlug.toLowerCase().includes(procedureName) ||
           procedureName.includes(p.procedureSlug.toLowerCase())
         );
-        
+
         if (!hasThisProc && procedureName.length > 3) {
           // Categorizar automaticamente baseado no nome
           const category = categorizeProcedure(procedureName);
           addProcedure(category, procedureName, `/video/${yearStr}_${brandSlug}_${modelSlug}/${category}/${procedureName}`, thumb);
         }
       }
-      
+
       // Associar thumbnails com procedimentos existentes
       for (const proc of procedures) {
         const procName = proc.procedureSlug.replace(/_/g, " ").toLowerCase();
         const thumbLower = decodedThumb.toLowerCase();
-        
+
         if (thumbLower.includes(procName) || procName.includes(thumbLower.split("/").pop()?.split("-")[0]?.trim() || "")) {
           if (!proc.thumbnail) {
             proc.thumbnail = thumb;
@@ -1272,9 +1094,9 @@ async function fetchAllVideosFromModelPage(
         }
       }
     }
-    
+
     console.log(`[ModelVideosIndex] Found ${procedures.length} procedures from model page using enhanced patterns`);
-    
+
     return {
       procedures,
       vehicleUrl: successfulUrl,
@@ -1297,24 +1119,24 @@ async function scanAndCacheProcedures(
   year: string
 ): Promise<{ proceduresFound: number; categoriesFound: number; cached: number; usedFallback: boolean }> {
   console.log(`[ScanAndCache] Starting scan for ${year} ${brand} ${model}...`);
-  
+
   // Buscar todos os vídeos da página do modelo
   const modelVideosIndex = await fetchAllVideosFromModelPage(apiKey, brand, model, year);
-  
+
   // Se não encontrou procedimentos via Firecrawl, usar dados estáticos como fallback
   if (!modelVideosIndex || modelVideosIndex.totalCount === 0) {
     console.log("[ScanAndCache] Firecrawl failed, using static data fallback...");
     return await cacheStaticProcedures(brand, model, year);
   }
-  
+
   const supabase = getSupabaseClient();
   const categories = new Set<string>();
   let cached = 0;
-  
+
   // Preparar dados para upsert
   const proceduresToCache = modelVideosIndex.procedures.map(proc => {
     categories.add(proc.categorySlug);
-    
+
     return {
       brand: brand,
       model: model,
@@ -1329,28 +1151,28 @@ async function scanAndCacheProcedures(
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 dias
     };
   });
-  
+
   // Upsert em lotes de 50
   const batchSize = 50;
   for (let i = 0; i < proceduresToCache.length; i += batchSize) {
     const batch = proceduresToCache.slice(i, i + batchSize);
-    
+
     const { error } = await supabase
       .from("carcare_procedure_cache")
-      .upsert(batch, { 
+      .upsert(batch, {
         onConflict: "brand,model,year,procedure_id",
-        ignoreDuplicates: false 
+        ignoreDuplicates: false
       });
-    
+
     if (error) {
       console.error("[ScanAndCache] Error caching batch:", error);
     } else {
       cached += batch.length;
     }
   }
-  
+
   console.log(`[ScanAndCache] Cached ${cached} procedures in ${categories.size} categories`);
-  
+
   return {
     proceduresFound: modelVideosIndex.totalCount,
     categoriesFound: categories.size,
@@ -1366,10 +1188,10 @@ async function cacheStaticProcedures(
   year: string
 ): Promise<{ proceduresFound: number; categoriesFound: number; cached: number; usedFallback: boolean }> {
   const supabase = getSupabaseClient();
-  
+
   // Obter categorias estáticas
   const staticCategories = getStaticCategories(brand, model, year);
-  
+
   const procedureMap = new Map<string, {
     brand: string;
     model: string;
@@ -1383,19 +1205,19 @@ async function cacheStaticProcedures(
     source_url: string;
     expires_at: string;
   }>();
-  
+
   const categoriesSet = new Set<string>();
   const brandSlug = brand.replace(/\s+/g, "_");
   const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
   const vehicleSlug = `${year}_${brandSlug}_${modelSlug}`;
-  
+
   for (const cat of staticCategories) {
     categoriesSet.add(cat.id);
-    
+
     for (const proc of cat.procedures) {
       // Use unique key to avoid duplicates
       const uniqueKey = `${proc.id}_${cat.id}`;
-      
+
       if (!procedureMap.has(uniqueKey)) {
         procedureMap.set(uniqueKey, {
           brand,
@@ -1413,31 +1235,31 @@ async function cacheStaticProcedures(
       }
     }
   }
-  
+
   const allProcedures = Array.from(procedureMap.values());
-  
+
   let cached = 0;
   const batchSize = 50;
-  
+
   for (let i = 0; i < allProcedures.length; i += batchSize) {
     const batch = allProcedures.slice(i, i + batchSize);
-    
+
     const { error } = await supabase
       .from("carcare_procedure_cache")
-      .upsert(batch, { 
+      .upsert(batch, {
         onConflict: "brand,model,year,procedure_id",
-        ignoreDuplicates: false 
+        ignoreDuplicates: false
       });
-    
+
     if (error) {
       console.error("[StaticFallback] Error caching batch:", error);
     } else {
       cached += batch.length;
     }
   }
-  
+
   console.log(`[StaticFallback] Cached ${cached} static procedures for ${brand} ${model} ${year}`);
-  
+
   return {
     proceduresFound: allProcedures.length,
     categoriesFound: categoriesSet.size,
@@ -1462,12 +1284,12 @@ function convertVideosIndexToCategories(
     vehicleContext: string;
     procedures: any[];
   }>();
-  
+
   const vehicleContext = `${brand} ${model} ${year}`;
-  
+
   for (const proc of index.procedures) {
     const catKey = proc.categorySlug.toLowerCase();
-    
+
     if (!categoryMap.has(catKey)) {
       categoryMap.set(catKey, {
         id: proc.categorySlug.toLowerCase().replace(/_/g, "-"),
@@ -1479,9 +1301,9 @@ function convertVideosIndexToCategories(
         procedures: [],
       });
     }
-    
+
     const cat = categoryMap.get(catKey)!;
-    
+
     // Evitar procedimentos duplicados
     if (!cat.procedures.some(p => p.id === proc.procedureSlug)) {
       cat.procedures.push({
@@ -1493,42 +1315,42 @@ function convertVideosIndexToCategories(
       });
     }
   }
-  
+
   // Converter para array e ordenar
   const categories = Array.from(categoryMap.values());
   categories.sort((a, b) => a.name.localeCompare(b.name));
-  
+
   console.log(`[ConvertIndex] Created ${categories.length} categories from ${index.totalCount} procedures`);
-  
+
   return categories;
 }
 
 // Buscar vídeos de um modelo específico - SUPORTA AMBOS FORMATOS DE URL
 // MELHORADO: Agora também busca a página de "todos os vídeos" do modelo
 async function fetchVideosFromCarCareKiosk(
-  apiKey: string, 
-  brand: string, 
-  model: string, 
+  apiKey: string,
+  brand: string,
+  model: string,
   year?: string
 ): Promise<any[]> {
   try {
     const brandSlug = brand.replace(/\s+/g, "_");
     const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
     const yearStr = year || new Date().getFullYear().toString();
-    
+
     // NOVO: Primeiro, buscar a página de "todos os vídeos" do modelo
     // Isso nos dá uma visão completa de todos os procedimentos disponíveis
     const modelVideosIndex = await fetchAllVideosFromModelPage(apiKey, brand, model, yearStr);
-    
+
     if (modelVideosIndex && modelVideosIndex.totalCount > 0) {
       console.log(`[Videos] Using model videos index with ${modelVideosIndex.totalCount} procedures`);
-      
+
       // Converter o índice de vídeos para o formato de categorias
       return convertVideosIndexToCategories(modelVideosIndex, brand, model, yearStr);
     }
-    
+
     console.log("[Videos] Model videos index empty or failed, falling back to category scraping...");
-    
+
     // Fallback: Tentar múltiplos formatos de URL
     const urlFormats = [
       // Novo formato: /videos/Brand/Model/Year
@@ -1538,14 +1360,14 @@ async function fetchVideosFromCarCareKiosk(
       // Formato antigo: /video/Year_Brand_Model
       `https://www.carcarekiosk.com/video/${yearStr}_${brandSlug}_${modelSlug}`,
     ];
-    
+
     let html = "";
     let markdown = "";
     let successfulUrl = "";
-    
+
     for (const url of urlFormats) {
       console.log(`Trying to fetch videos from ${url}...`);
-      
+
       try {
         const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
           method: "POST",
@@ -1564,7 +1386,7 @@ async function fetchVideosFromCarCareKiosk(
           const data = await response.json();
           const fetchedHtml = data.data?.html || "";
           const fetchedMarkdown = data.data?.markdown || "";
-          
+
           if (isValidPage(fetchedMarkdown, fetchedHtml) && fetchedHtml.length > 500) {
             html = fetchedHtml;
             markdown = fetchedMarkdown;
@@ -1579,28 +1401,28 @@ async function fetchVideosFromCarCareKiosk(
         console.log(`Failed to fetch from ${url}:`, e);
       }
     }
-    
+
     if (!html) {
       console.log(`All URL formats failed for ${brand} ${model} ${yearStr}, using static categories`);
       return getStaticCategories(brand, model, year);
     }
-    
+
     const categories: any[] = [];
     const seen = new Set();
     const proceduresSeen = new Set();
 
     // O CarCareKiosk usa um layout de cards onde cada card é uma categoria com procedimentos
     // Estrutura: <div class="card">...<a href="#collapse-categoryname">Category Name</a>...<li><a href="/video/...">Procedure</a></li>...</div>
-    
+
     // Padrão 1: Extrair categorias dos cards (collapse headers)
     const categoryHeaderRegex = /<a[^>]*data-toggle="collapse"[^>]*href="[^"]*#collapse-([^"]+)"[^>]*>([^<]+)<\/a>/gi;
     let match;
     const categoryMap = new Map<string, { id: string; name: string; thumbnail: string; procedures: any[] }>();
-    
+
     while ((match = categoryHeaderRegex.exec(html)) !== null) {
       const [, categoryId, categoryName] = match;
       const cleanName = categoryName.trim();
-      
+
       if (cleanName && !categoryMap.has(categoryId.toLowerCase())) {
         categoryMap.set(categoryId.toLowerCase(), {
           id: categoryId,
@@ -1610,7 +1432,7 @@ async function fetchVideosFromCarCareKiosk(
         });
       }
     }
-    
+
     // Padrão 2: Extrair thumbnails das categorias
     const thumbnailRegex = /<img[^>]*src="([^"]+)"[^>]*alt="[^"]*([^"]+)"[^>]*class="card-img-top"/gi;
     while ((match = thumbnailRegex.exec(html)) !== null) {
@@ -1623,23 +1445,23 @@ async function fetchVideosFromCarCareKiosk(
         }
       }
     }
-    
+
     // Padrão 3: Extrair procedimentos (links para vídeos específicos)
     // Links no formato: /video/2019_Honda_Civic_Type_R_2.0L_4_Cyl._Turbo/category/procedure
     const procedureRegex = /<a[^>]*href="(https?:\/\/www\.carcarekiosk\.com\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*class="[^"]*functions[^"]*"[^>]*>([^<]+)<\/a>/gi;
-    
+
     while ((match = procedureRegex.exec(html)) !== null) {
       const [, fullUrl, categorySlug, procedureSlug, procedureName] = match;
       const cleanProcedureName = procedureName.trim();
       const procKey = `${categorySlug}_${procedureSlug}`;
-      
+
       if (!proceduresSeen.has(procKey)) {
         proceduresSeen.add(procKey);
-        
+
         // Encontrar ou criar a categoria
         const categoryId = categorySlug.toLowerCase().replace(/_/g, '');
         let category = categoryMap.get(categoryId);
-        
+
         if (!category) {
           // Criar categoria se não existir
           category = {
@@ -1650,7 +1472,7 @@ async function fetchVideosFromCarCareKiosk(
           };
           categoryMap.set(categoryId, category);
         }
-        
+
         category.procedures.push({
           id: procedureSlug,
           name: translateCategoryName(cleanProcedureName),
@@ -1659,26 +1481,26 @@ async function fetchVideosFromCarCareKiosk(
         });
       }
     }
-    
+
     // Padrão alternativo: href sem protocolo
     const procedureRegex2 = /href="(\/video\/[^"]+\/([^"\/]+)\/([^"\/]+))"[^>]*>([^<]+)<\/a>/gi;
-    
+
     while ((match = procedureRegex2.exec(html)) !== null) {
       const [, path, categorySlug, procedureSlug, procedureName] = match;
       const cleanProcedureName = procedureName.trim();
       const procKey = `${categorySlug}_${procedureSlug}`;
-      
+
       // Ignorar links que não são procedimentos válidos
       if (procedureName.includes('svg') || procedureName.includes('img') || procedureName.length < 3) {
         continue;
       }
-      
+
       if (!proceduresSeen.has(procKey)) {
         proceduresSeen.add(procKey);
-        
+
         const categoryId = categorySlug.toLowerCase().replace(/_/g, '');
         let category = categoryMap.get(categoryId);
-        
+
         if (!category) {
           category = {
             id: categorySlug,
@@ -1688,7 +1510,7 @@ async function fetchVideosFromCarCareKiosk(
           };
           categoryMap.set(categoryId, category);
         }
-        
+
         category.procedures.push({
           id: procedureSlug,
           name: translateCategoryName(cleanProcedureName),
@@ -1697,7 +1519,7 @@ async function fetchVideosFromCarCareKiosk(
         });
       }
     }
-    
+
     // Converter mapa para array de categorias
     for (const [, catData] of categoryMap) {
       if (catData.procedures.length > 0 && !seen.has(catData.name.toLowerCase())) {
@@ -1714,12 +1536,12 @@ async function fetchVideosFromCarCareKiosk(
         });
       }
     }
-    
+
     // Ordenar categorias por nome
     categories.sort((a, b) => a.name.localeCompare(b.name));
 
     console.log(`Found ${categories.length} video categories with ${proceduresSeen.size} procedures for ${brand} ${model}`);
-    
+
     if (categories.length === 0) {
       console.log(`No categories found for ${brand} ${model}, using static data`);
       return getStaticCategories(brand, model, year);
@@ -1761,7 +1583,7 @@ function translateCategoryName(name: string): string {
     "license plate light": "Luz da Placa",
     "check engine light": "Luz do Motor",
   };
-  
+
   const lowerName = name.toLowerCase().trim();
   return translations[lowerName] || name;
 }
@@ -1769,25 +1591,25 @@ function translateCategoryName(name: string): string {
 // Gerar todas as variantes de URL possíveis do CarCareKiosk (suporta AMBOS formatos)
 function generateUrlVariants(videoUrl: string, brand?: string, model?: string, year?: string): string[] {
   const urls: string[] = [];
-  
+
   // Normalizar a URL de entrada
   let baseUrl = videoUrl.trim();
-  
+
   // Se é uma URL completa, usar diretamente
   if (baseUrl.startsWith('http')) {
     urls.push(baseUrl);
-    
+
     // Converter entre formatos se possível
     // Formato antigo: /video/2012_Honda_Civic/category/procedure
     // Formato novo:   /videos/Honda/Civic/2012/category/procedure
-    
+
     const oldFormatMatch = baseUrl.match(/\/video\/(\d{4})_([^\/]+)_([^\/]+)(\/.*)?$/);
     if (oldFormatMatch) {
       const [, urlYear, urlBrand, urlModel, rest] = oldFormatMatch;
       const newUrl = `https://www.carcarekiosk.com/videos/${urlBrand.replace(/_/g, "-")}/${urlModel.replace(/_/g, "-")}/${urlYear}${rest || ""}`;
       urls.push(newUrl);
     }
-    
+
     const newFormatMatch = baseUrl.match(/\/videos\/([^\/]+)\/([^\/]+)\/(\d{4})(\/.*)?$/);
     if (newFormatMatch) {
       const [, urlBrand, urlModel, urlYear, rest] = newFormatMatch;
@@ -1797,7 +1619,7 @@ function generateUrlVariants(videoUrl: string, brand?: string, model?: string, y
   } else if (baseUrl.startsWith('/')) {
     // Se começa com /, adicionar domínio e tentar ambos formatos
     urls.push(`https://www.carcarekiosk.com${baseUrl}`);
-    
+
     // Converter para o outro formato
     if (baseUrl.startsWith('/video/')) {
       const match = baseUrl.match(/^\/video\/(\d{4})_([^\/]+)_([^\/]+)(\/.*)?$/);
@@ -1819,29 +1641,29 @@ function generateUrlVariants(videoUrl: string, brand?: string, model?: string, y
       const brandSlugDash = brand.replace(/\s+/g, "-");
       const modelSlugUnderscore = model.replace(/\s+/g, "_").replace(/-/g, "_");
       const modelSlugDash = model.replace(/\s+/g, "-");
-      
+
       // Determinar se é categoria/procedimento ou apenas procedimento
       const parts = baseUrl.split('/').filter(Boolean);
-      
+
       if (parts.length >= 2) {
         // Tem categoria e procedimento: category/procedure
         const category = parts[0];
         const procedure = parts.slice(1).join('/');
-        
+
         // Novo formato: /videos/Brand/Model/Year/category/procedure
         urls.push(`https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}/${category}/${procedure}`);
         urls.push(`https://www.carcarekiosk.com/videos/${brandSlugDash}/${modelSlugDash}/${year}/${category}/${procedure}`);
-        
+
         // Formato antigo: /video/Year_Brand_Model/category/procedure
         urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlugUnderscore}_${modelSlugUnderscore}/${category}/${procedure}`);
       } else if (parts.length === 1) {
         // Só tem categoria ou procedimento
         const slug = parts[0].replace(/\s+/g, "_").toLowerCase();
-        
+
         // Tentar como categoria (página de listagem)
         urls.push(`https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}/${slug}`);
         urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlugUnderscore}_${modelSlugUnderscore}/${slug}`);
-        
+
         // Tentar categorias comuns com esse procedimento
         const commonCategories = ['maintenance', 'air_filter', 'engine', 'brakes', 'battery', 'coolant', 'oil', 'lights'];
         for (const cat of commonCategories) {
@@ -1849,39 +1671,39 @@ function generateUrlVariants(videoUrl: string, brand?: string, model?: string, y
         }
       }
     }
-    
+
     // Fallback: tentar diretamente
     if (!baseUrl.startsWith('http')) {
       urls.push(`https://www.carcarekiosk.com/video/${baseUrl}`);
       urls.push(`https://www.carcarekiosk.com/videos/${baseUrl}`);
     }
   }
-  
+
   // Se temos contexto do veículo, adicionar mais variantes
   if (brand && model && year) {
     const brandSlugUnderscore = brand.replace(/\s+/g, "_");
     const brandSlugDash = brand.replace(/\s+/g, "-");
     const modelSlugUnderscore = model.replace(/\s+/g, "_").replace(/-/g, "_");
     const modelSlugDash = model.replace(/\s+/g, "-");
-    
+
     // Página principal do veículo (ambos formatos)
     urls.push(`https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}`);
     urls.push(`https://www.carcarekiosk.com/videos/${brandSlugDash}/${modelSlugDash}/${year}`);
     urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlugUnderscore}_${modelSlugUnderscore}`);
-    
+
     // Extrair categoria/procedimento da URL original se existir
     const pathMatch = baseUrl.match(/\/([^\/]+)\/([^\/]+)$/);
     if (pathMatch) {
       const [, category, procedure] = pathMatch;
-      
+
       // Novo formato
       urls.push(`https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}/${category}/${procedure}`);
-      
+
       // Formato antigo
       urls.push(`https://www.carcarekiosk.com/video/${year}_${brandSlugUnderscore}_${modelSlugUnderscore}/${category}/${procedure}`);
     }
   }
-  
+
   // Remover duplicatas e URLs inválidas
   const validUrls = urls.filter(url => url && url.includes('carcarekiosk.com') && url.startsWith('http'));
   return [...new Set(validUrls)];
@@ -1903,22 +1725,22 @@ function isValidPage(markdown: string, html: string): boolean {
     'Internal Server Error',
     'Service Unavailable',
   ];
-  
+
   const contentLower = (markdown + html).toLowerCase();
-  
+
   for (const indicator of invalidIndicators) {
     if (contentLower.includes(indicator.toLowerCase())) {
       console.log(`Invalid page detected - indicator found: "${indicator}"`);
       return false;
     }
   }
-  
+
   // Verificar se tem conteúdo mínimo (páginas válidas têm mais de 500 caracteres)
   if (markdown.length < 200 && html.length < 500) {
     console.log("Invalid page detected - content too short");
     return false;
   }
-  
+
   return true;
 }
 
@@ -1929,7 +1751,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
     let brand: string | undefined;
     let model: string | undefined;
     let year: string | undefined;
-    
+
     if (vehicleContext) {
       const parts = vehicleContext.split(' ').filter(Boolean);
       if (parts.length >= 3) {
@@ -1941,12 +1763,12 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         model = parts[1];
       }
     }
-    
+
     // ESTRATÉGIA: Se recebemos apenas um procedimento simples (sem URL completa),
     // devemos buscar a página base do veículo que contém TODOS os thumbnails de vídeos
     // e de lá extrair os vídeos relevantes para o procedimento solicitado
     const isSimpleProcedure = !videoUrl.startsWith('http') && !videoUrl.startsWith('/') && !videoUrl.includes('/');
-    
+
     // Se é um procedimento simples e temos contexto do veículo, buscar página base primeiro
     let vehiclePageUrl: string | undefined;
     if (isSimpleProcedure && brand && model && year) {
@@ -1955,16 +1777,16 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       vehiclePageUrl = `https://www.carcarekiosk.com/videos/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${year}`;
       console.log(`Simple procedure detected: "${videoUrl}". Will search in vehicle page: ${vehiclePageUrl}`);
     }
-    
+
     const urlVariants = generateUrlVariants(videoUrl, brand, model, year);
-    
+
     // Se temos a página base do veículo, colocá-la como primeira opção
     if (vehiclePageUrl && !urlVariants.includes(vehiclePageUrl)) {
       urlVariants.unshift(vehiclePageUrl);
     }
-    
+
     const primaryUrl = urlVariants[0];
-    
+
     console.log(`Fetching video details from ${primaryUrl}... (skipCache: ${skipCache})`);
     console.log(`URL variants to try: ${urlVariants.length}`);
 
@@ -1992,10 +1814,10 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
     // Tentar cada variante de URL até encontrar uma válida
     let validData: { html: string; markdown: string; metadata: any } | null = null;
     let successfulUrl = primaryUrl;
-    
+
     for (const urlToTry of urlVariants) {
       console.log(`Trying URL: ${urlToTry}`);
-      
+
       const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
         method: "POST",
         headers: {
@@ -2018,7 +1840,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       const html = data.data?.html || "";
       const markdown = data.data?.markdown || "";
       const metadata = data.data?.metadata || {};
-      
+
       // Verificar se a página é válida
       if (isValidPage(markdown, html)) {
         validData = { html, markdown, metadata };
@@ -2029,17 +1851,17 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         console.log(`Page not found at: ${urlToTry}`);
       }
     }
-    
+
     // Se nenhuma URL funcionou, usar fallback com dados estáticos
     if (!validData) {
       console.log("All URL variants failed, using static fallback data");
-      
+
       // Extrair categoria/procedimento da URL para gerar passos estáticos
       const procedureSlug = videoUrl.split('/').pop() || "";
       const categorySlug = videoUrl.split('/').slice(-2, -1)[0] || "";
-      
+
       const fallbackSteps = generateStaticFallbackSteps(procedureSlug, categorySlug, vehicleContext);
-      
+
       return {
         title: formatProcedureTitle(procedureSlug, vehicleContext),
         description: `Tutorial de manutenção para ${vehicleContext || "seu veículo"}.`,
@@ -2054,24 +1876,24 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
     }
 
     const { html, markdown, metadata } = validData;
-    
+
     console.log(`Processing page content: ${html.length} chars HTML, ${markdown.length} chars Markdown`);
-    
+
     // ========== EXTRAIR VÍDEO ==========
     // O CarCareKiosk usa vídeos MP4 hospedados no CloudFront (não YouTube!)
     // Múltiplos padrões são tentados para maior robustez
-    
+
     let videoEmbedUrl: string | null = null;
     let videoSource: "cloudfront" | "youtube" | null = null;
     let youtubeVideoId: string | null = null;
-    
+
     // Log para debug - verificar se há padrões de vídeo no HTML
     const hasVideoTag = html.includes('<video');
     const hasSourceTag = html.includes('<source');
     const hasCloudfront = html.includes('cloudfront.net');
     const hasYoutube = html.includes('youtube.com') || html.includes('youtu.be');
     console.log(`Video detection hints: video=${hasVideoTag}, source=${hasSourceTag}, cloudfront=${hasCloudfront}, youtube=${hasYoutube}`);
-    
+
     // Prioridade 1: Vídeo MP4 do CloudFront - MÚLTIPLOS PADRÕES
     // Padrão principal: <source src="https://d2n97g4vasjwsk.cloudfront.net/...mp4" type="video/mp4">
     const cloudfrontPatterns = [
@@ -2086,7 +1908,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       // Padrão mais genérico - qualquer cloudfront mp4
       /(https:\/\/[a-z0-9]+\.cloudfront\.net\/[^\s"'<>]+\.mp4)/gi,
     ];
-    
+
     for (const pattern of cloudfrontPatterns) {
       const match = pattern.exec(html);
       if (match && match[1]) {
@@ -2096,7 +1918,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         break;
       }
     }
-    
+
     // Prioridade 2: Qualquer vídeo MP4 (outros CDNs)
     if (!videoEmbedUrl) {
       const anyMp4Patterns = [
@@ -2104,7 +1926,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         /<source[^>]*src="(https?:\/\/[^"]+\.mp4)"/gi,
         /<video[^>]*src="(https?:\/\/[^"]+\.mp4)"/gi,
       ];
-      
+
       for (const pattern of anyMp4Patterns) {
         const match = pattern.exec(html);
         if (match && match[1]) {
@@ -2115,7 +1937,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         }
       }
     }
-    
+
     // Prioridade 3: Fallback para YouTube (caso o CarCareKiosk mude de estratégia)
     if (!videoEmbedUrl) {
       const youtubePatterns = [
@@ -2123,7 +1945,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         /src="(https:\/\/youtube\.com\/embed\/([^"?]+))"/i,
         /<iframe[^>]*src="[^"]*youtube\.com\/embed\/([^"?]+)"/i,
       ];
-      
+
       for (const pattern of youtubePatterns) {
         const match = pattern.exec(html);
         if (match) {
@@ -2142,7 +1964,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         }
       }
     }
-    
+
     // Prioridade 4: YouTube no markdown
     if (!videoEmbedUrl) {
       const youtubeMatch = markdown.match(/youtube\.com\/(?:watch\?v=|embed\/)([a-zA-Z0-9_-]{11})/);
@@ -2153,7 +1975,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         console.log("Found YouTube in markdown:", videoEmbedUrl);
       }
     }
-    
+
     // Prioridade 5: Extrair da estrutura específica do CarCareKiosk
     // O site pode ter um player customizado ou estrutura diferente
     if (!videoEmbedUrl) {
@@ -2165,7 +1987,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         console.log("Found video in data attribute:", videoEmbedUrl);
       }
     }
-    
+
     // Prioridade 6: Procurar por URLs em scripts (player dinâmico)
     if (!videoEmbedUrl) {
       const scriptVideoMatch = html.match(/['"]?(https:\/\/[^'"]*cloudfront\.net[^'"]*\.mp4)['"]?/i);
@@ -2175,7 +1997,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         console.log("Found video URL in script:", videoEmbedUrl);
       }
     }
-    
+
     // Prioridade 7: Construir URL do vídeo a partir das thumbnails do CloudFront
     // As thumbnails do CarCareKiosk seguem o padrão:
     // https://d2n97g4vasjwsk.cloudfront.net/VEHICLE/PROCEDURE - 480p.webp
@@ -2186,11 +2008,11 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
       if (thumbnailMatches && thumbnailMatches.length > 0) {
         // IMPORTANTE: Usar o videoUrl ORIGINAL passado para a função (não a URL de sucesso)
         // Isso garante que buscamos pelo procedimento correto mesmo quando caímos na página base do veículo
-        
+
         // Extrair o procedimento da URL original
         let procedureSlug: string;
         let categorySlug: string;
-        
+
         // Verificar se é um procedimento simples (sem barras) ou uma URL completa
         if (!videoUrl.includes('/') || videoUrl.startsWith('http') === false && videoUrl.split('/').length <= 2) {
           // Procedimento simples como "battery" ou "oil_change"
@@ -2201,13 +2023,13 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           procedureSlug = videoUrl.split('/').pop()?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
           categorySlug = videoUrl.split('/').slice(-2, -1)[0]?.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ') || "";
         }
-        
+
         // Normalizar o procedimento para busca (oil_change -> oil change, change_oil -> change oil)
         const normalizedProcedure = procedureSlug.replace(/_/g, ' ').replace(/-/g, ' ').toLowerCase();
         const procedureWords = normalizedProcedure.split(' ').filter(w => w.length > 2);
-        
+
         console.log(`Looking for video matching procedure: "${normalizedProcedure}" (words: ${procedureWords.join(', ')}), category: "${categorySlug}"`);
-        
+
         // Mapear termos comuns para palavras-chave nas thumbnails
         const keywordMap: Record<string, string[]> = {
           // Oil related
@@ -2367,51 +2189,51 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
           'exhaust pipe': ['exhaust pipe', 'exhaust', 'pipe', 'tailpipe'],
           'silencer': ['silencer', 'muffler', 'exhaust'],
         };
-        
+
         // Ordenar thumbnails por relevância (as que contêm o procedimento primeiro)
         const rankedThumbnails = thumbnailMatches
           .map(thumb => {
             const thumbLower = decodeURIComponent(thumb.replace(/\+/g, ' ')).toLowerCase();
             let score = 0;
-            
+
             // Pontuação baseada em correspondência direta com procedimento
             if (normalizedProcedure && thumbLower.includes(normalizedProcedure)) score += 15;
             if (categorySlug && thumbLower.includes(categorySlug)) score += 5;
-            
+
             // Pontuação por palavras individuais do procedimento encontradas na thumbnail
             for (const word of procedureWords) {
               if (thumbLower.includes(word)) score += 6;
             }
-            
+
             // Buscar keywords mapeados para o procedimento
             const keywords = keywordMap[normalizedProcedure] || [];
             for (const keyword of keywords) {
               if (thumbLower.includes(keyword)) score += 8;
             }
-            
+
             // Tentar todas as combinações de palavras no keywordMap
             for (const [key, values] of Object.entries(keywordMap)) {
               // Verificar se o procedimento contém alguma das palavras da chave
               const keyWords = key.split(' ');
-              const procedureMatchesKey = keyWords.every(kw => normalizedProcedure.includes(kw)) || 
-                                          normalizedProcedure.split(' ').some(pw => keyWords.includes(pw));
+              const procedureMatchesKey = keyWords.every(kw => normalizedProcedure.includes(kw)) ||
+                normalizedProcedure.split(' ').some(pw => keyWords.includes(pw));
               if (procedureMatchesKey) {
                 for (const value of values) {
                   if (thumbLower.includes(value)) score += 6;
                 }
               }
             }
-            
+
             // Penalizar thumbnails de "Review" se buscando procedimento específico
             if (normalizedProcedure && thumbLower.includes('review') && !normalizedProcedure.includes('review')) {
               score -= 10;
             }
-            
+
             // Penalizar thumbnails genéricas (vehicle, front, etc.)
             if (thumbLower.includes('vehicle -') || thumbLower.includes('/front.')) {
               score -= 5;
             }
-            
+
             // Extrair nome do procedimento da thumbnail para exibição
             const thumbPath = decodeURIComponent(thumb.replace(/\+/g, ' '));
             const thumbName = thumbPath
@@ -2421,24 +2243,24 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
               ?.replace(/\.webp$/i, '')
               ?.replace(/ - Part \d+/i, '')
               ?.trim() || '';
-            
+
             return { url: thumb, score, name: thumbName };
           })
           .filter(t => t.score > 0) // Só considerar thumbnails com alguma relevância
           .sort((a, b) => b.score - a.score);
-        
+
         // Se nenhuma thumbnail teve score > 0, usar todas ordenadas
-        const thumbnailsToTry = rankedThumbnails.length > 0 ? rankedThumbnails : 
+        const thumbnailsToTry = rankedThumbnails.length > 0 ? rankedThumbnails :
           thumbnailMatches.map(url => ({ url, score: 0, name: '' }));
-        
+
         console.log(`Found ${thumbnailsToTry.length} thumbnails, best match score: ${thumbnailsToTry[0]?.score}`);
-        
+
         // Coletar TODOS os vídeos relacionados (não só o primeiro)
         // Mas APENAS os que são realmente relevantes para o procedimento (score mínimo)
         const relatedVideosFound: Array<{ url: string; name: string; score: number; verified: boolean }> = [];
         const seenUrls = new Set<string>();
         const MIN_SCORE_FOR_RELATED = 5; // Score mínimo para considerar como relacionado
-        
+
         // Tentar as thumbnails em ordem de relevância
         for (const { url: thumbUrl, score, name } of thumbnailsToTry.slice(0, 10)) { // Limitar a 10 para performance
           // Converter URL de thumbnail para URL de vídeo
@@ -2447,10 +2269,10 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
             .replace(/%20/g, '+')
             .replace(/\s*-\s*\d+p\.webp$/i, '.mp4')
             .replace(/\.webp$/i, '.mp4');
-          
+
           // Evitar duplicatas
           if (seenUrls.has(videoUrlFromThumb)) continue;
-          
+
           // Verificar se parece uma URL de vídeo válida
           if (videoUrlFromThumb.includes('.mp4')) {
             // Verificar se o vídeo existe (fazer HEAD request rápido)
@@ -2458,7 +2280,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
               const headResponse = await fetch(videoUrlFromThumb, { method: 'HEAD' });
               if (headResponse.ok) {
                 seenUrls.add(videoUrlFromThumb);
-                
+
                 // O primeiro vídeo verificado é o principal
                 if (!videoEmbedUrl) {
                   videoEmbedUrl = videoUrlFromThumb;
@@ -2479,9 +2301,9 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
             }
           }
         }
-        
+
         console.log(`Found ${relatedVideosFound.length} verified related videos (score >= ${MIN_SCORE_FOR_RELATED})`);
-        
+
         // Armazenar vídeos relacionados para uso posterior (sem o vídeo principal)
         if (relatedVideosFound.length > 0) {
           // @ts-ignore - Adicionar propriedade temporária
@@ -2489,7 +2311,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         }
       }
     }
-    
+
     // Prioridade 8: Extrair link para página de vídeo específica do CarCareKiosk
     // O markdown pode conter links para vídeos específicos como:
     // [Procedure Name](https://www.carcarekiosk.com/video/YEAR_BRAND_MODEL/category/procedure)
@@ -2499,13 +2321,13 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         // Extrair a URL do procedimento específico que foi solicitado
         const procedureSlug = videoUrl.split('/').pop() || "";
         const categorySlug = videoUrl.split('/').slice(-2, -1)[0] || "";
-        
+
         for (const match of videoPageMatches) {
           const pageUrl = match.slice(1, -1); // Remove parênteses
           // Verificar se a URL corresponde ao procedimento solicitado
           if (pageUrl.includes(procedureSlug) || pageUrl.includes(categorySlug)) {
             console.log("Found specific video page URL:", pageUrl);
-            
+
             // Tentar buscar a página específica do vídeo
             try {
               const videoPageResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
@@ -2520,11 +2342,11 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
                   waitFor: 2000,
                 }),
               });
-              
+
               if (videoPageResponse.ok) {
                 const videoPageData = await videoPageResponse.json();
                 const videoPageHtml = videoPageData.data?.html || "";
-                
+
                 // Procurar o vídeo MP4 nesta página específica
                 for (const pattern of cloudfrontPatterns) {
                   // Reset lastIndex for global regex
@@ -2537,7 +2359,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
                     break;
                   }
                 }
-                
+
                 if (videoEmbedUrl) break;
               }
             } catch (e) {
@@ -2547,14 +2369,14 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         }
       }
     }
-    
+
     console.log(`Video extraction result: ${videoSource || 'none'}, URL: ${videoEmbedUrl ? videoEmbedUrl.slice(0, 80) + '...' : 'null'}`);
-    
-    
+
+
     // ========== EXTRAIR TÍTULO ==========
     const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
     const title = titleMatch ? titleMatch[1].trim() : metadata.title || "Tutorial";
-    
+
     // ========== EXTRAIR THUMBNAIL/POSTER ==========
     let thumbnailUrl: string | null = null;
     const posterMatch = html.match(/<video[^>]*poster="([^"]+)"/i);
@@ -2569,7 +2391,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
     if (descParagraphMatch) {
       procedureDescription = descParagraphMatch[1].trim();
     }
-    
+
     // Fallback: primeira linha significativa após h1
     if (!procedureDescription) {
       const firstParagraphMatch = html.match(/<h1[^>]*>[^<]+<\/h1>[\s\S]*?<h2[^>]*>([^<]+)<\/h2>/i);
@@ -2591,7 +2413,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
 
     // Extract "Video Description" section from the sidebar
     let videoDescription = "";
-    
+
     // Try to find "Video Description" heading and its content
     const videoDescRegex = /Video\s*Description[\s\S]*?<\/h[23]>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi;
     const descMatches: string[] = [];
@@ -2602,11 +2424,11 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
         descMatches.push(content);
       }
     }
-    
+
     if (descMatches.length > 0) {
       videoDescription = descMatches.join('\n\n');
     }
-    
+
     // Alternative: Try to extract from markdown (often has better formatting)
     if (!videoDescription && markdown) {
       const markdownDescRegex = /Video\s*Description[\s\n]+([\s\S]+?)(?=\n##|\n\*\*[A-Z]|$)/i;
@@ -2639,20 +2461,20 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
 
     // O CarCareKiosk usa vídeos próprios (não YouTube), então não podemos transcrever
     // Em vez disso, vamos gerar passos com IA baseados no título e contexto
-    
+
     // Primeiro, tentar extrair passos do próprio HTML/Markdown
     // O CarCareKiosk tem descrições curtas, então precisamos gerar passos detalhados
-    
+
     if (htmlSteps.length === 0 && videoEmbedUrl) {
       // Gerar passos detalhados usando IA baseado no título e contexto
       console.log("No steps found in HTML, generating steps with AI...");
-      
+
       const procedureSlug = videoUrl.split('/').pop() || "";
       const categorySlug = videoUrl.split('/').slice(-2, -1)[0] || "";
-      
+
       // Usar os passos estáticos de fallback como base, mas traduzir e adaptar
       const staticSteps = generateStaticFallbackSteps(procedureSlug, categorySlug, vehicleContext);
-      
+
       if (staticSteps.length > 0) {
         elaboratedSteps = staticSteps;
         console.log(`Using ${staticSteps.length} static fallback steps`);
@@ -2686,7 +2508,7 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
     // Extrair vídeos relacionados se disponíveis
     // @ts-ignore - Acessar propriedade temporária
     const relatedVideos = validData?.relatedVideos || [];
-    
+
     const result = {
       title: translatedMeta.title || title,
       description: translatedMeta.description || metadata.description || procedureDescription || "",
@@ -2708,10 +2530,10 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
 
     // ========== SALVAR NO CACHE ==========
     // Para vídeos CloudFront, usamos a URL do vídeo como identificador
-    const cacheVideoId = videoSource === "cloudfront" 
+    const cacheVideoId = videoSource === "cloudfront"
       ? videoEmbedUrl?.split('/').pop()?.replace('.mp4', '') || null
       : youtubeVideoId;
-    
+
     await saveToCache({
       video_url: successfulUrl,
       youtube_video_id: cacheVideoId || undefined,
@@ -2744,10 +2566,10 @@ async function fetchVideoDetails(apiKey: string, videoUrl: string, vehicleContex
 
 // Buscar vídeos por pesquisa
 async function searchCarCareKiosk(
-  apiKey: string, 
-  query: string, 
-  brand?: string, 
-  model?: string, 
+  apiKey: string,
+  query: string,
+  brand?: string,
+  model?: string,
   year?: string
 ): Promise<any[]> {
   try {
@@ -2755,7 +2577,7 @@ async function searchCarCareKiosk(
     if (brand) searchQuery += ` ${brand}`;
     if (model) searchQuery += ` ${model}`;
     if (year) searchQuery += ` ${year}`;
-    
+
     console.log(`Searching CarCareKiosk: ${searchQuery}`);
 
     const response = await fetch("https://api.firecrawl.dev/v1/search", {
@@ -2795,16 +2617,16 @@ function searchStaticData(query: string, brand?: string, model?: string): any[] 
   const results: any[] = [];
   const queryLower = query.toLowerCase();
   const brands = getStaticBrands();
-  
+
   for (const b of brands) {
     if (brand && b.name.toLowerCase() !== brand.toLowerCase()) continue;
-    
+
     const models = getStaticModels(b.name);
     for (const m of models) {
       if (model && !m.name.toLowerCase().includes(model.toLowerCase())) continue;
-      
-      if (m.name.toLowerCase().includes(queryLower) || 
-          b.name.toLowerCase().includes(queryLower)) {
+
+      if (m.name.toLowerCase().includes(queryLower) ||
+        b.name.toLowerCase().includes(queryLower)) {
         results.push({
           title: `${b.name} ${m.name} ${m.years}`,
           description: `Vídeos de manutenção para ${b.name} ${m.name}`,
@@ -2814,7 +2636,7 @@ function searchStaticData(query: string, brand?: string, model?: string): any[] 
       }
     }
   }
-  
+
   return results.slice(0, 20);
 }
 
@@ -2823,7 +2645,7 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
   const vehicle = vehicleContext || "seu veículo";
   const procedureName = procedure.replace(/_/g, " ").replace(/-/g, " ");
   const categoryName = category.replace(/_/g, " ").replace(/-/g, " ");
-  
+
   // Passos genéricos baseados na categoria
   const categorySteps: Record<string, string[]> = {
     "oil": [
@@ -3197,13 +3019,13 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
       "⚠️ **Importante**: Verifique vazamentos com o motor ligado (você vai ouvir). Aperte conexões se necessário.",
     ],
   };
-  
+
   // Determinar qual conjunto de passos usar - verificar tanto category quanto procedure
   const categoryLower = category.toLowerCase();
   const procedureLower = procedure.toLowerCase();
   const searchTerm = categoryLower + " " + procedureLower; // Combinar para busca mais flexível
   let steps: string[] = [];
-  
+
   // Verificar primeiro procedimentos específicos, depois categorias
   // IMPORTANTE: Verificar categorias mais específicas ANTES das genéricas
   // CRÍTICO: coil_spring contém "oil" como substring, então DEVE ser verificado ANTES de "oil"!
@@ -3284,7 +3106,7 @@ function generateStaticFallbackSteps(procedure: string, category: string, vehicl
       `⚠️ **Recomendação**: Para procedimentos complexos, consulte um mecânico profissional.`,
     ];
   }
-  
+
   return steps;
 }
 
@@ -3384,13 +3206,13 @@ function formatProcedureTitle(procedure: string, vehicleContext?: string): strin
     "coil": "Mola",
     "spring": "Mola",
   };
-  
+
   const words = procedure
     .replace(/_/g, " ")
     .replace(/-/g, " ")
     .split(" ")
     .map(word => translations[word.toLowerCase()] || word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
-  
+
   const title = words.join(" ");
   return vehicleContext ? `${title} - ${vehicleContext}` : title;
 }
@@ -3409,11 +3231,11 @@ function formatBrandName(slug: string): string {
     "mercedes-benz": "Mercedes-Benz",
     "rolls-royce": "Rolls-Royce",
   };
-  
+
   if (specialNames[slug]) {
     return specialNames[slug];
   }
-  
+
   return slug
     .split("-")
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -3423,7 +3245,7 @@ function formatBrandName(slug: string): string {
 function formatModelName(slug: string, brand: string): string {
   const brandSlug = brand.toLowerCase().replace(/\s+/g, "_");
   let cleanSlug = slug.replace(new RegExp(`^${brandSlug}_?`, "i"), "");
-  
+
   return cleanSlug
     .replace(/_/g, " ")
     .split(" ")
@@ -3434,7 +3256,7 @@ function formatModelName(slug: string, brand: string): string {
 
 function getCategoryIcon(category: string): string {
   const lower = category.toLowerCase();
-  
+
   if (lower.includes("oil") || lower.includes("óleo")) return "🛢️";
   if (lower.includes("brake") || lower.includes("freio")) return "🛑";
   if (lower.includes("battery") || lower.includes("bateria")) return "🔋";
@@ -3449,7 +3271,7 @@ function getCategoryIcon(category: string): string {
   if (lower.includes("exhaust") || lower.includes("escapamento")) return "💨";
   if (lower.includes("electrical") || lower.includes("elétric")) return "⚡";
   if (lower.includes("fuse") || lower.includes("fusível")) return "🔌";
-  
+
   return "🔧";
 }
 
@@ -4141,16 +3963,16 @@ function buildCarCareKioskUrl(year: string, brand: string, model: string, catego
   // Formato: https://www.carcarekiosk.com/video/[Ano]_[Marca]_[Modelo]/[categoria]/[procedimento]
   const brandSlug = brand.replace(/\s+/g, "_");
   const modelSlug = model.replace(/\s+/g, "_").replace(/-/g, "_");
-  
+
   let baseUrl = `https://www.carcarekiosk.com/video/${year}_${brandSlug}_${modelSlug}`;
-  
+
   if (category) {
     baseUrl += `/${category}`;
     if (procedure) {
       baseUrl += `/${procedure}`;
     }
   }
-  
+
   return baseUrl;
 }
 
@@ -4160,41 +3982,41 @@ function getStaticCategories(brand?: string, model?: string, year?: string): any
   const yearStr = year || new Date().getFullYear().toString();
   const brandStr = brand || "";
   const modelStr = model || "";
-  
+
   // Mapeamento de categorias para slugs do CarCareKiosk
   const categories = [
-    { 
-      id: "air_conditioner", 
-      name: "Ar Condicionado", 
-      nameEn: "Air Conditioner", 
+    {
+      id: "air_conditioner",
+      name: "Ar Condicionado",
+      nameEn: "Air Conditioner",
       icon: "❄️",
       procedures: [
         { id: "recharge_freon", name: "Recarregar Gás", nameEn: "Recharge Freon" },
         { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
       ]
     },
-    { 
-      id: "air_filter_engine", 
-      name: "Filtro de Ar (Motor)", 
-      nameEn: "Air Filter (Engine)", 
+    {
+      id: "air_filter_engine",
+      name: "Filtro de Ar (Motor)",
+      nameEn: "Air Filter (Engine)",
       icon: "🌬️",
       procedures: [
         { id: "replace", name: "Substituir", nameEn: "Replace" },
       ]
     },
-    { 
-      id: "air_filter_cabin", 
-      name: "Filtro de Ar (Cabine)", 
-      nameEn: "Cabin Air Filter", 
+    {
+      id: "air_filter_cabin",
+      name: "Filtro de Ar (Cabine)",
+      nameEn: "Cabin Air Filter",
       icon: "🌬️",
       procedures: [
         { id: "replace", name: "Substituir", nameEn: "Replace" },
       ]
     },
-    { 
-      id: "battery", 
-      name: "Bateria", 
-      nameEn: "Battery", 
+    {
+      id: "battery",
+      name: "Bateria",
+      nameEn: "Battery",
       icon: "🔋",
       procedures: [
         { id: "replace", name: "Substituir", nameEn: "Replace" },
@@ -4202,10 +4024,10 @@ function getStaticCategories(brand?: string, model?: string, year?: string): any
         { id: "jumpstart", name: "Dar Partida", nameEn: "Jumpstart" },
       ]
     },
-    { 
-      id: "brakes", 
-      name: "Freios", 
-      nameEn: "Brakes", 
+    {
+      id: "brakes",
+      name: "Freios",
+      nameEn: "Brakes",
       icon: "🛑",
       procedures: [
         { id: "replace_front_brakes", name: "Trocar Freios Dianteiros", nameEn: "Replace Front Brakes" },
@@ -4213,10 +4035,10 @@ function getStaticCategories(brand?: string, model?: string, year?: string): any
         { id: "check_brake_fluid", name: "Verificar Fluido", nameEn: "Check Brake Fluid" },
       ]
     },
-    { 
-      id: "coolant_antifreeze", 
-      name: "Arrefecimento", 
-      nameEn: "Coolant (Antifreeze)", 
+    {
+      id: "coolant_antifreeze",
+      name: "Arrefecimento",
+      nameEn: "Coolant (Antifreeze)",
       icon: "🌡️",
       procedures: [
         { id: "add", name: "Adicionar", nameEn: "Add" },
@@ -4224,116 +4046,116 @@ function getStaticCategories(brand?: string, model?: string, year?: string): any
         { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
       ]
     },
-    { 
-      id: "headlight", 
-      name: "Faróis", 
-      nameEn: "Headlight", 
+    {
+      id: "headlight",
+      name: "Faróis",
+      nameEn: "Headlight",
       icon: "💡",
       procedures: [
         { id: "change_bulb", name: "Trocar Lâmpada", nameEn: "Change Bulb" },
         { id: "replace_fuse", name: "Trocar Fusível", nameEn: "Replace Fuse" },
       ]
     },
-    { 
-      id: "highbeam", 
-      name: "Farol Alto", 
-      nameEn: "Highbeam (Brights)", 
+    {
+      id: "highbeam",
+      name: "Farol Alto",
+      nameEn: "Highbeam (Brights)",
       icon: "💡",
       procedures: [
         { id: "change_bulb", name: "Trocar Lâmpada", nameEn: "Change Bulb" },
       ]
     },
-    { 
-      id: "brake_light", 
-      name: "Luz de Freio", 
-      nameEn: "Brake Light", 
+    {
+      id: "brake_light",
+      name: "Luz de Freio",
+      nameEn: "Brake Light",
       icon: "🔴",
       procedures: [
         { id: "change_bulb", name: "Trocar Lâmpada", nameEn: "Change Bulb" },
       ]
     },
-    { 
-      id: "tail_light", 
-      name: "Lanterna Traseira", 
-      nameEn: "Tail Light", 
+    {
+      id: "tail_light",
+      name: "Lanterna Traseira",
+      nameEn: "Tail Light",
       icon: "💡",
       procedures: [
         { id: "change_bulb", name: "Trocar Lâmpada", nameEn: "Change Bulb" },
       ]
     },
-    { 
-      id: "oil", 
-      name: "Óleo do Motor", 
-      nameEn: "Oil & Oil Filter", 
+    {
+      id: "oil",
+      name: "Óleo do Motor",
+      nameEn: "Oil & Oil Filter",
       icon: "🛢️",
       procedures: [
         { id: "change_oil", name: "Trocar Óleo", nameEn: "Change Oil" },
         { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
       ]
     },
-    { 
-      id: "power_steering", 
-      name: "Direção Hidráulica", 
-      nameEn: "Power Steering", 
+    {
+      id: "power_steering",
+      name: "Direção Hidráulica",
+      nameEn: "Power Steering",
       icon: "🔧",
       procedures: [
         { id: "add_fluid", name: "Adicionar Fluido", nameEn: "Add Fluid" },
         { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
       ]
     },
-    { 
-      id: "transmission_fluid", 
-      name: "Transmissão", 
-      nameEn: "Transmission Fluid", 
+    {
+      id: "transmission_fluid",
+      name: "Transmissão",
+      nameEn: "Transmission Fluid",
       icon: "⚙️",
       procedures: [
         { id: "add", name: "Adicionar", nameEn: "Add" },
         { id: "fix_minor_leaks", name: "Corrigir Vazamentos", nameEn: "Fix Minor Leaks" },
       ]
     },
-    { 
-      id: "washer_fluid", 
-      name: "Fluido do Limpador", 
-      nameEn: "Washer Fluid", 
+    {
+      id: "washer_fluid",
+      name: "Fluido do Limpador",
+      nameEn: "Washer Fluid",
       icon: "💧",
       procedures: [
         { id: "add", name: "Adicionar", nameEn: "Add" },
         { id: "check_level", name: "Verificar Nível", nameEn: "Check Level" },
       ]
     },
-    { 
-      id: "wipers", 
-      name: "Palhetas", 
-      nameEn: "Windshield Wipers", 
+    {
+      id: "wipers",
+      name: "Palhetas",
+      nameEn: "Windshield Wipers",
       icon: "🪟",
       procedures: [
         { id: "replace_wipers", name: "Substituir", nameEn: "Replace Wipers" },
       ]
     },
-    { 
-      id: "tires_wheels", 
-      name: "Pneus e Rodas", 
-      nameEn: "Tires & Wheels", 
+    {
+      id: "tires_wheels",
+      name: "Pneus e Rodas",
+      nameEn: "Tires & Wheels",
       icon: "⭕",
       procedures: [
         { id: "change_tire", name: "Trocar Pneu", nameEn: "Change Tire" },
         { id: "add_air", name: "Calibrar", nameEn: "Add Air" },
       ]
     },
-    { 
-      id: "interior_fuse", 
-      name: "Fusíveis Internos", 
-      nameEn: "Interior Fuse Box", 
+    {
+      id: "interior_fuse",
+      name: "Fusíveis Internos",
+      nameEn: "Interior Fuse Box",
       icon: "🔌",
       procedures: [
         { id: "replace", name: "Substituir", nameEn: "Replace" },
         { id: "diagram", name: "Diagrama", nameEn: "Diagram" },
       ]
     },
-    { 
-      id: "engine_fuse", 
-      name: "Fusíveis do Motor", 
-      nameEn: "Engine Fuse Box", 
+    {
+      id: "engine_fuse",
+      name: "Fusíveis do Motor",
+      nameEn: "Engine Fuse Box",
       icon: "🔌",
       procedures: [
         { id: "replace", name: "Substituir", nameEn: "Replace" },
@@ -4341,7 +4163,7 @@ function getStaticCategories(brand?: string, model?: string, year?: string): any
       ]
     },
   ];
-  
+
   return categories.map(cat => ({
     id: cat.id,
     name: cat.name,

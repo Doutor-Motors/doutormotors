@@ -43,6 +43,9 @@ import {
 import { useCodingHistory, CodingExecution } from '@/hooks/useCodingHistory';
 import { RISK_LEVEL_CONFIG, CodingRiskLevel } from '@/services/obd/codingFunctions';
 import { Link } from 'react-router-dom';
+import { useSubscription } from '@/hooks/useSubscription';
+import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
+import { Crown } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<string, typeof RotateCcw> = {
   adaptation_reset: RotateCcw,
@@ -75,8 +78,36 @@ const STATUS_OPTIONS = [
 ];
 
 export default function CodingHistoryPage() {
+  const { canUseCoding } = useSubscription();
   const { history, isLoading, getStats } = useCodingHistory();
   const stats = getStats();
+
+  // VALIDAÇÃO CRÍTICA: Bloqueia acesso se não for Pro
+  if (!canUseCoding) {
+    return (
+      <DashboardLayout>
+        <div className="container mx-auto px-4 py-8">
+          <Card className="border-amber-200 bg-amber-50">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Crown className="w-6 h-6 text-amber-600" />
+                <CardTitle className="text-amber-900">Recurso Exclusivo Pro</CardTitle>
+              </div>
+              <CardDescription className="text-amber-700">
+                O histórico de funções de codificação está disponível apenas para usuários do plano Pro.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UpgradePrompt
+                feature="Histórico de Coding"
+                description="Acesse o histórico completo de todas as funções de codificação executadas."
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,7 +127,7 @@ export default function CodingHistoryPage() {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchesSearch = 
+        const matchesSearch =
           execution.function_name.toLowerCase().includes(query) ||
           execution.function_id.toLowerCase().includes(query) ||
           (execution.message && execution.message.toLowerCase().includes(query));
@@ -118,7 +149,7 @@ export default function CodingHistoryPage() {
       if (dateFilter !== 'all') {
         const executionDate = new Date(execution.created_at);
         const now = new Date();
-        
+
         let startDate: Date;
         switch (dateFilter) {
           case 'today':
@@ -171,7 +202,7 @@ export default function CodingHistoryPage() {
   const getRiskBadge = (riskLevel: string) => {
     const config = RISK_LEVEL_CONFIG[riskLevel as CodingRiskLevel];
     if (!config) return <Badge variant="outline">{riskLevel}</Badge>;
-    
+
     return (
       <Badge className={`${config.bgColor} ${config.color} border-0`}>
         {config.label}
@@ -382,7 +413,7 @@ export default function CodingHistoryPage() {
           <CardHeader>
             <CardTitle>Execuções {hasActiveFilters ? 'Filtradas' : 'Recentes'}</CardTitle>
             <CardDescription>
-              {hasActiveFilters 
+              {hasActiveFilters
                 ? `${filteredHistory.length} resultado${filteredHistory.length !== 1 ? 's' : ''} encontrado${filteredHistory.length !== 1 ? 's' : ''}`
                 : 'Últimas 50 funções executadas'
               }

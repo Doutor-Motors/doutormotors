@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface FullSystemDiagnosticReport {
   generatedAt: string;
   generatedBy: string;
-  
+
   // Seção 1: Visão Geral
   overview: {
     projectName: string;
@@ -19,7 +19,7 @@ export interface FullSystemDiagnosticReport {
     lastScan: string;
     status: "healthy" | "warning" | "critical";
   };
-  
+
   // Seção 2: Arquitetura Frontend
   frontend: {
     totalPages: number;
@@ -27,13 +27,13 @@ export interface FullSystemDiagnosticReport {
     totalHooks: number;
     routes: RouteInfo[];
   };
-  
+
   // Seção 3: Backend (Edge Functions)
   backend: {
     totalFunctions: number;
     functions: EdgeFunctionInfo[];
   };
-  
+
   // Seção 4: Banco de Dados
   database: {
     totalTables: number;
@@ -41,7 +41,7 @@ export interface FullSystemDiagnosticReport {
     relationships: RelationshipInfo[];
     issues: DatabaseIssue[];
   };
-  
+
   // Seção 5: Estatísticas em Tempo Real
   realTimeStats: {
     totalUsers: number;
@@ -56,19 +56,19 @@ export interface FullSystemDiagnosticReport {
     totalCodingExecutions: number;
     totalRecordings: number;
   };
-  
+
   // Seção 6: Fluxos de Usuário
   userFlows: UserFlowInfo[];
-  
+
   // Seção 7: Segurança
   security: {
     warnings: SecurityWarning[];
     recommendations: string[];
   };
-  
+
   // Seção 8: Otimizações Propostas
   optimizations: OptimizationProposal[];
-  
+
   // Seção 9: Conclusão
   conclusion: {
     functionalitiesPreserved: string[];
@@ -202,20 +202,20 @@ async function fetchRealTimeStats() {
 export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDiagnosticReport> {
   // Buscar dados reais do banco
   const realTimeStats = await fetchRealTimeStats();
-  
+
   return {
     generatedAt: new Date().toISOString(),
     generatedBy: "Sistema de Varredura Automatizada",
-    
+
     overview: {
       projectName: "Doutor Motors",
-      version: "2.0.0",
+      version: "2.1.0", // Versão atualizada pós-migração
       lastScan: new Date().toISOString(),
       status: realTimeStats.totalUsers > 0 ? "healthy" : "warning",
     },
-    
+
     realTimeStats,
-    
+
     frontend: {
       totalPages: 38,
       totalComponents: 85,
@@ -236,7 +236,7 @@ export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDi
         { path: "/termos", component: "TermsPage", protected: false, description: "Termos de uso" },
         { path: "/privacidade", component: "PrivacyPolicyPage", protected: false, description: "Política de privacidade" },
         { path: "/estude-seu-carro", component: "StudyCarPage", protected: false, description: "Tutoriais de manutenção" },
-        
+
         // Rotas Protegidas - Usuário
         { path: "/dashboard", component: "UserDashboard", protected: true, description: "Dashboard principal" },
         { path: "/dashboard/vehicles", component: "VehicleManager", protected: true, description: "Gerenciar veículos" },
@@ -252,7 +252,7 @@ export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDi
         { path: "/dashboard/support", component: "SupportCenter", protected: true, description: "Central de suporte" },
         { path: "/dashboard/support/:id", component: "TicketDetail", protected: true, description: "Detalhes do ticket" },
         { path: "/dashboard/upgrade", component: "UpgradePage", protected: true, description: "Upgrade de plano" },
-        
+
         // Rotas Admin
         { path: "/admin", component: "AdminDashboard", protected: true, description: "Dashboard administrativo" },
         { path: "/admin/users", component: "AdminUsers", protected: true, description: "Gerenciar usuários" },
@@ -266,15 +266,15 @@ export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDi
         { path: "/admin/carcare-data", component: "AdminCarCareData", protected: true, description: "Cache de procedimentos" },
       ],
     },
-    
+
     backend: {
       totalFunctions: 12,
       functions: [
-        { name: "diagnose", purpose: "Análise de códigos DTC via IA (Gemini)", dependencies: ["LOVABLE_API_KEY"], status: "active" },
-        { name: "fetch-solution", purpose: "Busca soluções web para DTCs", dependencies: ["FIRECRAWL_API_KEY", "LOVABLE_API_KEY"], status: "active" },
-        { name: "fetch-tutorial", purpose: "Busca tutoriais detalhados", dependencies: ["FIRECRAWL_API_KEY", "LOVABLE_API_KEY"], status: "active" },
+        { name: "diagnose", purpose: "Análise de códigos DTC via IA (Gemini)", dependencies: ["GEMINI_API_KEY"], status: "active" },
+        { name: "fetch-solution", purpose: "Busca soluções web para DTCs", dependencies: ["FIRECRAWL_API_KEY", "GEMINI_API_KEY"], status: "active" },
+        { name: "fetch-tutorial", purpose: "Busca tutoriais detalhados", dependencies: ["FIRECRAWL_API_KEY", "GEMINI_API_KEY"], status: "active" },
         { name: "search-tutorials", purpose: "Pesquisa na base de tutoriais", dependencies: [], status: "active" },
-        { name: "carcare-api", purpose: "API CarCareKiosk com cache e transcription", dependencies: ["FIRECRAWL_API_KEY", "ELEVENLABS_API_KEY", "LOVABLE_API_KEY"], status: "active" },
+        { name: "carcare-api", purpose: "API CarCareKiosk com cache e transcription", dependencies: ["FIRECRAWL_API_KEY", "ELEVENLABS_API_KEY", "GEMINI_API_KEY"], status: "active" },
         { name: "carcare-scheduled-scan", purpose: "Scan automático de veículos populares", dependencies: [], status: "active" },
         { name: "send-contact-email", purpose: "Envio de emails de contato", dependencies: ["RESEND_API_KEY"], status: "active" },
         { name: "send-notification", purpose: "Envio de notificações por email", dependencies: ["RESEND_API_KEY"], status: "active" },
@@ -284,7 +284,7 @@ export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDi
         { name: "check-kpi-alerts", purpose: "Verificação de KPIs", dependencies: [], status: "active" },
       ],
     },
-    
+
     database: {
       totalTables: 22,
       tables: [
@@ -339,7 +339,7 @@ export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDi
         { level: "info", table: "carcare_procedure_cache", description: "RLS com USING(true) para service role", solution: "Intencional - Service role only", status: "fixed" },
       ],
     },
-    
+
     userFlows: [
       {
         name: "Fluxo de Diagnóstico OBD2",
@@ -413,7 +413,7 @@ export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDi
         tablesUsed: ["profiles", "user_subscriptions", "user_roles", "support_tickets", "audit_logs", "system_alerts"],
       },
     ],
-    
+
     security: {
       warnings: [
         { level: "warning", category: "Auth", description: "Proteção de senhas vazadas desabilitada", status: "manual" },
@@ -428,7 +428,7 @@ export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDi
         "Configurar backups automáticos diários",
       ],
     },
-    
+
     optimizations: [
       {
         category: "Performance",
@@ -452,7 +452,7 @@ export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDi
         effort: "low",
       },
     ],
-    
+
     conclusion: {
       functionalitiesPreserved: [
         "✓ Diagnóstico OBD2 com análise IA",
@@ -473,6 +473,7 @@ export async function generateFullSystemDiagnosticReport(): Promise<FullSystemDi
         "✓ Cache de vídeo com validação de conteúdo",
         "✓ Fallback para dados estáticos quando Firecrawl falha",
         "✓ Logo do PDF otimizada (apenas na capa)",
+        "✓ Migração de IA completa para Google Gemini",
       ],
       pendingItems: [
         "⏳ Habilitar proteção de senhas vazadas",
@@ -562,14 +563,14 @@ class FullSystemDiagnosticReportGenerator extends PDFBaseGenerator {
   private addOverviewSection(): void {
     this.addSectionTitle("VISÃO GERAL DO SISTEMA", "1");
 
-    const statusColor = this.data.overview.status === "healthy" 
+    const statusColor = this.data.overview.status === "healthy"
       ? [220, 252, 231] as [number, number, number]
-      : this.data.overview.status === "warning" 
+      : this.data.overview.status === "warning"
         ? [254, 249, 195] as [number, number, number]
         : [254, 226, 226] as [number, number, number];
 
-    const statusText = this.data.overview.status === "healthy" 
-      ? "✓ SISTEMA SAUDÁVEL" 
+    const statusText = this.data.overview.status === "healthy"
+      ? "✓ SISTEMA SAUDÁVEL"
       : this.data.overview.status === "warning"
         ? "⚠ ATENÇÃO NECESSÁRIA"
         : "✗ CRÍTICO";

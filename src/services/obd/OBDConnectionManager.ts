@@ -68,7 +68,7 @@ export class OBDConnectionManager {
   private deviceAddress: string = '';
   private protocol: string = '';
   private voltage: string = '';
-  private isSimulated: boolean = true;
+  private isSimulated: boolean = false; // PRODUÇÃO: Apenas dispositivos OBD2 reais
   private lastError: string = '';
   private settings: OBDSettings | null = null;
 

@@ -71,9 +71,31 @@ const UserDashboard = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchData();
-    }
+    if (!user) return;
+
+    fetchData();
+
+    // Real-time subscription for vehicles
+    const vehiclesChannel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vehicles',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Vehicle change detected:', payload);
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(vehiclesChannel);
+    };
   }, [user, activeVehicleId]);
 
   const fetchData = async () => {
@@ -101,6 +123,17 @@ const UserDashboard = () => {
           if (!activeVehicleId) {
             setActiveVehicleId(active.id);
           }
+        } else if (vehiclesData.length > 0) {
+          // If active ID is not found but we have vehicles, default to first one
+          const first = vehiclesData[0];
+          setActiveVehicle(first);
+          setActiveVehicleId(first.id);
+        } else {
+          // No vehicles
+          setActiveVehicle(null);
+          // Don't necessarily clear ID here to avoid flashing if it's just a sync issue, 
+          // but for correctness if we are sure there are no vehicles:
+          setActiveVehicleId(null);
         }
       }
 

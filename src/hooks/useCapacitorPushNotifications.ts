@@ -80,19 +80,19 @@ interface UseCapacitorPushNotificationsReturn {
   isRegistered: boolean;
   permission: 'prompt' | 'granted' | 'denied' | 'unknown';
   token: string | null;
-  
+
   // Actions
   requestPermission: () => Promise<boolean>;
   register: () => Promise<boolean>;
   unregister: () => Promise<void>;
-  
+
   // Channels (Android only)
   createDiagnosticChannels: () => Promise<void>;
-  
+
   // Notifications
   getDeliveredNotifications: () => Promise<PushNotificationSchema[]>;
   clearAllNotifications: () => Promise<void>;
-  
+
   // Event handlers
   onTokenReceived: (callback: (token: string) => void) => void;
   onNotificationReceived: (callback: (notification: PushNotificationSchema) => void) => void;
@@ -146,30 +146,30 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
   const [isRegistered, setIsRegistered] = useState(false);
   const [permission, setPermission] = useState<'prompt' | 'granted' | 'denied' | 'unknown'>('unknown');
   const [token, setToken] = useState<string | null>(null);
-  
+
   // Callbacks
   const [onTokenCallback, setOnTokenCallback] = useState<((token: string) => void) | null>(null);
   const [onNotificationCallback, setOnNotificationCallback] = useState<((notification: PushNotificationSchema) => void) | null>(null);
   const [onActionCallback, setOnActionCallback] = useState<((action: PushNotificationActionPerformed) => void) | null>(null);
-  
+
   // Platform info
   const platformInfo = getPlatformInfo();
   const isNative = platformInfo.isNative;
-  
+
   // Get plugin instance
   const getPlugin = useCallback((): CapacitorPushNotifications | null => {
     return getCapacitorPushPlugin();
   }, []);
-  
+
   const isSupported = isNative && getPlugin() !== null;
-  
+
   // Initialize and set up listeners
   useEffect(() => {
     if (!isSupported) return;
-    
+
     const plugin = getPlugin();
     if (!plugin) return;
-    
+
     const setupListeners = async () => {
       // Registration success
       const tokenListener = await plugin.addListener('registration', (tokenData) => {
@@ -178,30 +178,27 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
         setIsRegistered(true);
         onTokenCallback?.(tokenData.value);
       });
-      
+
       // Registration error
       const errorListener = await plugin.addListener('registrationError', (error) => {
-        console.error('[CapacitorPush] Registration error:', error.error);
         setIsRegistered(false);
       });
-      
+
       // Notification received (foreground)
       const notificationListener = await plugin.addListener('pushNotificationReceived', (notification) => {
-        console.log('[CapacitorPush] Notification received:', notification);
         onNotificationCallback?.(notification);
       });
-      
+
       // Notification action performed (user tapped)
       const actionListener = await plugin.addListener('pushNotificationActionPerformed', (action) => {
-        console.log('[CapacitorPush] Action performed:', action);
         onActionCallback?.(action);
       });
-      
+
       // Check initial permission state
       const permissionStatus = await plugin.checkPermissions();
-      setPermission(permissionStatus.receive === 'granted' ? 'granted' : 
-                   permissionStatus.receive === 'denied' ? 'denied' : 'prompt');
-      
+      setPermission(permissionStatus.receive === 'granted' ? 'granted' :
+        permissionStatus.receive === 'denied' ? 'denied' : 'prompt');
+
       return () => {
         tokenListener.remove();
         errorListener.remove();
@@ -209,10 +206,10 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
         actionListener.remove();
       };
     };
-    
+
     setupListeners();
   }, [isSupported, getPlugin, onTokenCallback, onNotificationCallback, onActionCallback]);
-  
+
   // Request permission
   const requestPermission = useCallback(async (): Promise<boolean> => {
     const plugin = getPlugin();
@@ -220,7 +217,7 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
       console.warn('[CapacitorPush] Plugin not available');
       return false;
     }
-    
+
     try {
       const result = await plugin.requestPermissions();
       const granted = result.receive === 'granted';
@@ -232,7 +229,7 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
       return false;
     }
   }, [getPlugin]);
-  
+
   // Register for push notifications
   const register = useCallback(async (): Promise<boolean> => {
     const plugin = getPlugin();
@@ -240,14 +237,14 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
       console.warn('[CapacitorPush] Plugin not available');
       return false;
     }
-    
+
     // Request permission first
     const hasPermission = permission === 'granted' || await requestPermission();
     if (!hasPermission) {
       console.warn('[CapacitorPush] Permission denied');
       return false;
     }
-    
+
     try {
       await plugin.register();
       console.log('[CapacitorPush] Registered for push notifications');
@@ -257,12 +254,12 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
       return false;
     }
   }, [getPlugin, permission, requestPermission]);
-  
+
   // Unregister
   const unregister = useCallback(async (): Promise<void> => {
     const plugin = getPlugin();
     if (!plugin) return;
-    
+
     try {
       await plugin.unregister();
       setIsRegistered(false);
@@ -272,12 +269,12 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
       console.error('[CapacitorPush] Unregister failed:', error);
     }
   }, [getPlugin]);
-  
+
   // Create diagnostic notification channels (Android only)
   const createDiagnosticChannels = useCallback(async (): Promise<void> => {
     const plugin = getPlugin();
     if (!plugin || !platformInfo.isAndroid) return;
-    
+
     try {
       for (const channel of DIAGNOSTIC_CHANNELS) {
         await plugin.createChannel(channel);
@@ -287,12 +284,12 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
       console.error('[CapacitorPush] Failed to create channels:', error);
     }
   }, [getPlugin, platformInfo.isAndroid]);
-  
+
   // Get delivered notifications
   const getDeliveredNotifications = useCallback(async (): Promise<PushNotificationSchema[]> => {
     const plugin = getPlugin();
     if (!plugin) return [];
-    
+
     try {
       const result = await plugin.getDeliveredNotifications();
       return result.notifications;
@@ -301,12 +298,12 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
       return [];
     }
   }, [getPlugin]);
-  
+
   // Clear all notifications
   const clearAllNotifications = useCallback(async (): Promise<void> => {
     const plugin = getPlugin();
     if (!plugin) return;
-    
+
     try {
       await plugin.removeAllDeliveredNotifications();
       console.log('[CapacitorPush] All notifications cleared');
@@ -314,20 +311,20 @@ export const useCapacitorPushNotifications = (): UseCapacitorPushNotificationsRe
       console.error('[CapacitorPush] Failed to clear notifications:', error);
     }
   }, [getPlugin]);
-  
+
   // Callback setters
   const onTokenReceived = useCallback((callback: (token: string) => void) => {
     setOnTokenCallback(() => callback);
   }, []);
-  
+
   const onNotificationReceived = useCallback((callback: (notification: PushNotificationSchema) => void) => {
     setOnNotificationCallback(() => callback);
   }, []);
-  
+
   const onNotificationAction = useCallback((callback: (action: PushNotificationActionPerformed) => void) => {
     setOnActionCallback(() => callback);
   }, []);
-  
+
   return {
     isNative,
     isSupported,

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const TechnicalReport = () => {
   const navigate = useNavigate();
-  
+
   const handleDownloadPDF = () => {
     window.print();
   };
@@ -28,8 +28,8 @@ const TechnicalReport = () => {
       {/* Header */}
       <div className="no-print bg-dm-space text-primary-foreground border-b sticky top-0 z-50 p-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Button 
-            onClick={() => navigate("/admin")} 
+          <Button
+            onClick={() => navigate("/admin")}
             className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-dm-blue-3"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -49,9 +49,9 @@ const TechnicalReport = () => {
           <h1 className="text-3xl font-bold mb-2">RELATÓRIO TÉCNICO COMPLETO</h1>
           <h2 className="text-xl text-gray-600">Sistema Doutor Motors</h2>
           <p className="text-sm text-gray-500 mt-2">
-            Gerado em: {new Date().toLocaleDateString('pt-BR', { 
-              day: '2-digit', 
-              month: 'long', 
+            Gerado em: {new Date().toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: 'long',
               year: 'numeric',
               hour: '2-digit',
               minute: '2-digit'
@@ -86,7 +86,7 @@ const TechnicalReport = () => {
           <h2 className="text-xl font-bold border-b-2 border-blue-600 pb-2 mb-4">
             1. ESTRUTURA DE PÁGINAS E ROTAS
           </h2>
-          
+
           <h3 className="font-bold mt-4 mb-2">1.1 Rotas Públicas</h3>
           <table className="w-full border-collapse border border-gray-300 text-sm mb-4">
             <thead className="bg-gray-100">
@@ -164,7 +164,7 @@ const TechnicalReport = () => {
           <h2 className="text-xl font-bold border-b-2 border-blue-600 pb-2 mb-4">
             2. COMPONENTES E FUNCIONALIDADES
           </h2>
-          
+
           <h3 className="font-bold mt-4 mb-2">2.1 OBDConnector</h3>
           <table className="w-full border-collapse border border-gray-300 text-sm mb-4">
             <tbody>
@@ -213,7 +213,7 @@ const TechnicalReport = () => {
           <h2 className="text-xl font-bold border-b-2 border-blue-600 pb-2 mb-4">
             3. ELEMENTOS INTERATIVOS (BOTÕES E AÇÕES)
           </h2>
-          
+
           <h3 className="font-bold mt-4 mb-2">3.1 DiagnosticCenter</h3>
           <table className="w-full border-collapse border border-gray-300 text-sm mb-4">
             <thead className="bg-gray-100">
@@ -742,7 +742,7 @@ date-fns: ^3.6.0`}</pre>
           </h2>
 
           <div className="bg-gray-50 p-4 rounded text-sm font-mono whitespace-pre">
-{`src/
+            {`src/
 ├── assets/images/          # Imagens e ícones
 ├── components/
 │   ├── admin/              # AdminLayout, AdminProtectedRoute
@@ -931,8 +931,8 @@ supabase/
           <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
             <h3 className="font-bold mb-2">💡 Resumo:</h3>
             <p className="text-sm">
-              O sistema está <strong>funcional e estável</strong> para uso. As funcionalidades principais (cadastro, veículos, diagnósticos, suporte) 
-              estão operando corretamente. A limitação do Bluetooth afeta apenas navegadores específicos, mas o sistema se adapta 
+              O sistema está <strong>funcional e estável</strong> para uso. As funcionalidades principais (cadastro, veículos, diagnósticos, suporte)
+              estão operando corretamente. A limitação do Bluetooth afeta apenas navegadores específicos, mas o sistema se adapta
               automaticamente usando modo simulação quando necessário.
             </p>
           </div>

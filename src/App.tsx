@@ -71,8 +71,16 @@ import SelectPlanPage from "./pages/SelectPlanPage";
 import MyPaymentsPage from "./pages/dashboard/MyPaymentsPage";
 import UserAuditTimeline from "./pages/admin/UserAuditTimeline";
 import MaintenanceManagerPage from "./pages/dashboard/MaintenanceManagerPage";
+import AuditReportTestPage from "./pages/AuditReportTestPage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -112,7 +120,8 @@ const App = () => (
                 <Route path="/checkout-pix" element={<PixCheckoutPage />} />
                 <Route path="/subscription-checkout" element={<SubscriptionCheckoutPage />} />
                 <Route path="/select-plan" element={<SelectPlanPage />} />
-                
+                <Route path="/test-audit-report" element={<AuditReportTestPage />} />
+
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
                 <Route path="/dashboard/vehicles" element={<ProtectedRoute><VehicleManager /></ProtectedRoute>} />
@@ -131,9 +140,15 @@ const App = () => (
                 <Route path="/dashboard/permissions" element={<ProtectedRoute><PermissionsDiagnostic /></ProtectedRoute>} />
                 <Route path="/dashboard/payments" element={<ProtectedRoute><MyPaymentsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/maintenance" element={<ProtectedRoute><MaintenanceManagerPage /></ProtectedRoute>} />
-                <Route path="/estude-seu-carro" element={<ProtectedRoute><StudyCarPage /></ProtectedRoute>} />
+                <Route path="/estude-seu-carro" element={
+                  <ProtectedRoute>
+                    <AdminProtectedRoute>
+                      <StudyCarPage />
+                    </AdminProtectedRoute>
+                  </ProtectedRoute>
+                } />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />
-                
+
                 {/* Admin Routes */}
                 <Route path="/admin" element={<ProtectedRoute><AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/tickets" element={<ProtectedRoute><AdminProtectedRoute><AdminTickets /></AdminProtectedRoute></ProtectedRoute>} />
@@ -154,7 +169,7 @@ const App = () => (
                 <Route path="/admin/carcare-data" element={<ProtectedRoute><AdminProtectedRoute><AdminCarCareData /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/contact-analytics" element={<ProtectedRoute><AdminProtectedRoute><ContactAnalytics /></AdminProtectedRoute></ProtectedRoute>} />
                 <Route path="/admin/users/:userId/timeline" element={<ProtectedRoute><AdminProtectedRoute><UserAuditTimeline /></AdminProtectedRoute></ProtectedRoute>} />
-                
+
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AdminNotificationProvider>

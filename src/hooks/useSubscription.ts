@@ -154,6 +154,8 @@ export function useSubscription() {
       } as Subscription;
     },
     enabled: !!user?.id,
+    staleTime: 10 * 60 * 1000, // Cache por 10 minutos para evitar reload ao trocar de aba
+    refetchOnWindowFocus: false, // Explicitamente desativar
   });
 
   const createSubscription = useMutation({

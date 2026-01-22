@@ -38,9 +38,9 @@ import {
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCodingHistory } from '@/hooks/useCodingHistory';
 import { useUsageTracking } from '@/hooks/useUsageTracking';
-import { 
-  getOBDCodingManager, 
-  CodingFunction, 
+import {
+  getOBDCodingManager,
+  CodingFunction,
   CodingCategory,
   CATEGORY_LABELS,
   RISK_LEVEL_CONFIG,
@@ -58,32 +58,59 @@ const CATEGORY_ICONS = {
 };
 
 export default function CodingFunctionsPage() {
-  const { isPro, isAdmin } = useSubscription();
+  const { isPro, isAdmin, canUseCoding } = useSubscription();
   const hasProAccess = isPro || isAdmin;
   const { saveExecution } = useCodingHistory();
   const { canUse, incrementUsage } = useUsageTracking();
-  
+
   const [selectedCategory, setSelectedCategory] = useState<CodingCategory>('adaptation_reset');
   const [selectedFunction, setSelectedFunction] = useState<CodingFunction | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [progress, setProgress] = useState({ step: 0, total: 0, message: '' });
   const [result, setResult] = useState<CodingFunctionResult | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  
+
   const codingManager = getOBDCodingManager();
   const connectionManager = getOBDConnectionManager();
   const connectionInfo = connectionManager.getConnectionInfo();
   const isConnected = connectionInfo.state === 'connected';
   const canExecuteCoding = canUse('coding_executions');
 
+  // VALIDAÇÃO CRÍTICA: Bloqueia acesso se não for Pro
+  if (!canUseCoding) {
+    return (
+      <DashboardLayout>
+        <div className="container mx-auto px-4 py-8">
+          <Card className="border-amber-200 bg-amber-50">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Crown className="w-6 h-6 text-amber-600" />
+                <CardTitle className="text-amber-900">Recurso Exclusivo Pro</CardTitle>
+              </div>
+              <CardDescription className="text-amber-700">
+                As funções de codificação estão disponíveis apenas para usuários do plano Pro.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UpgradePrompt
+                feature="Funções de Codificação"
+                description="Desbloqueie adaptações, calibrações e configurações avançadas do módulo do seu veículo."
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const categories = Object.entries(CATEGORY_LABELS) as [CodingCategory, typeof CATEGORY_LABELS[CodingCategory]][];
 
   const handleSelectFunction = useCallback((func: CodingFunction) => {
     setSelectedFunction(func);
     setResult(null);
-    
+
     const { canExecute, reason } = codingManager.canExecuteFunction(func, hasProAccess);
-    
+
     if (!canExecute && reason?.includes('Pro')) {
       return; // Will show upgrade prompt
     }
@@ -91,26 +118,26 @@ export default function CodingFunctionsPage() {
 
   const handleExecute = useCallback(async () => {
     if (!selectedFunction) return;
-    
+
     setShowConfirmDialog(false);
     setIsExecuting(true);
     setProgress({ step: 0, total: selectedFunction.commands.length, message: 'Iniciando...' });
-    
+
     const startTime = Date.now();
-    
+
     try {
       // Increment usage before execution
       await incrementUsage('coding_executions');
-      
+
       const executionResult = await codingManager.executeFunction(
         selectedFunction,
         (step, total, message) => {
           setProgress({ step, total, message });
         }
       );
-      
+
       setResult(executionResult);
-      
+
       // Save execution to history
       try {
         await saveExecution({
@@ -122,7 +149,7 @@ export default function CodingFunctionsPage() {
       } catch (saveError) {
         console.error('Failed to save coding execution:', saveError);
       }
-      
+
       if (executionResult.success) {
         toast.success('Função executada com sucesso!');
       } else {
@@ -140,7 +167,7 @@ export default function CodingFunctionsPage() {
         duration: Date.now() - startTime,
       };
       setResult(errorResult);
-      
+
       // Save failed execution
       try {
         await saveExecution({
@@ -160,7 +187,7 @@ export default function CodingFunctionsPage() {
 
   const handleStartExecution = useCallback(() => {
     if (!selectedFunction) return;
-    
+
     if (selectedFunction.confirmationRequired) {
       setShowConfirmDialog(true);
     } else {
@@ -184,7 +211,7 @@ export default function CodingFunctionsPage() {
               Funções avançadas de configuração e programação do veículo
             </p>
           </div>
-          
+
           {!hasProAccess && (
             <Badge variant="secondary" className="gap-1">
               <Lock className="h-3 w-3" />
@@ -218,8 +245,8 @@ export default function CodingFunctionsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Categories & Functions */}
           <div className="lg:col-span-2 space-y-4">
-            <Tabs 
-              value={selectedCategory} 
+            <Tabs
+              value={selectedCategory}
               onValueChange={(v) => {
                 setSelectedCategory(v as CodingCategory);
                 setSelectedFunction(null);
@@ -253,15 +280,14 @@ export default function CodingFunctionsPage() {
                       const riskConfig = RISK_LEVEL_CONFIG[func.riskLevel];
                       const isLocked = func.requiresPro && !hasProAccess;
                       const isSelected = selectedFunction?.id === func.id;
-                      
+
                       return (
-                        <Card 
+                        <Card
                           key={func.id}
-                          className={`cursor-pointer transition-all ${
-                            isSelected 
-                              ? 'ring-2 ring-primary border-primary' 
+                          className={`cursor-pointer transition-all ${isSelected
+                              ? 'ring-2 ring-primary border-primary'
                               : 'hover:border-primary/50'
-                          } ${isLocked ? 'opacity-60' : ''}`}
+                            } ${isLocked ? 'opacity-60' : ''}`}
                           onClick={() => handleSelectFunction(func)}
                         >
                           <CardContent className="p-4">
@@ -282,8 +308,8 @@ export default function CodingFunctionsPage() {
                                   {func.description}
                                 </p>
                                 <div className="flex items-center gap-2 mt-2">
-                                  <Badge 
-                                    variant="outline" 
+                                  <Badge
+                                    variant="outline"
                                     className={`${riskConfig.bgColor} ${riskConfig.color} border-0`}
                                   >
                                     Risco: {riskConfig.label}
@@ -293,7 +319,7 @@ export default function CodingFunctionsPage() {
                                   </span>
                                 </div>
                               </div>
-                              
+
                               {isSelected && !isLocked && (
                                 <Check className="h-5 w-5 text-primary shrink-0" />
                               )}
@@ -330,7 +356,7 @@ export default function CodingFunctionsPage() {
                     <p>Selecione uma função ao lado</p>
                   </div>
                 ) : selectedFunction.requiresPro && !hasProAccess ? (
-                  <UpgradePrompt 
+                  <UpgradePrompt
                     feature="funções avançadas de coding"
                     compact
                   />
@@ -366,8 +392,8 @@ export default function CodingFunctionsPage() {
                           <span>{progress.message}</span>
                           <span>{progress.step}/{progress.total}</span>
                         </div>
-                        <Progress 
-                          value={(progress.step / progress.total) * 100} 
+                        <Progress
+                          value={(progress.step / progress.total) * 100}
                         />
                       </div>
                     )}
@@ -393,7 +419,7 @@ export default function CodingFunctionsPage() {
                     )}
 
                     {/* Execute Button */}
-                    <Button 
+                    <Button
                       className="w-full"
                       onClick={handleStartExecution}
                       disabled={isExecuting || !isConnected}
@@ -471,10 +497,10 @@ export default function CodingFunctionsPage() {
                   </div>
                 )}
                 <p className="text-sm">
-                  {selectedFunction?.requiresEngineOff && 
+                  {selectedFunction?.requiresEngineOff &&
                     '⚠️ Certifique-se de que o motor está DESLIGADO. '
                   }
-                  {selectedFunction?.requiresIgnitionOn && 
+                  {selectedFunction?.requiresIgnitionOn &&
                     'A ignição deve estar LIGADA (posição ON). '
                   }
                 </p>

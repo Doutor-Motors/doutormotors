@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { checkRateLimit } from "../_shared/rateLimiter.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -43,11 +44,35 @@ interface DiagnosticItem {
   solution_url: string | null;
 }
 
+// JSON Schema for Gemini
+const GEMINI_RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    diagnostics: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          dtc_code: { type: "string" },
+          description_human: { type: "string" },
+          priority: { type: "string", enum: ["critical", "attention", "preventive"] },
+          severity: { type: "integer" },
+          can_diy: { type: "boolean" },
+          diy_difficulty: { type: "integer" },
+          probable_causes: { type: "array", items: { type: "string" } },
+        },
+        required: ["dtc_code", "description_human", "priority", "severity", "can_diy", "probable_causes"]
+      }
+    }
+  },
+  required: ["diagnostics"]
+};
+
 async function sendNotification(
-  supabaseUrl: string, 
-  serviceRoleKey: string, 
-  type: string, 
-  userId: string, 
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  type: string,
+  userId: string,
   data: Record<string, any>
 ) {
   try {
@@ -67,7 +92,7 @@ async function sendNotification(
       console.error("Failed to send notification:", await response.text());
       return false;
     }
-    
+
     console.log(`${type} notification sent successfully`);
     return true;
   } catch (error) {
@@ -77,15 +102,20 @@ async function sendNotification(
 }
 
 serve(async (req) => {
+  // Health check endpoint
+  if (req.url.endsWith('/health')) {
+    const { handleHealthCheck } = await import("../_shared/healthCheck.ts");
+    return handleHealthCheck('diagnose', '1.0.0');
+  }
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Parse and validate input
     const rawBody = await req.json();
     const validationResult = diagnosticRequestSchema.safeParse(rawBody);
-    
+
     if (!validationResult.success) {
       const errors = validationResult.error.errors
         .map((e) => `${e.path.join(".")}: ${e.message}`)
@@ -97,176 +127,148 @@ serve(async (req) => {
       );
     }
 
-    const { 
-      dtcCodes, 
-      vehicleBrand, 
-      vehicleModel, 
+    const {
+      dtcCodes,
+      vehicleBrand,
+      vehicleModel,
       vehicleYear,
       diagnosticId,
       userId,
       vehicleId
     } = validationResult.data;
-    
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Rate limiting: 10 requisições por minuto por usuário
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip");
+
+    const rateLimitResult = await checkRateLimit({
+      supabase,
+      userId,
+      ipAddress,
+      endpoint: "diagnose",
+      limit: 10,
+      windowMinutes: 1,
+    });
+
+    if (!rateLimitResult.allowed) {
+      console.warn(`Rate limit exceeded for user ${userId || ipAddress}`);
+      return new Response(
+        JSON.stringify({
+          error: "Muitas requisições. Por favor, aguarde um momento.",
+          retryAfter: 60,
+          remaining: 0,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": "60",
+            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
     }
 
-    // Create prompt for AI analysis
+    // Switch to GEMINI_API_KEY
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY is not configured");
+      throw new Error("Configuração de IA ausente no servidor");
+    }
+
     const prompt = `Você é um especialista em diagnóstico automotivo. Analise os seguintes códigos DTC (Diagnostic Trouble Codes) para um veículo ${vehicleBrand} ${vehicleModel} ${vehicleYear}.
 
 Códigos para analisar: ${dtcCodes.join(', ')}
 
 Para CADA código, forneça uma análise detalhada em português brasileiro incluindo:
-1. Descrição clara do problema em linguagem simples (sem jargão técnico)
+1. Descrição clara do problema em linguagem simples (sem jargão técnico excessivo)
 2. Causas prováveis (lista de 2-4 causas)
 3. Nível de severidade de 1-10 (1=menor, 10=crítico)
 4. Prioridade: "critical" (segurança/dano grave), "attention" (precisa atenção) ou "preventive" (manutenção)
 5. Se pode ser resolvido pelo próprio dono (DIY): true ou false
 6. Se DIY, dificuldade de 1-5 (1=fácil, 5=muito difícil)
 
-IMPORTANTE: 
-- Seja claro e objetivo
-- Use linguagem acessível para leigos
-- Priorize a segurança do motorista
-- Seja realista sobre o que pode ser feito em casa
+IMPORTANTE:
+- Seja realista e seguro. Se houver dúvida sobre segurança, coloque como "critical".
+- Responda EXATAMENTE conforme o JSON schema solicitado.`;
 
-Responda APENAS com o JSON, sem explicações adicionais.`;
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: "Você é um especialista em diagnóstico automotivo OBD2. Responda sempre em português brasileiro com JSONs válidos." },
-          { role: "user", content: prompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "analyze_dtc_codes",
-              description: "Analisa códigos DTC e retorna diagnósticos estruturados",
-              parameters: {
-                type: "object",
-                properties: {
-                  diagnostics: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        dtc_code: { type: "string" },
-                        description_human: { type: "string" },
-                        priority: { type: "string", enum: ["critical", "attention", "preventive"] },
-                        severity: { type: "number", minimum: 1, maximum: 10 },
-                        can_diy: { type: "boolean" },
-                        diy_difficulty: { type: "number", minimum: 1, maximum: 5 },
-                        probable_causes: { type: "array", items: { type: "string" } },
-                      },
-                      required: ["dtc_code", "description_human", "priority", "severity", "can_diy", "probable_causes"],
-                    },
-                  },
-                },
-                required: ["diagnostics"],
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "analyze_dtc_codes" } },
-      }),
-    });
+    // Gemini API call
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            response_mime_type: "application/json",
+            response_schema: GEMINI_RESPONSE_SCHEMA
+          }
+        })
+      }
+    );
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos à sua conta." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error("Erro ao processar diagnóstico");
+      console.error("Gemini API error:", response.status, errorText);
+      throw new Error(`Erro no processamento de IA: ${response.status}`);
     }
 
     const aiResponse = await response.json();
-    
-    // Extract the function call result
     let diagnosticItems: DiagnosticItem[] = [];
-    
-    const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      try {
-        const parsed = JSON.parse(toolCall.function.arguments);
+
+    try {
+      const jsonText = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (jsonText) {
+        const parsed = JSON.parse(jsonText);
         diagnosticItems = parsed.diagnostics || [];
-      } catch (e) {
-        console.error("Failed to parse AI response:", e);
       }
+    } catch (e) {
+      console.error("Failed to parse Gemini response:", e);
     }
 
-    // If no items from AI, provide fallback based on known codes
+    // Fallback if AI fails or returns empty
     if (diagnosticItems.length === 0) {
+      console.warn("AI returned empty diagnostics, using fallback");
       diagnosticItems = dtcCodes.map(code => ({
         dtc_code: code,
-        description_human: `Código ${code} detectado. Consulte um mecânico para diagnóstico completo.`,
-        priority: code.startsWith('P03') || code.startsWith('P07') ? 'critical' : 'attention',
+        description_human: `Código ${code} detectado. Consulte um mecânico para detalhes. (Análise IA indisponível temporariamente)`,
+        priority: 'attention',
         severity: 5,
         can_diy: false,
         diy_difficulty: null,
-        probable_causes: ['Diagnóstico adicional necessário'],
+        probable_causes: ['Falha na conexão de análise avançada'],
         solution_url: null,
       }));
     }
 
-    // Check for critical items
     const criticalItems = diagnosticItems.filter(item => item.priority === 'critical');
     const hasCritical = criticalItems.length > 0;
     const vehicleName = `${vehicleBrand} ${vehicleModel} ${vehicleYear}`;
 
-    // Send email notifications if we have userId
+    // Notifications
     if (userId && diagnosticId) {
-      // If there are critical items, send critical alert
       if (hasCritical) {
-        await sendNotification(
-          SUPABASE_URL,
-          SUPABASE_SERVICE_ROLE_KEY,
-          'critical_diagnostic',
-          userId,
-          {
-            diagnosticId,
-            vehicleName,
-            dtcCode: criticalItems[0]?.dtc_code || 'N/A',
-            description: criticalItems[0]?.description_human || 'Problema crítico detectado',
-          }
-        );
-      }
-
-      // Always send diagnostic completed notification
-      await sendNotification(
-        SUPABASE_URL,
-        SUPABASE_SERVICE_ROLE_KEY,
-        'diagnostic_completed',
-        userId,
-        {
+        await sendNotification(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'critical_diagnostic', userId, {
           diagnosticId,
           vehicleName,
-          totalCodes: diagnosticItems.length,
-          criticalCount: criticalItems.length,
-        }
-      );
+          dtcCode: criticalItems[0]?.dtc_code || 'N/A',
+          description: criticalItems[0]?.description_human || 'Problema crítico detectado',
+        });
+      }
+
+      await sendNotification(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'diagnostic_completed', userId, {
+        diagnosticId,
+        vehicleName,
+        totalCodes: diagnosticItems.length,
+        criticalCount: criticalItems.length,
+      });
     }
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         diagnostics: diagnosticItems,
         vehicleInfo: { brand: vehicleBrand, model: vehicleModel, year: vehicleYear },
@@ -279,8 +281,8 @@ Responda APENAS com o JSON, sem explicações adicionais.`;
   } catch (error) {
     console.error("Diagnose function error:", error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Erro desconhecido ao processar diagnóstico" 
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Erro desconhecido ao processar diagnóstico"
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

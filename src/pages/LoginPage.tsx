@@ -35,7 +35,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       notifyWarning('Campos obrigatórios', 'Preencha todos os campos.');
       return;
@@ -49,7 +49,7 @@ const LoginPage = () => {
 
     if (error) {
       let errorMessage = "Erro ao fazer login. Tente novamente.";
-      
+
       if (error.message.includes("Invalid login credentials")) {
         errorMessage = "Email ou senha incorretos.";
       } else if (error.message.includes("Email not confirmed")) {
@@ -73,9 +73,9 @@ const LoginPage = () => {
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4"
-      style={{ 
+      style={{
         backgroundImage: `url(${heroBg})`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',

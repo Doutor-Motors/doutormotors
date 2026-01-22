@@ -1,14 +1,13 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.016972b3e5134fb2984d3dfb425d3809',
+  appId: 'com.doutormotors.app',
   appName: 'Doutor Motors',
   webDir: 'dist',
-  
-  // Server configuration for development with hot-reload
-  // IMPORTANT: Remove or comment out for production builds!
+
+  // Server configuration
   server: {
-    url: 'https://016972b3-e513-4fb2-984d-3dfb425d3809.lovableproject.com?forceHideBadge=true',
+    androidScheme: 'https',
     cleartext: true
   },
 
@@ -18,7 +17,7 @@ const config: CapacitorConfig = {
     BluetoothSerial: {
       // No specific configuration needed
     },
-    
+
     // Splash Screen configuration
     SplashScreen: {
       launchShowDuration: 2000,
@@ -29,7 +28,7 @@ const config: CapacitorConfig = {
       showSpinner: true,
       spinnerColor: '#3B82F6',
     },
-    
+
     // Status Bar configuration
     StatusBar: {
       style: 'Dark',

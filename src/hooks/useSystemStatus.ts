@@ -49,7 +49,6 @@ const KNOWN_EDGE_FUNCTIONS = [
   "check-kpi-alerts",
   "create-pix-qrcode",
   "abacatepay-webhook",
-  "simulate-pix-payment",
   "check-subscription-renewal",
   "check-spam-alerts",
   "delete-user",
@@ -90,12 +89,12 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   const now = new Date();
 
   // ===== PAYMENTS =====
-  
+
   // 1. Verificar integração AbacatePay (pix_payments)
   const { count: pixPaymentsCount } = await supabase
     .from("pix_payments")
     .select("*", { count: "exact", head: true });
-  
+
   const { count: paidPixCount } = await supabase
     .from("pix_payments")
     .select("*", { count: "exact", head: true })
@@ -142,7 +141,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== SUBSCRIPTIONS =====
-  
+
   const { count: activeSubsCount } = await supabase
     .from("user_subscriptions")
     .select("*", { count: "exact", head: true })
@@ -165,7 +164,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== DATABASE =====
-  
+
   // Verificar tabelas existentes tentando consultar cada uma
   const tableCheckPromises = EXPECTED_TABLES.slice(0, 10).map(async (table) => {
     try {
@@ -175,7 +174,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
       return false;
     }
   });
-  
+
   const tableResults = await Promise.all(tableCheckPromises);
   const existingTablesCount = tableResults.filter(Boolean).length;
   const tablesPercentage = Math.round((existingTablesCount / 10) * 100);
@@ -201,7 +200,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== USERS & PROFILES =====
-  
+
   const { count: usersCount } = await supabase
     .from("profiles")
     .select("*", { count: "exact", head: true });
@@ -217,7 +216,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== VEHICLES & DIAGNOSTICS =====
-  
+
   const { count: vehiclesCount } = await supabase
     .from("vehicles")
     .select("*", { count: "exact", head: true });
@@ -237,7 +236,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== SUPPORT =====
-  
+
   const { count: ticketsCount } = await supabase
     .from("support_tickets")
     .select("*", { count: "exact", head: true });
@@ -253,7 +252,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== DATA RECORDING =====
-  
+
   const { count: recordingsCount } = await supabase
     .from("data_recordings")
     .select("*", { count: "exact", head: true });
@@ -269,7 +268,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== CODING FUNCTIONS =====
-  
+
   const { count: codingCount } = await supabase
     .from("coding_executions")
     .select("*", { count: "exact", head: true });
@@ -285,7 +284,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== CARCARE CACHE =====
-  
+
   const { count: carcareCount } = await supabase
     .from("carcare_procedure_cache")
     .select("*", { count: "exact", head: true });
@@ -301,10 +300,10 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== EDGE FUNCTIONS =====
-  
+
   // Verificamos se as edge functions críticas respondem
   const criticalEdgeFunctions = ["diagnose", "create-pix-qrcode", "abacatepay-webhook"];
-  
+
   features.push({
     id: "edge-functions-diagnose",
     name: "Edge Function: Diagnóstico IA",
@@ -319,7 +318,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
     name: "Edge Functions: Pagamentos",
     category: "edge_functions",
     status: "complete",
-    details: "create-pix-qrcode, abacatepay-webhook, simulate-pix-payment",
+    details: "create-pix-qrcode, abacatepay-webhook",
     lastChecked: now,
   });
 
@@ -342,7 +341,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== SECURITY =====
-  
+
   const { count: auditLogsCount } = await supabase
     .from("audit_logs")
     .select("*", { count: "exact", head: true });
@@ -367,7 +366,7 @@ async function checkSystemStatus(): Promise<SystemFeatureStatus[]> {
   });
 
   // ===== FRONTEND =====
-  
+
   features.push({
     id: "pwa-support",
     name: "PWA (Progressive Web App)",

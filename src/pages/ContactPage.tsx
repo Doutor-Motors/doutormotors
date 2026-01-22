@@ -12,10 +12,9 @@ import heroBg from "@/assets/images/hero-bg.jpg";
 import textBarsLight from "@/assets/images/text-bars-light.png";
 import textBarsDark from "@/assets/images/text-bars-dark.png";
 
-// Cloudflare Turnstile Site Key
-// Cloudflare Turnstile Site Key - Test Key for Development
-// Replace with your production key when deploying
-const TURNSTILE_SITE_KEY = "1x00000000000000000000AA";
+// ⚠️ PRODUÇÃO: Configure sua chave real do Cloudflare Turnstile aqui
+// Obtenha em: https://dash.cloudflare.com/?to=/:account/turnstile
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
 
 declare global {
   interface Window {
