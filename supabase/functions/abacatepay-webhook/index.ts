@@ -5,6 +5,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-signature",
 };
 
+// Helper function to convert hex string to Uint8Array
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    const part = hex.substr(i * 2, 2);
+    bytes[i] = parseInt(part, 16);
+  }
+  return bytes;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -29,14 +39,15 @@ Deno.serve(async (req) => {
 
   try {
     const webhookSecret = Deno.env.get("ABACATEPAY_WEBHOOK_SECRET");
-    
+
     // Get the signature from headers
     const signature = req.headers.get("x-webhook-signature");
-    
+    const signatureValid = !!signature; // Default to signature exists check for now, but will implement HMAC if secret is found
+
     // Get raw body for signature verification
     const rawBody = await req.text();
     let body;
-    
+
     try {
       body = JSON.parse(rawBody);
     } catch {
@@ -46,36 +57,39 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    
-    console.log("Webhook received:", JSON.stringify(body, null, 2));
 
-    // Validate webhook signature if secret is configured
-    let signatureValid = false;
+    // Verify signature if secret is provided
     if (webhookSecret && signature) {
+      // HMAC SHA256 from AbacatePay
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
         "raw",
         encoder.encode(webhookSecret),
         { name: "HMAC", hash: "SHA-256" },
         false,
-        ["sign"]
+        ["verify"]
       );
-      
-      const signatureBytes = await crypto.subtle.sign(
+
+      const verified = await crypto.subtle.verify(
         "HMAC",
         key,
+        hexToBytes(signature),
         encoder.encode(rawBody)
       );
-      
-      const expectedSignature = Array.from(new Uint8Array(signatureBytes))
-        .map(b => b.toString(16).padStart(2, "0"))
-        .join("");
-      
-      signatureValid = signature === expectedSignature;
-      
-      if (!signatureValid) {
-        console.warn("Invalid webhook signature - expected:", expectedSignature, "received:", signature);
+
+      if (!verified) {
+        console.error("Invalid webhook signature attempt");
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+    } else if (webhookSecret && !signature) {
+      console.error("Missing webhook signature");
+      return new Response(JSON.stringify({ error: "Missing signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Initialize Supabase client
@@ -98,13 +112,13 @@ Deno.serve(async (req) => {
     console.log("Event type:", eventType);
 
     // Handle PIX QR Code paid event
-    if (eventType === "pixQrCode.paid" || eventType === "PIXQRCODE_PAID" || 
-        eventType === "billing.paid" || eventType === "BILLING_PAID") {
-      
+    if (eventType === "pixQrCode.paid" || eventType === "PIXQRCODE_PAID" ||
+      eventType === "billing.paid" || eventType === "BILLING_PAID") {
+
       // Try to extract PIX ID from different possible locations in the payload
       const pixQrCode = body.data?.pixQrCode || body.pixQrCode || body.data;
       const pixId = pixQrCode?.id || body.pixQrCodeId || body.id;
-      
+
       if (!pixId) {
         console.error("No PIX ID in webhook payload");
         return new Response(JSON.stringify({ received: true, warning: "No PIX ID found" }), {
@@ -123,7 +137,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (findError || !pixPayment) {
-        console.log("PIX payment not found for ID:", pixId, findError);
+        console.error("PIX payment not found");
         return new Response(JSON.stringify({ received: true, warning: "Payment not found" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -142,18 +156,18 @@ Deno.serve(async (req) => {
       if (updateError) {
         console.error("Error updating PIX payment:", updateError);
       } else {
-        console.log("PIX payment marked as paid:", pixPayment.id);
-        
+        console.log("PIX payment marked as paid successfully");
+
         // Notify admins about the new payment
         try {
           const { data: admins } = await supabase
             .from("user_roles")
             .select("user_id")
             .eq("role", "admin");
-          
+
           if (admins && admins.length > 0) {
             const adminUserIds = admins.map(a => a.user_id);
-            
+
             // Create system alert for admins
             await supabase.from("system_alerts").insert({
               title: "💰 Novo Pagamento PIX Confirmado!",
@@ -166,7 +180,7 @@ Deno.serve(async (req) => {
               sent_by: "system",
               send_email: false,
             });
-            
+
             console.log("Admin notification created for payment:", pixPayment.id);
           }
         } catch (notifyError) {

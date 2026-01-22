@@ -90,6 +90,49 @@ Deno.serve(async (req) => {
         }
       );
     }
+    // 2. Check Monthly Usage Limit (for Basic users)
+    if (userId) {
+      // Get user plan and current usage
+      const { data: sub } = await supabase
+        .from("user_subscriptions")
+        .select("plan_type, status")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .maybeSingle();
+
+      const plan = sub?.plan_type || "basic";
+
+      // Check if user is Admin
+      const { data: role } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      const isAdmin = !!role;
+
+      if (!isAdmin && plan === "basic") {
+        const monthYear = new Date().toISOString().substring(0, 7); // YYYY-MM
+        const { data: usage } = await supabase
+          .from("usage_tracking")
+          .select("ai_queries_count")
+          .eq("user_id", userId)
+          .eq("month_year", monthYear)
+          .maybeSingle();
+
+        const currentUsage = usage?.ai_queries_count || 0;
+        if (currentUsage >= 10) { // Limite do plano Basic: 10 consultas por mês
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Limite mensal de consultas IA atingido para o plano Basic. Faça upgrade para Pro para uso ilimitado.",
+            }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
 
     const rawBody = await req.json();
     const validationResult = solutionRequestSchema.safeParse(rawBody);

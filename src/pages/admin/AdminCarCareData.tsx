@@ -12,13 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { 
-  Database, 
-  Search, 
-  RefreshCw, 
-  Download, 
-  Trash2, 
-  Car, 
+import {
+  Database,
+  Search,
+  RefreshCw,
+  Download,
+  Trash2,
+  Car,
   Wrench,
   FolderTree,
   Clock,
@@ -31,28 +31,25 @@ import {
 
 interface CachedProcedure {
   id: string;
-  brand: string;
-  model: string;
+  brand_id: string;
+  model_id: string;
   year: string | null;
   procedure_id: string;
-  procedure_name: string;
-  procedure_name_pt: string | null;
-  category: string;
+  category_id: string;
   video_url: string | null;
   thumbnail_url: string | null;
   source_url: string | null;
-  discovered_at: string;
+  title_pt: string | null;
+  created_at: string;
   updated_at: string;
   expires_at: string;
 }
 
 interface Category {
   id: string;
-  category_id: string;
+  name: string;
   name_en: string;
-  name_pt: string;
   icon: string | null;
-  keywords: string[] | null;
 }
 
 interface ScanResult {
@@ -80,14 +77,18 @@ export default function AdminCarCareData() {
     queryKey: ["carcare-cached-procedures"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("carcare_procedure_cache")
-        .select("*")
-        .order("brand", { ascending: true })
-        .order("model", { ascending: true })
-        .order("category", { ascending: true });
+        .from("car_care_video_cache")
+        .select(`
+          *,
+          brand:car_care_brands(name),
+          model:car_care_models(name),
+          procedure:car_care_procedures(name, name_en),
+          category:car_care_categories(name, name_en)
+        `)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as CachedProcedure[];
+      return data as any[];
     },
   });
 
@@ -96,9 +97,9 @@ export default function AdminCarCareData() {
     queryKey: ["carcare-categories"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("carcare_categories")
+        .from("car_care_categories")
         .select("*")
-        .order("name_en", { ascending: true });
+        .order("name", { ascending: true });
 
       if (error) throw error;
       return data as Category[];
@@ -109,7 +110,7 @@ export default function AdminCarCareData() {
   const scanVehicleMutation = useMutation({
     mutationFn: async ({ brand, model, year }: { brand: string; model: string; year: string }) => {
       const { data, error } = await supabase.functions.invoke("carcare-api", {
-        body: { 
+        body: {
           action: "scan-and-cache",
           brand,
           model,
@@ -169,17 +170,17 @@ export default function AdminCarCareData() {
 
   // Clear cache mutation
   const clearCacheMutation = useMutation({
-    mutationFn: async (vehicleFilter?: { brand?: string; model?: string }) => {
-      let query = supabase.from("carcare_procedure_cache").delete();
-      
-      if (vehicleFilter?.brand) {
-        query = query.eq("brand", vehicleFilter.brand);
+    mutationFn: async (vehicleFilter?: { brand_id?: string; model_id?: string }) => {
+      let query = supabase.from("car_care_video_cache").delete();
+
+      if (vehicleFilter?.brand_id) {
+        query = query.eq("brand_id", vehicleFilter.brand_id);
       }
-      if (vehicleFilter?.model) {
-        query = query.eq("model", vehicleFilter.model);
+      if (vehicleFilter?.model_id) {
+        query = query.eq("model_id", vehicleFilter.model_id);
       }
-      if (!vehicleFilter?.brand && !vehicleFilter?.model) {
-        // Delete all if no filter
+
+      if (!vehicleFilter?.brand_id && !vehicleFilter?.model_id) {
         query = query.neq("id", "00000000-0000-0000-0000-000000000000");
       }
 
@@ -197,31 +198,35 @@ export default function AdminCarCareData() {
 
   // Group procedures by brand and model
   const groupedProcedures = cachedProcedures?.reduce((acc, proc) => {
-    const brandKey = proc.brand;
-    const modelKey = `${proc.brand}|${proc.model}|${proc.year || ""}`;
-    
+    const brandName = proc.brand?.name || proc.brand_id;
+    const modelName = proc.model?.name || proc.model_id;
+    const brandKey = brandName;
+    const modelKey = `${brandName}|${modelName}|${proc.year || ""}`;
+
     if (!acc.brands[brandKey]) {
       acc.brands[brandKey] = {
-        name: brandKey,
+        name: brandName,
         models: {},
         totalProcedures: 0,
       };
     }
-    
+
     if (!acc.brands[brandKey].models[modelKey]) {
       acc.brands[brandKey].models[modelKey] = {
-        brand: proc.brand,
-        model: proc.model,
+        brand: brandName,
+        brand_id: proc.brand_id,
+        model: modelName,
+        model_id: proc.model_id,
         year: proc.year,
         procedures: [],
         categories: new Set(),
       };
     }
-    
+
     acc.brands[brandKey].models[modelKey].procedures.push(proc);
-    acc.brands[brandKey].models[modelKey].categories.add(proc.category);
+    acc.brands[brandKey].models[modelKey].categories.add(proc.category?.name || proc.category_id);
     acc.brands[brandKey].totalProcedures++;
-    
+
     return acc;
   }, { brands: {} as Record<string, any> }) || { brands: {} };
 
@@ -229,12 +234,19 @@ export default function AdminCarCareData() {
   const filteredProcedures = cachedProcedures?.filter(proc => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
+    const brandName = (proc.brand?.name || "").toLowerCase();
+    const modelName = (proc.model?.name || "").toLowerCase();
+    const procedureName = (proc.procedure?.name || "").toLowerCase();
+    const procedureNameEn = (proc.procedure?.name_en || "").toLowerCase();
+    const categoryName = (proc.category?.name || "").toLowerCase();
+
     return (
-      proc.brand.toLowerCase().includes(term) ||
-      proc.model.toLowerCase().includes(term) ||
-      proc.procedure_name.toLowerCase().includes(term) ||
-      proc.category.toLowerCase().includes(term) ||
-      (proc.procedure_name_pt?.toLowerCase().includes(term))
+      brandName.includes(term) ||
+      modelName.includes(term) ||
+      procedureName.includes(term) ||
+      procedureNameEn.includes(term) ||
+      categoryName.includes(term) ||
+      (proc.title_pt?.toLowerCase().includes(term))
     );
   }) || [];
 
@@ -243,7 +255,7 @@ export default function AdminCarCareData() {
     totalProcedures: cachedProcedures?.length || 0,
     totalBrands: Object.keys(groupedProcedures.brands).length,
     totalModels: Object.values(groupedProcedures.brands).reduce(
-      (sum: number, b: any) => sum + Object.keys(b.models).length, 
+      (sum: number, b: any) => sum + Object.keys(b.models).length,
       0
     ),
     totalCategories: categories?.length || 0,
@@ -298,7 +310,7 @@ export default function AdminCarCareData() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Marcas</CardDescription>
@@ -311,7 +323,7 @@ export default function AdminCarCareData() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Modelos</CardDescription>
@@ -324,7 +336,7 @@ export default function AdminCarCareData() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Categorias</CardDescription>
@@ -337,7 +349,7 @@ export default function AdminCarCareData() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Expirados</CardDescription>
@@ -478,7 +490,7 @@ export default function AdminCarCareData() {
                       <li className="text-primary font-medium">Se Firecrawl falhar, usa dados estáticos como fallback</li>
                     </ol>
                   </div>
-                  
+
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg flex items-center gap-2">
@@ -556,19 +568,19 @@ export default function AdminCarCareData() {
                         {filteredProcedures.slice(0, 100).map((proc) => (
                           <TableRow key={proc.id}>
                             <TableCell>
-                              <div className="font-medium">{proc.brand}</div>
+                              <div className="font-medium">{proc.brand?.name || proc.brand_id}</div>
                               <div className="text-xs text-muted-foreground">
-                                {proc.model} {proc.year}
+                                {proc.model?.name || proc.model_id} {proc.year}
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{proc.category}</Badge>
+                              <Badge variant="outline">{proc.category?.name || proc.category_id}</Badge>
                             </TableCell>
                             <TableCell className="max-w-[200px] truncate">
-                              {proc.procedure_name}
+                              {proc.procedure?.name_en || proc.procedure_id}
                             </TableCell>
                             <TableCell className="max-w-[200px] truncate">
-                              {proc.procedure_name_pt || "-"}
+                              {proc.procedure?.name || proc.title_pt || "-"}
                             </TableCell>
                             <TableCell>
                               {new Date(proc.expires_at) < new Date() ? (
@@ -626,27 +638,13 @@ export default function AdminCarCareData() {
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <div className="font-medium">{cat.name_pt}</div>
+                            <div className="font-medium">{cat.name}</div>
                             <div className="text-sm text-muted-foreground">{cat.name_en}</div>
                           </div>
                           <Badge variant="outline" className="text-xs">
-                            {cat.category_id}
+                            {cat.id}
                           </Badge>
                         </div>
-                        {cat.keywords && cat.keywords.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {cat.keywords.slice(0, 4).map((kw, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">
-                                {kw}
-                              </Badge>
-                            ))}
-                            {cat.keywords.length > 4 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{cat.keywords.length - 4}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -708,8 +706,8 @@ export default function AdminCarCareData() {
                                     onClick={() => {
                                       if (confirm(`Limpar cache para ${model.brand} ${model.model}?`)) {
                                         clearCacheMutation.mutate({
-                                          brand: model.brand,
-                                          model: model.model,
+                                          brand_id: model.brand_id,
+                                          model_id: model.model_id,
                                         });
                                       }
                                     }}
