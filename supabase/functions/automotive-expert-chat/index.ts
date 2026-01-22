@@ -149,7 +149,7 @@ serve(async (req) => {
       geminiContents.push({ role, parts });
     });
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}`;
 
     const response = await fetch(geminiUrl, {
       method: "POST",
@@ -160,7 +160,7 @@ serve(async (req) => {
     if (!response.ok) {
       const err = await response.text();
       console.error("Gemini Error:", err);
-      throw new Error(`Erro Gemini: ${response.status}`);
+      throw new Error(`Erro Gemini: ${response.status} - ${err}`);
     }
 
     const { readable, writable } = new TransformStream();
@@ -228,7 +228,7 @@ serve(async (req) => {
 
     // Nova tentativa: Non-streaming request
     const responseNonStream = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

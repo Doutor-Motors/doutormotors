@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { 
-  Bluetooth, 
-  Wifi, 
+import {
+  Bluetooth,
+  Wifi,
   WifiOff,
   Play,
   Loader2,
@@ -32,8 +32,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppStore, Vehicle, Diagnostic, DiagnosticItem } from "@/store/useAppStore";
-import { analyzeDTCCodes, saveDiagnostic, runDemoDiagnostic } from "@/services/diagnostics/engine";
-import { generateMockDTCCodes } from "@/services/diagnostics/dtcDatabase";
+import { analyzeDTCCodes, saveDiagnostic } from "@/services/diagnostics/engine";
 import { OBDConnectionSelector } from "@/components/obd/OBDConnectionSelector";
 import { useOBDConnection } from "@/components/obd/useOBDConnection";
 import { PlatformCapabilityBadge } from "@/components/obd/PlatformCapabilityBadge";
@@ -45,10 +44,10 @@ const DiagnosticCenter = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { 
-    vehicles, 
+  const {
+    vehicles,
     setVehicles,
-    activeVehicleId, 
+    activeVehicleId,
     setActiveVehicleId,
     addDiagnostic,
     setCurrentDiagnosticId
@@ -56,7 +55,7 @@ const DiagnosticCenter = () => {
 
   // Use the new OBD connection hook
   const obd = useOBDConnection();
-  
+
   // Platform detection for capability warnings
   const { platformInfo, canConnect, recommendedAction, connectionCapabilities } = usePlatformDetection();
 
@@ -72,7 +71,7 @@ const DiagnosticCenter = () => {
   useEffect(() => {
     const fetchVehicles = async () => {
       if (!user) return;
-      
+
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
@@ -81,7 +80,7 @@ const DiagnosticCenter = () => {
 
       if (!error && data) {
         setVehicles(data);
-        
+
         // Set vehicle from URL param or first vehicle
         const vehicleIdFromUrl = searchParams.get('vehicle');
         if (vehicleIdFromUrl && data.find(v => v.id === vehicleIdFromUrl)) {
@@ -176,7 +175,7 @@ const DiagnosticCenter = () => {
     try {
       // Read DTC codes from OBD2 adapter (or simulated)
       const obdData = await obd.readDTCCodes();
-      
+
       // Run AI analysis on the codes
       const result = await analyzeDTCCodes(
         obdData.dtcCodes,
@@ -218,7 +217,7 @@ const DiagnosticCenter = () => {
             items: items || [],
             vehicle: activeVehicle,
           };
-          
+
           setCurrentDiagnostic(fullDiagnostic);
           setDiagnosticItems(items || []);
           setCurrentDiagnosticId(saveResult.diagnosticId);
@@ -231,7 +230,7 @@ const DiagnosticCenter = () => {
           description: `${result.items.length} item(s) encontrado(s) via ${obd.connectionType === 'wifi' ? 'WiFi' : 'Bluetooth'}.`,
         });
         notifyDiagnosticComplete();
-        
+
         // Notificar alertas críticos e de atenção
         result.items.forEach((item: any) => {
           if (item.priority === 'critical') {
@@ -348,7 +347,7 @@ const DiagnosticCenter = () => {
               Conecte seu OBD2 via Bluetooth ou WiFi e execute uma leitura completa do veículo.
             </p>
           </div>
-          
+
           {/* Vehicle Selector */}
           <div className="flex items-center gap-2">
             <Car className="w-5 h-5 text-muted-foreground" />
@@ -435,7 +434,7 @@ const DiagnosticCenter = () => {
                     Pronto para Diagnóstico
                   </h3>
                   <p className="text-muted-foreground text-sm">
-                    {activeVehicle 
+                    {activeVehicle
                       ? `${activeVehicle.brand} ${activeVehicle.model} (${activeVehicle.year})`
                       : "Selecione um veículo"
                     }
@@ -596,7 +595,7 @@ const DiagnosticCenter = () => {
               Conecte seu OBD2
             </h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Plugue o adaptador OBD2 na porta de diagnóstico do seu veículo 
+              Plugue o adaptador OBD2 na porta de diagnóstico do seu veículo
               e conecte via <strong>Bluetooth</strong> ou <strong>WiFi</strong> para iniciar.
             </p>
             <div className="flex justify-center gap-3">

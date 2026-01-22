@@ -71,8 +71,6 @@ import SelectPlanPage from "./pages/SelectPlanPage";
 import MyPaymentsPage from "./pages/dashboard/MyPaymentsPage";
 import UserAuditTimeline from "./pages/admin/UserAuditTimeline";
 import MaintenanceManagerPage from "./pages/dashboard/MaintenanceManagerPage";
-import AuditReportTestPage from "./pages/AuditReportTestPage";
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -120,7 +118,7 @@ const App = () => (
                 <Route path="/checkout-pix" element={<PixCheckoutPage />} />
                 <Route path="/subscription-checkout" element={<SubscriptionCheckoutPage />} />
                 <Route path="/select-plan" element={<SelectPlanPage />} />
-                <Route path="/test-audit-report" element={<AuditReportTestPage />} />
+
 
                 {/* Protected User Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
@@ -142,9 +140,7 @@ const App = () => (
                 <Route path="/dashboard/maintenance" element={<ProtectedRoute><MaintenanceManagerPage /></ProtectedRoute>} />
                 <Route path="/estude-seu-carro" element={
                   <ProtectedRoute>
-                    <AdminProtectedRoute>
-                      <StudyCarPage />
-                    </AdminProtectedRoute>
+                    <StudyCarPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/relatorio-tecnico" element={<ProtectedRoute><TechnicalReport /></ProtectedRoute>} />

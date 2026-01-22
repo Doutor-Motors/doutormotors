@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { 
+import {
   ArrowLeft,
   Loader2,
   Wrench,
@@ -28,6 +28,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useValidUUID } from "@/hooks/useValidUUID";
+import { useUserTier } from "@/hooks/useUserTier";
+import { useAdmin } from "@/hooks/useAdmin";
+import ExpertChatView from "@/components/studycar/ExpertChatView";
 import { DiagnosticItem, Vehicle } from "@/store/useAppStore";
 import { getSolutionForDTC, getYouTubeSearchUrl } from "@/services/solutions/recommender";
 import { fetchSolutionFromCarCareKiosk, FetchedSolution } from "@/services/solutions/api";
@@ -62,14 +65,14 @@ const SolutionGuide = () => {
   const { diagnosticItemId } = useParams<{ diagnosticItemId: string }>();
   const { user } = useAuth();
   const { notifySuccess, notifyError, notifyInfo, checkAndNotifyCacheStatus } = useNotifications();
-  
+
   const { isValid, validId } = useValidUUID({
     id: diagnosticItemId,
     redirectTo: "/dashboard/history",
     errorTitle: "Link inválido",
     errorDescription: "Selecione uma solução a partir do relatório de diagnóstico.",
   });
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingAI, setIsFetchingAI] = useState(false);
   const [item, setItem] = useState<DiagnosticItem | null>(null);
@@ -79,10 +82,12 @@ const SolutionGuide = () => {
   const [fromCache, setFromCache] = useState(false);
   const [activeSource, setActiveSource] = useState<ContentSource>('loveble');
   const [showIntegratedViewer, setShowIntegratedViewer] = useState(false);
+  const { isPro } = useUserTier();
+  const { isAdmin } = useAdmin();
 
   // Verificar se é um sistema crítico que bloqueia DIY
   const isCriticalSystem = item ? shouldBlockDIY(item.dtc_code, item.description_human) : false;
-  
+
   // Determinar tipo de sistema para o bloqueador de segurança
   const getCriticalSystemType = (): "freio" | "direcao" | "suspensao" | "airbag" | "geral" => {
     if (!item) return "geral";
@@ -95,12 +100,12 @@ const SolutionGuide = () => {
   };
 
   const fetchAISolution = async (
-    diagnosticItem: DiagnosticItem, 
+    diagnosticItem: DiagnosticItem,
     vehicleData: Vehicle,
     forceRefresh: boolean = false
   ) => {
     setIsFetchingAI(true);
-    
+
     if (forceRefresh) {
       notifyInfo("Atualizando solução", "Buscando nova versão do CarCareKiosk...");
     } else {
@@ -129,7 +134,7 @@ const SolutionGuide = () => {
         setSolution(aiSolution);
         setUsedAI(true);
         setFromCache(response.fromCache || false);
-        
+
         if (forceRefresh) {
           notifySuccess("Solução atualizada!", "Nova versão carregada e salva no cache.");
         } else if (response.fromCache) {
@@ -338,7 +343,7 @@ const SolutionGuide = () => {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
             {isFetchingAI && (
               <Badge variant="secondary" className="animate-pulse">
@@ -352,7 +357,7 @@ const SolutionGuide = () => {
                   <Sparkles className="w-3 h-3 mr-1" />
                   {fromCache ? 'Cache Local' : 'CarCareKiosk + IA'}
                 </Badge>
-                
+
                 {/* Botão de Refresh Forçado */}
                 <Button
                   variant="outline"
@@ -371,7 +376,8 @@ const SolutionGuide = () => {
         </div>
 
         {/* Source Selector */}
-        {usedAI && solution.articleUrl && (
+        {/* Source Selector - Apenas Admin */}
+        {usedAI && solution.articleUrl && isAdmin && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <SourceSelector
               activeSource={activeSource}
@@ -379,7 +385,7 @@ const SolutionGuide = () => {
               hasExternalContent={!!solution.articleUrl}
               isLoadingExternal={isFetchingAI}
             />
-            
+
             {activeSource === 'carcarekiosk' && (
               <Button
                 variant="default"
@@ -466,9 +472,9 @@ const SolutionGuide = () => {
 
         {/* Safety Blocker para sistemas críticos */}
         {isCriticalSystem && item && (
-          <SafetyBlocker 
-            systemType={getCriticalSystemType()} 
-            dtcCode={item.dtc_code} 
+          <SafetyBlocker
+            systemType={getCriticalSystemType()}
+            dtcCode={item.dtc_code}
           />
         )}
 
@@ -510,7 +516,7 @@ const SolutionGuide = () => {
                 Ferramentas
               </TabsTrigger>
               <TabsTrigger value="resources" className="font-chakra uppercase text-xs sm:text-sm">
-                Recursos
+                Especialista {isPro && <Badge className="ml-1 bg-primary text-[8px] px-1">PRO</Badge>}
               </TabsTrigger>
             </TabsList>
 
@@ -583,76 +589,23 @@ const SolutionGuide = () => {
             </TabsContent>
 
             <TabsContent value="resources" className="mt-6">
-              <div className="grid md:grid-cols-3 gap-4">
-                {solution.videoUrl && (
-                  <a href={solution.videoUrl} target="_blank" rel="noopener noreferrer">
-                    <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] h-full">
-                      <CardContent className="p-6 flex items-center gap-4">
-                        <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
-                          <Youtube className="w-6 h-6 text-red-600" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-chakra font-bold uppercase text-foreground">Vídeo Educativo</h3>
-                          <p className="text-sm text-muted-foreground">Assista no YouTube</p>
-                        </div>
-                        <ExternalLink className="w-5 h-5 text-muted-foreground" />
-                      </CardContent>
-                    </Card>
-                  </a>
-                )}
-
-                {solution.articleUrl && (
-                  <Card 
-                    className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] h-full border-primary/20"
-                    onClick={() => setShowIntegratedViewer(true)}
-                  >
-                    <CardContent className="p-6 flex items-center gap-4">
-                      <div className="bg-primary/10 p-3 rounded-full">
-                        <BookOpen className="w-6 h-6 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-chakra font-bold uppercase text-foreground">Artigo Informativo</h3>
-                        <p className="text-sm text-muted-foreground">CarCareKiosk (Externo)</p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">
-                        <Play className="w-3 h-3 mr-1" />
-                        Ver
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {solution.shopUrl && (
-                  <a href={solution.shopUrl} target="_blank" rel="noopener noreferrer">
-                    <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] h-full">
-                      <CardContent className="p-6 flex items-center gap-4">
-                        <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
-                          <ShoppingCart className="w-6 h-6 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-chakra font-bold uppercase text-foreground">Pesquisar Peças</h3>
-                          <p className="text-sm text-muted-foreground">Ver opções (Externo)</p>
-                        </div>
-                        <ExternalLink className="w-5 h-5 text-muted-foreground" />
-                      </CardContent>
-                    </Card>
-                  </a>
-                )}
-              </div>
-              
-              {/* Aviso sobre links externos */}
-              <div className="mt-4 text-xs text-center text-muted-foreground">
-                <p>⚠️ {LEGAL_PHRASES.EXTERNAL_CONTENT}</p>
-              </div>
-              
-              {/* Glossário Automático */}
-              <div className="mt-6">
-                <GlossaryPanel
-                  contextText={`${solution.title} ${solution.description} ${solution.steps.join(' ')} ${solution.tools.join(' ')} ${solution.parts.join(' ')} ${solution.warnings.join(' ')}`}
-                  contextOnly={true}
-                  defaultCollapsed={true}
-                />
-              </div>
+              <Card className="border-muted">
+                <CardContent className="p-8 text-center">
+                  <Sparkles className="w-12 h-12 text-primary mx-auto mb-4" />
+                  <h3 className="font-chakra font-bold uppercase text-foreground mb-2">
+                    Especialista IA
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Estamos finalizando os ajustes nesta funcionalidade.
+                  </p>
+                  <Badge variant="secondary" className="mb-4">
+                    EM BREVE
+                  </Badge>
+                  <p className="text-xs text-muted-foreground">
+                    Aguarde novidades nas próximas atualizações!
+                  </p>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         )}
@@ -660,8 +613,8 @@ const SolutionGuide = () => {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
           {vehicle && !isFetchingAI && !isCriticalSystem && (
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               variant="secondary"
               className="font-chakra uppercase"
               onClick={() => fetchAISolution(item, vehicle)}
@@ -671,8 +624,8 @@ const SolutionGuide = () => {
             </Button>
           )}
           {item.status !== 'resolved' && (
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="font-chakra uppercase"
               onClick={handleMarkResolved}
             >

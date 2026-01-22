@@ -142,7 +142,7 @@ const ProceduresView = ({
                   rel="noopener noreferrer"
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Ver todos os tutoriais de {selectedCategory.name} no CarCareKiosk
+                  Ver todos os tutoriais de {selectedCategory.name}
                 </a>
               </Button>
             </div>

@@ -12,7 +12,7 @@ const TermsPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="pt-36 sm:pt-40 md:pt-44 pb-16">
         <div className="container mx-auto px-4 max-w-4xl">
           {/* Header */}
@@ -46,9 +46,9 @@ const TermsPage = () => {
                     Aviso Importante
                   </h3>
                   <p className="text-orange-700 dark:text-orange-400">
-                    O <strong>Doutor Motors</strong> é uma plataforma <strong>informativa e educativa</strong>. 
-                    Não somos uma oficina mecânica, não prestamos serviços de reparo automotivo e não fornecemos 
-                    instruções diretas para reparos. Todas as informações são de caráter educativo para ajudá-lo 
+                    O <strong>Doutor Motors</strong> é uma plataforma <strong>informativa e educativa</strong>.
+                    Não somos uma oficina mecânica, não prestamos serviços de reparo automotivo e não fornecemos
+                    instruções diretas para reparos. Todas as informações são de caráter educativo para ajudá-lo
                     a entender melhor seu veículo.
                   </p>
                 </div>
@@ -105,12 +105,12 @@ const TermsPage = () => {
               </CardHeader>
               <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                 <p>
-                  Ao acessar e utilizar a plataforma Doutor Motors, você concorda expressamente com estes 
-                  Termos de Uso. Se você não concordar com qualquer parte destes termos, não deve utilizar 
+                  Ao acessar e utilizar a plataforma Doutor Motors, você concorda expressamente com estes
+                  Termos de Uso. Se você não concordar com qualquer parte destes termos, não deve utilizar
                   nossos serviços.
                 </p>
                 <p>
-                  O uso contínuo da plataforma após alterações nos termos constitui aceitação das 
+                  O uso contínuo da plataforma após alterações nos termos constitui aceitação das
                   modificações. Recomendamos revisar periodicamente esta página.
                 </p>
               </CardContent>
@@ -144,8 +144,8 @@ const TermsPage = () => {
 
                 <p><strong>2.3. Links Externos:</strong></p>
                 <p>
-                  Quando disponibilizamos links para tutoriais ou guias externos (como CarCareKiosk, YouTube, etc.), 
-                  estes são de propriedade e responsabilidade de seus respectivos criadores. Não temos controle 
+                  Quando disponibilizamos links para tutoriais ou guias externos (como YouTube, etc.),
+                  estes são de propriedade e responsabilidade de seus respectivos criadores. Não temos controle
                   sobre o conteúdo desses sites e não nos responsabilizamos por informações neles contidas.
                 </p>
               </CardContent>
@@ -162,8 +162,8 @@ const TermsPage = () => {
               <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                 <p><strong>3.1. Sem Garantia de Precisão:</strong></p>
                 <p>
-                  As informações fornecidas pela plataforma são baseadas em bancos de dados de diagnóstico 
-                  automotivo e inteligência artificial. Não garantimos a precisão, completude ou aplicabilidade 
+                  As informações fornecidas pela plataforma são baseadas em bancos de dados de diagnóstico
+                  automotivo e inteligência artificial. Não garantimos a precisão, completude ou aplicabilidade
                   das informações para seu veículo específico.
                 </p>
 
@@ -176,7 +176,7 @@ const TermsPage = () => {
 
                 <p><strong>3.3. Exclusão de Responsabilidade:</strong></p>
                 <p>
-                  O Doutor Motors e seus desenvolvedores não se responsabilizam por quaisquer danos diretos, 
+                  O Doutor Motors e seus desenvolvedores não se responsabilizam por quaisquer danos diretos,
                   indiretos, incidentais, consequenciais ou punitivos resultantes de:
                 </p>
                 <ul>
@@ -199,7 +199,7 @@ const TermsPage = () => {
               </CardHeader>
               <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                 <p>
-                  Problemas relacionados aos seguintes sistemas devem <strong>SEMPRE</strong> ser avaliados 
+                  Problemas relacionados aos seguintes sistemas devem <strong>SEMPRE</strong> ser avaliados
                   e reparados exclusivamente por profissionais qualificados:
                 </p>
                 <ul className="text-red-700 dark:text-red-400">
@@ -210,7 +210,7 @@ const TermsPage = () => {
                   <li><strong>Sistema de Combustível:</strong> Injeção, bomba de combustível, linhas de pressão.</li>
                 </ul>
                 <p className="font-semibold text-red-700 dark:text-red-400">
-                  ⚠️ Nunca tente reparar esses sistemas por conta própria. Reparos inadequados podem 
+                  ⚠️ Nunca tente reparar esses sistemas por conta própria. Reparos inadequados podem
                   resultar em acidentes graves, lesões ou morte.
                 </p>
               </CardContent>
@@ -251,12 +251,12 @@ const TermsPage = () => {
               </CardHeader>
               <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                 <p>
-                  Todo o conteúdo da plataforma, incluindo textos, gráficos, logos, ícones, imagens, 
-                  código-fonte e software, são propriedade do Doutor Motors ou de seus licenciadores 
+                  Todo o conteúdo da plataforma, incluindo textos, gráficos, logos, ícones, imagens,
+                  código-fonte e software, são propriedade do Doutor Motors ou de seus licenciadores
                   e são protegidos por leis de direitos autorais.
                 </p>
                 <p>
-                  É proibida a reprodução, distribuição, modificação ou uso comercial do conteúdo 
+                  É proibida a reprodução, distribuição, modificação ou uso comercial do conteúdo
                   sem autorização prévia por escrito.
                 </p>
               </CardContent>
@@ -271,8 +271,8 @@ const TermsPage = () => {
               </CardHeader>
               <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                 <p>
-                  Reservamo-nos o direito de modificar estes Termos de Uso a qualquer momento. 
-                  Alterações significativas serão notificadas através da plataforma ou por e-mail. 
+                  Reservamo-nos o direito de modificar estes Termos de Uso a qualquer momento.
+                  Alterações significativas serão notificadas através da plataforma ou por e-mail.
                   O uso continuado da plataforma após alterações constitui aceitação dos novos termos.
                 </p>
               </CardContent>
@@ -287,8 +287,8 @@ const TermsPage = () => {
               </CardHeader>
               <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                 <p>
-                  Estes Termos de Uso são regidos pelas leis da República Federativa do Brasil. 
-                  Qualquer disputa decorrente destes termos será resolvida no foro da comarca de 
+                  Estes Termos de Uso são regidos pelas leis da República Federativa do Brasil.
+                  Qualquer disputa decorrente destes termos será resolvida no foro da comarca de
                   São Paulo, Estado de São Paulo.
                 </p>
               </CardContent>
@@ -318,7 +318,7 @@ const TermsPage = () => {
           {/* Footer do documento */}
           <div className="text-center text-sm text-muted-foreground">
             <p>
-              Ao utilizar a plataforma Doutor Motors, você declara ter lido, compreendido e 
+              Ao utilizar a plataforma Doutor Motors, você declara ter lido, compreendido e
               concordado com estes Termos de Uso.
             </p>
             <p className="mt-2">

@@ -65,11 +65,12 @@ const Header = () => {
     <header
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ease-out ${isVisible ? "translate-y-0" : "-translate-y-full"
         } ${isScrolled
-          ? "bg-secondary/90 backdrop-blur-xl shadow-2xl shadow-black/20 py-2"
+          ? "bg-secondary/90 backdrop-blur-xl shadow-2xl shadow-black/20 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))]"
           : isLandingPage
-            ? "bg-gradient-to-b from-black/40 to-transparent py-4"
-            : "bg-secondary/95 backdrop-blur-md py-4"
+            ? "bg-gradient-to-b from-black/40 to-transparent py-4 pt-[calc(1rem+env(safe-area-inset-top))]"
+            : "bg-secondary/95 backdrop-blur-md py-4 pt-[calc(1rem+env(safe-area-inset-top))]"
         }`}
+      style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
     >
       {/* Borda inferior animada */}
       <div className={`absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent transition-opacity duration-300 ${isScrolled ? "opacity-100" : "opacity-0"}`} />

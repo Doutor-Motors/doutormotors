@@ -112,9 +112,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-dm-space text-primary-foreground">
-        <div className="p-6 border-b border-dm-cadet/20">
+      {/* Sidebar - Desktop - Estilo Homepage */}
+      <aside className="hidden lg:flex flex-col w-64 bg-secondary/95 backdrop-blur-md text-primary-foreground border-r border-white/10">
+        <div className="p-6 border-b border-white/10">
           {/* Logo igual ao Footer */}
           <div className="flex flex-col items-start cursor-default">
             <img src={logo} alt="Doutor Motors" className="h-[100px] w-auto object-contain -ml-1" />
@@ -138,11 +138,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <li key={item.path}>
                   <Link
                     to={isLocked ? "/dashboard/upgrade" : item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg font-chakra uppercase text-sm transition-colors ${isActive
-                      ? "bg-primary text-primary-foreground"
+                    className={`flex items-center gap-3 px-4 py-3 rounded-full font-chakra uppercase text-sm transition-all duration-300 ${isActive
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
                       : isLocked
-                        ? "text-muted-foreground/60 hover:bg-muted/20 hover:text-muted-foreground"
-                        : "text-dm-cadet hover:bg-dm-blue-2 hover:text-primary-foreground"
+                        ? "text-muted-foreground/60 hover:bg-white/10 hover:text-muted-foreground"
+                        : "text-primary-foreground/80 hover:bg-white/10 hover:text-primary-foreground"
                       }`}
                   >
                     <item.icon className={`w-5 h-5 ${isLocked ? "opacity-50" : ""}`} />
@@ -177,8 +177,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
       </aside>
 
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-dm-space z-40 px-4 py-3 flex items-center justify-between">
+      {/* Mobile Header - Estilo Homepage */}
+      <div
+        className="lg:hidden fixed top-0 left-0 right-0 bg-gradient-to-b from-black/40 to-transparent backdrop-blur-xl z-40 px-4 py-4 flex items-center justify-between border-b border-white/10"
+        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+      >
         <div className="flex items-center gap-2">
           {/* Botão Voltar Mobile */}
           {!isDashboardHome && (
@@ -199,17 +202,25 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="text-primary-foreground p-2"
+          className={`relative w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 ${isSidebarOpen
+            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/40"
+            : "bg-white/20 text-primary-foreground hover:bg-white/30 border border-white/20"
+            }`}
         >
-          {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          <span className={`absolute transition-all duration-300 ${isSidebarOpen ? "rotate-90 opacity-0" : "rotate-0 opacity-100"}`}>
+            <Menu className="w-6 h-6" />
+          </span>
+          <span className={`absolute transition-all duration-300 ${isSidebarOpen ? "rotate-0 opacity-100" : "-rotate-90 opacity-0"}`}>
+            <X className="w-6 h-6" />
+          </span>
         </button>
       </div>
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Sidebar - Estilo Homepage */}
       {isSidebarOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setIsSidebarOpen(false)}>
+        <div className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30" onClick={() => setIsSidebarOpen(false)}>
           <aside
-            className="absolute left-0 top-0 bottom-0 w-64 bg-dm-space text-primary-foreground pt-24"
+            className="absolute left-0 top-0 bottom-0 w-64 bg-secondary/95 backdrop-blur-xl text-primary-foreground pt-24 border-r border-white/10 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <nav className="flex-1 px-4 py-4">
@@ -225,11 +236,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                       <Link
                         to={isLocked ? "/dashboard/upgrade" : item.path}
                         onClick={() => setIsSidebarOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg font-chakra uppercase text-sm transition-colors ${isActive
-                          ? "bg-primary text-primary-foreground"
+                        className={`flex items-center gap-3 px-4 py-3 rounded-full font-chakra uppercase text-sm transition-all duration-300 ${isActive
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
                           : isLocked
-                            ? "text-muted-foreground/60 hover:bg-muted/20 hover:text-muted-foreground"
-                            : "text-dm-cadet hover:bg-dm-blue-2 hover:text-primary-foreground"
+                            ? "text-muted-foreground/60 hover:bg-white/10 hover:text-muted-foreground"
+                            : "text-primary-foreground/80 hover:bg-white/10 hover:text-primary-foreground"
                           }`}
                       >
                         <item.icon className={`w-5 h-5 ${isLocked ? "opacity-50" : ""}`} />

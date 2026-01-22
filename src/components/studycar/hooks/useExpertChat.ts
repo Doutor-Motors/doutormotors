@@ -37,21 +37,21 @@ interface UseExpertChatProps {
 export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
   const { user } = useAuth();
   const { notifySuccess, notifyError } = useNotifications();
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [selectedOBDCodes, setSelectedOBDCodes] = useState<DiagnosticCode[]>([]);
 
   const streamChat = useCallback(async (
-    userMessage: string, 
-    imageBase64?: string, 
+    userMessage: string,
+    imageBase64?: string,
     documentFile?: File,
     onConversationCreated?: () => void
   ) => {
     let documentContent = "";
     let documentName = "";
-    
+
     // Read document content if provided
     if (documentFile) {
       documentName = documentFile.name;
@@ -62,18 +62,18 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
       }
     }
 
-    const finalMessage = documentContent 
+    const finalMessage = documentContent
       ? `${userMessage}\n\n--- Documento anexado: ${documentName} ---\n${documentContent}`
       : userMessage;
 
-    const userMsg: Message = { 
-      role: "user", 
+    const userMsg: Message = {
+      role: "user",
       content: userMessage,
       imageBase64: imageBase64,
       documentName: documentName || undefined,
     };
     const allMessages = [...messages, userMsg];
-    
+
     setMessages(allMessages);
     setIsLoading(true);
 
@@ -81,16 +81,18 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
     let newConversationId = currentConversationId;
 
     try {
-      // Get the real user access token
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
-      
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
       if (!accessToken) {
         throw new Error("Você precisa estar logado para usar o especialista");
       }
 
+      // Use Supabase client to get the correct URL
+      const functionUrl = `${supabase.supabaseUrl}/functions/v1/automotive-expert-chat`;
+
       const response = await fetch(
-        `https://txxgmxxssnogumcwsfvn.supabase.co/functions/v1/automotive-expert-chat`,
+        functionUrl,
         {
           method: "POST",
           headers: {
@@ -98,10 +100,10 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
             Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
-            messages: allMessages.map(m => ({ 
-              role: m.role, 
+            messages: allMessages.map(m => ({
+              role: m.role,
               content: m.role === "user" && m === userMsg ? finalMessage : m.content,
-              imageBase64: m.imageBase64 
+              imageBase64: m.imageBase64
             })),
             vehicleContext: userVehicle,
             conversationId: currentConversationId,
@@ -127,7 +129,7 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         textBuffer += decoder.decode(value, { stream: true });
 
         let newlineIndex: number;
@@ -144,7 +146,7 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
 
           try {
             const parsed = JSON.parse(jsonStr);
-            
+
             // Handle special events
             if (parsed.type === "tutorials") {
               suggestedTutorials = parsed.tutorials;
@@ -153,7 +155,7 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
             if (parsed.type === "conversation") {
               newConversationId = parsed.conversationId;
               setCurrentConversationId(parsed.conversationId);
-              
+
               // Notify that conversation was created
               if (!currentConversationId) {
                 notifySuccess("Conversa salva", "Sua conversa foi salva automaticamente");
@@ -167,8 +169,8 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
               assistantContent += content;
               setMessages(prev => {
                 const updated = [...prev];
-                updated[updated.length - 1] = { 
-                  role: "assistant", 
+                updated[updated.length - 1] = {
+                  role: "assistant",
                   content: assistantContent,
                   suggestedTutorials: suggestedTutorials.length > 0 ? suggestedTutorials : undefined
                 };
@@ -186,10 +188,10 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
       if (suggestedTutorials.length > 0) {
         setMessages(prev => {
           const updated = [...prev];
-          updated[updated.length - 1] = { 
-            role: "assistant", 
+          updated[updated.length - 1] = {
+            role: "assistant",
             content: assistantContent,
-            suggestedTutorials 
+            suggestedTutorials
           };
           return updated;
         });
@@ -200,9 +202,9 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
       console.error("Chat error:", error);
       setMessages(prev => [
         ...prev.filter(m => !(m.role === "assistant" && m.content === "")),
-        { 
-          role: "assistant", 
-          content: `❌ ${error instanceof Error ? error.message : "Erro ao processar sua pergunta. Tente novamente."}` 
+        {
+          role: "assistant",
+          content: `❌ ${error instanceof Error ? error.message : "Erro ao processar sua pergunta. Tente novamente."}`
         }
       ]);
       return null;
@@ -225,7 +227,7 @@ export const useExpertChat = ({ userVehicle }: UseExpertChatProps) => {
         .select("role, content, image_url, document_url, document_name, suggested_tutorials")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
-      
+
       if (messagesData) {
         const loadedMessages: Message[] = messagesData.map((m: any) => ({
           role: m.role,

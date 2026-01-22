@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { OBDData, OBDDevice, DEFAULT_WIFI_CONFIG, SIMULATED_DTC_CODES } from './types';
+import { OBDData, OBDDevice, DEFAULT_WIFI_CONFIG } from './types';
 
 interface UseWiFiConnectionReturn {
   isSupported: boolean;
@@ -35,61 +35,16 @@ export const useWiFiConnection = (): UseWiFiConnectionReturn => {
       // Try to establish WebSocket connection to OBD2 WiFi adapter
       // Most ELM327 WiFi adapters use raw TCP, but we'll simulate here
       // In a real native app, you'd use a TCP socket library
-      
-      return new Promise((resolve) => {
-        // Simulate connection attempt
-        const timeout = setTimeout(() => {
-          // Fallback to simulation after timeout
-          setDevice({
-            id: 'simulated-wifi',
-            name: 'OBD2 Simulado (WiFi)',
-            type: 'wifi',
-            address: ip,
-            port: port,
-            signalStrength: 85,
-          });
-          setIsSimulated(true);
-          
-          toast({
-            title: "Modo Demonstração WiFi",
-            description: "Navegadores não suportam conexão WiFi direta. Use o app nativo para dados reais.",
-            variant: "default",
-          });
-          
-          resolve(true);
-        }, 2000);
 
-        // In a real implementation with WebSocket support:
-        try {
-          // Note: Real ELM327 WiFi doesn't use WebSocket, but raw TCP
-          // This would require a native app or proxy server
-          // For demo, we use simulation
-          
-          // Clear timeout and simulate success
-          clearTimeout(timeout);
-          
-          setTimeout(() => {
-            setDevice({
-              id: `wifi-${ip}`,
-              name: `OBD2 WiFi (${ip})`,
-              type: 'wifi',
-              address: ip,
-              port: port,
-              signalStrength: 90,
-            });
-            setIsSimulated(true); // In browser, we always simulate WiFi
-            
-          toast({
-            title: "Modo Demonstração WiFi",
-            description: "Dados simulados. Para conexão real, use o app nativo.",
-            variant: "default",
-          });
-            
-            resolve(true);
-          }, 2000);
-        } catch (wsError) {
-          // WebSocket failed, timeout will handle simulation
-        }
+      return new Promise((resolve) => {
+        // PRODUÇÃO: Em ambiente web, não podemos conectar via Socket TCP raw
+        // Retornamos false imediatamente para forçar uso do App Nativo
+        toast({
+          title: "Conexão WiFi Indisponível",
+          description: "O navegador não suporta conexão OBD2 via WiFi. Use o App Nativo.",
+          variant: "destructive",
+        });
+        resolve(false);
       });
     } catch (error) {
       console.error('WiFi connection error:', error);
@@ -109,7 +64,7 @@ export const useWiFiConnection = (): UseWiFiConnectionReturn => {
     }
     setDevice(null);
     setIsSimulated(false);
-    
+
     toast({
       title: "WiFi Desconectado",
       description: "Adaptador OBD2 WiFi desconectado.",
@@ -121,28 +76,9 @@ export const useWiFiConnection = (): UseWiFiConnectionReturn => {
       throw new Error('WiFi não conectado');
     }
 
-    // Simulate reading time
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // In real implementation, this would send ELM327 commands over TCP/WebSocket
-    // Commands like: ATZ (reset), ATSP0 (auto protocol), 03 (read DTCs)
-    const randomIndex = Math.floor(Math.random() * SIMULATED_DTC_CODES.length);
-    const dtcCodes = SIMULATED_DTC_CODES[randomIndex];
-
-    return {
-      dtcCodes,
-      rawData: {
-        protocol: 'ISO 15765-4 (CAN)',
-        voltage: '12.6V',
-        readTime: new Date().toISOString(),
-        connectionMethod: 'WiFi',
-        deviceIP: device.address,
-        devicePort: device.port,
-        signalStrength: device.signalStrength,
-      },
-      timestamp: new Date(),
-      connectionType: 'wifi',
-    };
+    // PRODUÇÃO: WiFi OBD2 requer app nativo (TCP raw)
+    // Navegadores não suportam conexão TCP direta
+    throw new Error('Leitura de DTCs via WiFi requer o app nativo. Navegadores não suportam TCP raw.');
   }, [device]);
 
   return {

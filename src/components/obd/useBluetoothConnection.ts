@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { OBDData, OBDDevice, DEFAULT_BLUETOOTH_CONFIG, SIMULATED_DTC_CODES } from './types';
+import { OBDData, OBDDevice, DEFAULT_BLUETOOTH_CONFIG } from './types';
 
 interface UseBluetoothConnectionReturn {
   isSupported: boolean;
@@ -38,7 +38,7 @@ export const useBluetoothConnection = (): UseBluetoothConnectionReturn => {
 
           if (btDevice) {
             const server = await btDevice.gatt?.connect();
-            
+
             if (server) {
               setBluetoothDevice(btDevice);
               setDevice({
@@ -48,37 +48,38 @@ export const useBluetoothConnection = (): UseBluetoothConnectionReturn => {
                 address: btDevice.id,
               });
               setIsSimulated(false);
-              
+
               toast({
                 title: "Bluetooth Conectado!",
                 description: `Conectado ao dispositivo ${btDevice.name}`,
               });
-              
+
               return true;
             }
           }
         } catch (btError: any) {
           console.log('Bluetooth connection failed or cancelled:', btError.message);
-          // User cancelled or no device found - fall through to simulation
+
+          // PRODUÇÃO: Não ativar modo demonstração automaticamente
+          // Se usuário cancelou ou não há dispositivo, retornar false
+          toast({
+            title: "Conexão Cancelada",
+            description: "Você cancelou a seleção do dispositivo Bluetooth. Tente novamente quando estiver pronto.",
+            variant: "default",
+          });
+
+          return false;
         }
       }
 
-      // Fallback to simulation mode
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setDevice({
-        id: 'simulated-bt',
-        name: 'OBD2 Simulado (Bluetooth)',
-        type: 'bluetooth',
-      });
-      setIsSimulated(true);
-      
+      // Se Bluetooth não é suportado, informar usuário
       toast({
-        title: "Modo Demonstração",
-        description: "Conectado em modo de simulação Bluetooth.",
+        title: "Bluetooth Não Disponível",
+        description: "Seu navegador não suporta Web Bluetooth. Use o app nativo ou conecte via WiFi.",
+        variant: "destructive",
       });
-      
-      return true;
+
+      return false;
     } catch (error) {
       console.error('Bluetooth connection error:', error);
       toast({
@@ -97,7 +98,7 @@ export const useBluetoothConnection = (): UseBluetoothConnectionReturn => {
     setBluetoothDevice(null);
     setDevice(null);
     setIsSimulated(false);
-    
+
     toast({
       title: "Bluetooth Desconectado",
       description: "Adaptador OBD2 Bluetooth desconectado.",
@@ -109,26 +110,11 @@ export const useBluetoothConnection = (): UseBluetoothConnectionReturn => {
       throw new Error('Bluetooth não conectado');
     }
 
-    // Simulate reading time
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // PRODUÇÃO: Leitura real de DTCs do dispositivo OBD2
+    // TODO: Implementar comunicação real com ELM327 via Web Bluetooth
+    // Comandos: ATZ (reset), ATSP0 (auto protocol), 03 (read DTCs)
 
-    // In real implementation, this would communicate with the device
-    // For now, return simulated data
-    const randomIndex = Math.floor(Math.random() * SIMULATED_DTC_CODES.length);
-    const dtcCodes = SIMULATED_DTC_CODES[randomIndex];
-
-    return {
-      dtcCodes,
-      rawData: {
-        protocol: 'ISO 15765-4 (CAN)',
-        voltage: '12.4V',
-        readTime: new Date().toISOString(),
-        connectionMethod: 'Bluetooth',
-        deviceName: device.name,
-      },
-      timestamp: new Date(),
-      connectionType: 'bluetooth',
-    };
+    throw new Error('Leitura de DTCs requer implementação de comunicação real com dispositivo OBD2. Use o app nativo para funcionalidade completa.');
   }, [device]);
 
   return {

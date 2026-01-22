@@ -83,7 +83,7 @@ async function callGeminiAPI(prompt: string, schema: any, temperature = 0.4): Pr
   if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -155,7 +155,7 @@ async function callGeminiAPI(prompt: string, schema: any, temperature = 0.4): Pr
   if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

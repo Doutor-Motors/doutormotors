@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { OBDData, OBDDevice, DEFAULT_WIFI_CONFIG, SIMULATED_DTC_CODES } from './types';
+import { OBDData, OBDDevice, DEFAULT_WIFI_CONFIG } from './types';
 import { getPlatformInfo } from '@/utils/platformDetector';
 
 // Types are now defined in platformDetector.ts
@@ -50,34 +50,26 @@ export const useCapacitorTCP = (): UseCapacitorTCPReturn => {
     port: number = connectionConfig.port
   ): Promise<boolean> => {
     if (!isNative) {
-      // Simulate connection in browser
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setDevice({
-        id: `capacitor-tcp-${ip}`,
-        name: `OBD2 TCP (${ip}:${port})`,
-        type: 'wifi',
-        address: ip,
-        port: port,
-        signalStrength: 95,
-      });
+      // PRODUÇÃO: TCP não funciona em navegadores
       toast({
-        title: 'Modo Demonstração TCP',
-        description: `Conexão TCP simulada (execute no app móvel para conexão real)`,
+        title: 'TCP Não Disponível no Navegador',
+        description: `Conexão TCP OBD2 requer o app nativo. Baixe o app para usar WiFi.`,
+        variant: 'destructive',
       });
-      return true;
+      return false;
     }
 
     try {
       // In a real Capacitor app, you would use a TCP socket plugin
       // Example with capacitor-tcp-socket or similar:
       const TcpSocket = (window as any).TcpSockets;
-      
+
       if (!TcpSocket) {
         throw new Error('TCP Socket plugin not available');
       }
 
       const newSocket = await TcpSocket.create();
-      
+
       await newSocket.connect({
         host: ip,
         port: port,
@@ -124,14 +116,14 @@ export const useCapacitorTCP = (): UseCapacitorTCPReturn => {
   const sendCommand = async (tcpSocket: any, command: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Timeout')), 3000);
-      
+
       tcpSocket.write(command + '\r');
-      
+
       tcpSocket.on('data', (data: any) => {
         clearTimeout(timeout);
         resolve(data.toString().trim());
       });
-      
+
       tcpSocket.on('error', (error: any) => {
         clearTimeout(timeout);
         reject(error);
@@ -159,27 +151,15 @@ export const useCapacitorTCP = (): UseCapacitorTCPReturn => {
     }
 
     if (!isNative || !socket) {
-      // Return simulated data
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const randomIndex = Math.floor(Math.random() * SIMULATED_DTC_CODES.length);
-      return {
-        dtcCodes: SIMULATED_DTC_CODES[randomIndex],
-        rawData: {
-          protocol: 'Capacitor TCP (Simulated)',
-          voltage: '12.6V',
-          connectionMethod: 'Capacitor TCP Native',
-          deviceIP: device.address,
-        },
-        timestamp: new Date(),
-        connectionType: 'wifi',
-      };
+      // PRODUÇÃO: Sem simulação - requer app nativo
+      throw new Error('Leitura de DTCs via TCP requer o app nativo. Navegadores não suportam TCP raw.');
     }
 
     try {
       const voltage = await sendCommand(socket, ELM327_COMMANDS.READ_VOLTAGE);
       const protocol = await sendCommand(socket, ELM327_COMMANDS.READ_PROTOCOL);
       const dtcResponse = await sendCommand(socket, ELM327_COMMANDS.READ_DTC);
-      
+
       const dtcCodes = parseDTCResponse(dtcResponse);
 
       return {
@@ -217,7 +197,7 @@ export const useCapacitorTCP = (): UseCapacitorTCPReturn => {
 function parseDTCResponse(response: string): string[] {
   const dtcCodes: string[] = [];
   const cleanResponse = response.replace(/\s/g, '').replace(/^43/, '');
-  
+
   if (cleanResponse === 'NODATA' || cleanResponse === '') {
     return [];
   }

@@ -16,22 +16,22 @@ interface UseOBDConnectionReturn {
   connectionType: ExtendedConnectionType | null;
   device: OBDDevice | null;
   isSimulated: boolean;
-  
+
   // Capabilities
   isBluetoothSupported: boolean;
   isWifiSupported: boolean;
   isCapacitorSupported: boolean;
   isNativePlatform: boolean;
-  
+
   // WiFi Config
   wifiConfig: { ip: string; port: number };
   setWifiConfig: (config: { ip: string; port: number }) => void;
-  
+
   // Capacitor specific
   availableDevices: OBDDevice[];
   isScanning: boolean;
   scanDevices: () => Promise<OBDDevice[]>;
-  
+
   // Actions
   connectBluetooth: () => Promise<boolean>;
   connectWifi: (ip?: string, port?: number) => Promise<boolean>;
@@ -40,7 +40,7 @@ interface UseOBDConnectionReturn {
   disconnect: () => void;
   readDTCCodes: () => Promise<OBDData>;
   readMileage: () => Promise<number | null>;
-  
+
   // Mileage sync
   lastSyncedMileage: number | null;
   lastSyncedAt: string | null;
@@ -55,25 +55,25 @@ export const useOBDConnection = (): UseOBDConnectionReturn => {
   // Web-based connections
   const bluetooth = useBluetoothConnection();
   const wifi = useWiFiConnection();
-  
+
   // Capacitor native connections
   const capacitorBluetooth = useCapacitorBluetooth();
   const capacitorTCP = useCapacitorTCP();
-  
+
   // Mileage sync hook
   const mileageSync = useMileageSync();
 
   // Check if running in native platform
-  const isNativePlatform = typeof window !== 'undefined' && 
+  const isNativePlatform = typeof window !== 'undefined' &&
     (window as any).Capacitor?.isNativePlatform?.() === true;
 
   // Connect via Web Bluetooth
   const connectBluetooth = useCallback(async (): Promise<boolean> => {
     setConnectionStatus('connecting');
     setConnectionType('bluetooth');
-    
+
     const success = await bluetooth.connect();
-    
+
     if (success) {
       setConnectionStatus('connected');
       return true;
@@ -88,9 +88,9 @@ export const useOBDConnection = (): UseOBDConnectionReturn => {
   const connectWifi = useCallback(async (ip?: string, port?: number): Promise<boolean> => {
     setConnectionStatus('connecting');
     setConnectionType('wifi');
-    
+
     const success = await wifi.connect(ip, port);
-    
+
     if (success) {
       setConnectionStatus('connected');
       return true;
@@ -105,9 +105,9 @@ export const useOBDConnection = (): UseOBDConnectionReturn => {
   const connectCapacitorBluetooth = useCallback(async (): Promise<boolean> => {
     setConnectionStatus('connecting');
     setConnectionType('capacitor-bluetooth');
-    
+
     const success = await capacitorBluetooth.connect();
-    
+
     if (success) {
       setConnectionStatus('connected');
       return true;
@@ -122,9 +122,9 @@ export const useOBDConnection = (): UseOBDConnectionReturn => {
   const connectCapacitorWifi = useCallback(async (ip?: string, port?: number): Promise<boolean> => {
     setConnectionStatus('connecting');
     setConnectionType('capacitor-wifi');
-    
+
     const success = await capacitorTCP.connect(ip, port);
-    
+
     if (success) {
       setConnectionStatus('connected');
       return true;
@@ -151,7 +151,7 @@ export const useOBDConnection = (): UseOBDConnectionReturn => {
         capacitorTCP.disconnect();
         break;
     }
-    
+
     setConnectionStatus('disconnected');
     setConnectionType(null);
   }, [connectionType, bluetooth, wifi, capacitorBluetooth, capacitorTCP]);
@@ -183,14 +183,9 @@ export const useOBDConnection = (): UseOBDConnectionReturn => {
     }
 
     try {
-      // Simulate mileage reading for now (real implementation would send AT command)
-      // In production, this would send "01 A6" command and parse response
-      const simulatedMileage = Math.floor(Math.random() * 50000) + 30000;
-      
-      // Sync mileage with maintenance reminders
-      await mileageSync.syncMileage(simulatedMileage);
-      
-      return simulatedMileage;
+      // PRODUÇÃO: Simulação de dados removida.
+      // Se não houver implementação real de leitura (AT command), retorna null.
+      return null;
     } catch (err) {
       console.error('[OBD] Error reading mileage:', err);
       return null;

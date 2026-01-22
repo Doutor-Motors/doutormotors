@@ -192,55 +192,8 @@ export class OBDConnectionManager {
    * Simulate ELM327 commands for demo/testing
    */
   private async simulateCommand(command: string): Promise<string> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
-
-    switch (command) {
-      case ELM327_COMMANDS.RESET:
-        return 'ELM327 v2.1\r\n>';
-      case ELM327_COMMANDS.ECHO_OFF:
-      case ELM327_COMMANDS.LINEFEED_OFF:
-      case ELM327_COMMANDS.SPACES_OFF:
-      case ELM327_COMMANDS.HEADERS_OFF:
-      case ELM327_COMMANDS.AUTO_PROTOCOL:
-        return 'OK\r\n>';
-      case ELM327_COMMANDS.READ_VOLTAGE:
-        return '12.4V\r\n>';
-      case ELM327_COMMANDS.DESCRIBE_PROTOCOL:
-        return 'AUTO, ISO 15765-4 CAN (11 bit, 500 kbaud)\r\n>';
-      case ELM327_COMMANDS.READ_DTC:
-        // Simulate random DTCs
-        const hasDTCs = Math.random() > 0.3;
-        if (hasDTCs) {
-          const simulatedDTCs = ['01200030', '01710128', '04200000'][Math.floor(Math.random() * 3)];
-          return `43${simulatedDTCs}\r\n>`;
-        }
-        return '43\r\n>'; // No DTCs
-      case ELM327_COMMANDS.ENGINE_RPM:
-        const rpm = Math.floor(800 + Math.random() * 2200);
-        const rpmA = Math.floor((rpm * 4) / 256);
-        const rpmB = (rpm * 4) % 256;
-        return `410C${rpmA.toString(16).padStart(2, '0')}${rpmB.toString(16).padStart(2, '0')}\r\n>`;
-      case ELM327_COMMANDS.VEHICLE_SPEED:
-        const speed = Math.floor(Math.random() * 120);
-        return `410D${speed.toString(16).padStart(2, '0')}\r\n>`;
-      case ELM327_COMMANDS.COOLANT_TEMP:
-        const temp = Math.floor(70 + Math.random() * 30) + 40; // 70-100°C raw
-        return `4105${temp.toString(16).padStart(2, '0')}\r\n>`;
-      case ELM327_COMMANDS.ENGINE_LOAD:
-        const load = Math.floor(Math.random() * 100 * 255 / 100);
-        return `4104${load.toString(16).padStart(2, '0')}\r\n>`;
-      case ELM327_COMMANDS.THROTTLE_POS:
-        const throttle = Math.floor(Math.random() * 50 * 255 / 100);
-        return `4111${throttle.toString(16).padStart(2, '0')}\r\n>`;
-      case ELM327_COMMANDS.FUEL_LEVEL:
-        const fuel = Math.floor((50 + Math.random() * 50) * 255 / 100);
-        return `412F${fuel.toString(16).padStart(2, '0')}\r\n>`;
-      case ELM327_COMMANDS.VIN:
-        return '490201574442374841485533313030310\r\n>'; // Sample VIN
-      default:
-        return 'NO DATA\r\n>';
-    }
+    // PRODUÇÃO: Simulação desativada
+    throw new Error('Modo de simulação desativado para produção');
   }
 
   /**
@@ -422,10 +375,11 @@ export class OBDConnectionManager {
     this.protocol = '';
     this.voltage = '';
     this.lastError = '';
-    this.isSimulated = true;
+    this.isSimulated = false;
     this.onStateChange?.(this.getConnectionInfo());
   }
 }
+
 
 // Singleton instance
 let connectionManager: OBDConnectionManager | null = null;

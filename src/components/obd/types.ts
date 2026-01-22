@@ -43,12 +43,3 @@ export const DEFAULT_BLUETOOTH_CONFIG = {
   serviceUUID: '0000fff0-0000-1000-8000-00805f9b34fb',
   characteristicUUID: '0000fff1-0000-1000-8000-00805f9b34fb',
 };
-
-// Simulated DTC codes for demo
-export const SIMULATED_DTC_CODES = [
-  ['P0300', 'P0420'],
-  ['P0171', 'P0128', 'P0442'],
-  ['P0101', 'P0130'],
-  ['P0300', 'P0171', 'P0420', 'P0128'],
-  ['P0700', 'P0715'],
-];

@@ -76,7 +76,7 @@ const VideoView = ({
 }: VideoViewProps) => {
   // Estado para controlar qual vídeo está sendo exibido quando há múltiplos
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
-  
+
   // Determinar o vídeo atual a ser exibido
   const currentVideoUrl = useMemo(() => {
     if (videoDetails?.relatedVideos && videoDetails.relatedVideos.length > 0 && selectedVideoIndex > 0) {
@@ -94,7 +94,7 @@ const VideoView = ({
   // Extrair YouTube video ID
   const getYouTubeEmbedUrl = (url: string | undefined): string | null => {
     if (!url) return null;
-    
+
     // Se for MP4, não é YouTube
     if (isMP4Video(url)) return null;
 
@@ -252,7 +252,7 @@ const VideoView = ({
                         )}
                       </AspectRatio>
                     </div>
-                    
+
                     {/* Video Info - Compact */}
                     <div className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
@@ -286,7 +286,7 @@ const VideoView = ({
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Related Videos - Compact Tabs */}
                       {videoDetails?.relatedVideos && videoDetails.relatedVideos.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/30">
@@ -312,7 +312,7 @@ const VideoView = ({
                           ))}
                         </div>
                       )}
-                      
+
                       {/* Video Description - Collapsible */}
                       {videoDetails?.videoDescription && (
                         <details className="pt-2 border-t border-border/30">
@@ -491,11 +491,10 @@ const VideoView = ({
                             </span>
                           )}
                           <span
-                            className={`${
-                              videoDetails.transcriptionUsed
+                            className={`${videoDetails.transcriptionUsed
                                 ? "text-foreground"
                                 : "text-muted-foreground"
-                            } leading-relaxed`}
+                              } leading-relaxed`}
                           >
                             {step}
                           </span>
@@ -555,7 +554,7 @@ const VideoView = ({
                     rel="noopener noreferrer"
                     className="text-xs text-muted-foreground/60 hover:text-muted-foreground inline-flex items-center gap-1 transition-colors"
                   >
-                    Fonte: CarCareKiosk
+                    Fonte: Externa
                     <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 </div>

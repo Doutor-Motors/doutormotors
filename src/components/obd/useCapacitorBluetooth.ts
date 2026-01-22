@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { OBDData, OBDDevice, SIMULATED_DTC_CODES } from './types';
-import { 
-  getOBDConnectionManager, 
+import { OBDData, OBDDevice } from './types';
+import {
+  getOBDConnectionManager,
   OBDConnectionInfo
 } from '@/services/obd/OBDConnectionManager';
 import { getPlatformInfo } from '@/utils/platformDetector';
@@ -91,12 +91,12 @@ export const useCapacitorBluetooth = (): UseCapacitorBluetoothReturn => {
 
       // List paired devices
       const pairedDevices = await window.BluetoothSerial.list();
-      
+
       // Discover new devices
       const discoveredDevices = await new Promise<any[]>((resolve) => {
         const devices: any[] = [];
         const timeout = setTimeout(() => resolve(devices), 10000);
-        
+
         window.BluetoothSerial!.discoverUnpaired(
           (result: any) => {
             // Filter for OBD-related devices
@@ -130,12 +130,12 @@ export const useCapacitorBluetooth = (): UseCapacitorBluetoothReturn => {
       const obdDevices = allDevices.filter(d => isOBDDevice(d.name));
 
       setAvailableDevices(obdDevices.length > 0 ? obdDevices : allDevices);
-      
+
       toast({
         title: 'Busca concluída',
         description: `${obdDevices.length} dispositivos OBD encontrados`,
       });
-      
+
       return obdDevices;
     } catch (error: any) {
       console.error('Scan error:', error);
@@ -192,7 +192,7 @@ export const useCapacitorBluetooth = (): UseCapacitorBluetoothReturn => {
 
         // Connect via Bluetooth Serial
         await window.BluetoothSerial.connect(deviceToConnect.address!);
-        
+
         // Setup transport
         setupNativeTransport();
 
@@ -223,24 +223,24 @@ export const useCapacitorBluetooth = (): UseCapacitorBluetoothReturn => {
       } else {
         // Simulate connection in browser
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         const simulatedDevice: OBDDevice = {
           id: 'capacitor-simulated',
           name: 'OBD2 ELM327 (Simulado)',
           type: 'bluetooth',
           address: '00:00:00:00:00:00',
         };
-        
+
         setDevice(simulatedDevice);
-        
+
         // Initialize in simulation mode
         await connectionManager.initialize(simulatedDevice.name, simulatedDevice.address);
-        
+
         toast({
           title: 'Modo Demonstração',
           description: 'Conexão simulada. Execute no app móvel para conexão real.',
         });
-        
+
         setIsInitializing(false);
         return true;
       }
@@ -261,11 +261,11 @@ export const useCapacitorBluetooth = (): UseCapacitorBluetoothReturn => {
     if (isNative && window.BluetoothSerial) {
       window.BluetoothSerial.disconnect().catch(console.error);
     }
-    
+
     connectionManager.disconnect();
     setDevice(null);
     setVehicleData(null);
-    
+
     toast({
       title: 'Desconectado',
       description: 'Conexão Bluetooth encerrada.',

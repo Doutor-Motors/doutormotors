@@ -1,12 +1,26 @@
 import { Button } from "@/components/ui/button";
 import { Download, ArrowLeft, AlertTriangle, CheckCircle, Info, Lightbulb } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { generateTechnicalReportPDF } from "@/services/pdf/technicalReportGenerator";
+import { toast } from "sonner";
 
 const TechnicalReport = () => {
   const navigate = useNavigate();
 
-  const handleDownloadPDF = () => {
-    window.print();
+
+  const handleDownloadPDF = async () => {
+    try {
+      toast.info("Gerando relatório PDF...", {
+        description: "Isso pode levar alguns segundos. O download iniciará automaticamente."
+      });
+      generateTechnicalReportPDF();
+      toast.success("Relatório gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao gerar relatório", {
+        description: "Ocorreu um erro ao criar o arquivo PDF. Tente novamente."
+      });
+    }
   };
 
   return (
@@ -565,7 +579,7 @@ const TechnicalReport = () => {
 
           <h3 className="font-bold mt-4 mb-2">5.4 Links Externos (Deep Linking)</h3>
           <ul className="list-disc list-inside space-y-1 text-sm">
-            <li><strong>CarCareKiosk:</strong> Guias de reparo detalhados</li>
+            <li><strong>Fontes Externas:</strong> Guias de reparo detalhados</li>
             <li><strong>YouTube:</strong> Tutoriais em vídeo</li>
             <li><strong>Mercado Livre:</strong> Compra de peças automotivas</li>
           </ul>
